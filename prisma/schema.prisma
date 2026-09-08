@@ -160,8 +160,11 @@ model ModelProvider {
   displayName String
   category    String   @default("image") // 'image' | 'video' | 'text' | '3d'
   costPerUnit Float    @default(4)
+  marginRate  Float    @default(1.4) // admin-configurable markup multiplier
   active      Boolean  @default(true)
   styleHint   String   @default("")
+  adapterType String   @default("default") // 'default' | 'openai' | 'replicate' | 'stability'
+  adapterConfig String @default("{}") // JSON: { apiEndpoint?, modelId?, ... }
   jobs        GenerationJob[]
 }
 

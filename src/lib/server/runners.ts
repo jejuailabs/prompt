@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { logEvent } from '@/lib/events';
 import { refundCredits } from '@/lib/server/credits';
 import { chatJson, generateImage } from '@/lib/server/ai';
+import { getImageAdapter, parseAdapterConfig } from '@/lib/server/image-adapters';
 import { gameCoverUrl, isHexColor, renderGameHtml, writeGameBundle } from '@/lib/server/game-template';
 import { uploadBuffer } from '@/lib/server/storage';
 import type { LandingContent } from '@/lib/types';
@@ -43,7 +44,9 @@ async function processGenerationJob(jobId: string): Promise<void> {
     if (job.provider.styleHint) promptParts.push(job.provider.styleHint);
     const size = SIZE_BY_ASPECT[job.aspect] ?? '1024x1024';
 
-    const { buffer } = await generateImage(promptParts.join(', '), size);
+    const adapter = getImageAdapter((job.provider as Record<string, unknown>).adapterType as string ?? 'default');
+    const config = parseAdapterConfig((job.provider as Record<string, unknown>).adapterConfig as string ?? '{}');
+    const { buffer } = await adapter.generate(promptParts.join(', '), size, config);
     const fileUrl = await savePng(job.id, buffer, 'gen');
 
     const artifact = await db.artifact.create({

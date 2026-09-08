@@ -180,6 +180,7 @@ export interface ProviderDTO {
   displayName: string;
   category: string;
   costPerUnit: number;
+  marginRate: number;
   active: boolean;
 }
 

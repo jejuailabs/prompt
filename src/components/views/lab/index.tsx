@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { AlertCircle, Check, FlaskConical, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertCircle, Check, FlaskConical, Loader2, RefreshCw, Sparkles, Wallet } from 'lucide-react';
 import { api, ApiError } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useRefreshSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
-import type { JobDTO, ProviderDTO } from '@/lib/types';
+import type { CreditStateDTO, JobDTO, ProviderDTO } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -54,9 +54,18 @@ export default function LabView() {
   });
   const providers = providersQ.data ?? [];
 
+  const session = useAppStore((s) => s.session);
+  const creditsQ = useQuery({
+    queryKey: ['credits'],
+    queryFn: () => api.get<CreditStateDTO>('/api/credits'),
+    enabled: !!session,
+    staleTime: 10_000,
+  });
+  const balance = creditsQ.data?.balance ?? 0;
+
   const totalCost = providers
     .filter((p) => selected.includes(p.id))
-    .reduce((sum, p) => sum + Math.round(p.costPerUnit * 1.4), 0);
+    .reduce((sum, p) => sum + Math.round(p.costPerUnit * p.marginRate), 0);
 
   const hasActive = jobs.some((j) => j.status === 'queued' || j.status === 'running');
   const hasDone = jobs.some((j) => j.status === 'done' && j.resultArtifact);
@@ -146,6 +155,7 @@ export default function LabView() {
       });
       setJobs((prev) => [...prev, ...data.jobs]);
       refreshSession();
+      void qc.invalidateQueries({ queryKey: ['credits'] });
     } catch (e) {
       toastErr(e);
     } finally {
@@ -223,7 +233,7 @@ export default function LabView() {
                         />
                         <span className="text-sm">{p.displayName}</span>
                         <span className="text-[10px] tabular-nums text-muted-foreground">
-                          {(p.costPerUnit * 1.4).toFixed(0)}크
+                          {Math.round(p.costPerUnit * p.marginRate)}크
                         </span>
                       </label>
                     ))}
@@ -272,6 +282,19 @@ export default function LabView() {
             ]}
             footer={
               <div className="w-full space-y-3">
+                {session && (
+                  <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Wallet className="size-3.5" /> {t('myCredits')}
+                    </span>
+                    <span className={cn(
+                      'text-sm font-semibold tabular-nums',
+                      totalCost > 0 && balance < totalCost ? 'text-red-500' : 'text-foreground',
+                    )}>
+                      {balance.toLocaleString()}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm text-muted-foreground">{t('neededCredits')}</span>
                   <strong className="text-lg tabular-nums text-primary">{totalCost.toLocaleString()}</strong>

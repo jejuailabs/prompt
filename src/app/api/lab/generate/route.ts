@@ -15,7 +15,6 @@ interface GenerateBody {
   promptId?: string;
 }
 
-const MARGIN = 1.4;
 const VALID_ASPECTS = ['1:1', '16:9', '9:16'];
 
 export async function POST(req: NextRequest) {
@@ -36,8 +35,8 @@ export async function POST(req: NextRequest) {
       throw new HttpError('사용할 수 없는 모델이 포함되어 있습니다', 400);
     }
 
-    // charge = Σ provider.costPerUnit × 1.4 (rounded), charged upfront
-    const perJobCharges = providers.map((p) => Math.round(p.costPerUnit * MARGIN));
+    // charge = Σ provider.costPerUnit × marginRate (per-provider, admin-configurable)
+    const perJobCharges = providers.map((p) => Math.round(p.costPerUnit * ((p as Record<string, unknown>).marginRate as number ?? 1.4)));
     const charge = perJobCharges.reduce((sum, c) => sum + c, 0);
     const balance = await chargeCredits(user.id, charge, 'generation_job');
 

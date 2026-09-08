@@ -11,6 +11,7 @@ export async function GET() {
         displayName: p.displayName,
         category: p.category,
         costPerUnit: p.costPerUnit,
+        marginRate: (p as Record<string, unknown>).marginRate as number ?? 1.4,
         active: p.active,
       })),
     );

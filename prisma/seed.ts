@@ -107,10 +107,10 @@ async function main() {
 
   console.log('Seeding model providers...');
   const providers = [
-    { id: 'midjourney-v7', displayName: 'Midjourney v7', category: 'image', costPerUnit: 8, styleHint: 'highly detailed, cinematic lighting' },
-    { id: 'dalle-3', displayName: 'DALL-E 3', category: 'image', costPerUnit: 6, styleHint: 'vibrant digital art' },
-    { id: 'stable-diffusion-35', displayName: 'Stable Diffusion 3.5', category: 'image', costPerUnit: 3, styleHint: 'artistic, painterly quality' },
-    { id: 'leonardo-phoenix', displayName: 'Leonardo Phoenix', category: 'image', costPerUnit: 4, styleHint: 'photorealistic, sharp details' },
+    { id: 'midjourney-v7', displayName: 'Midjourney v7', category: 'image', costPerUnit: 8, marginRate: 1.4, styleHint: 'highly detailed, cinematic lighting', adapterType: 'replicate', adapterConfig: '{"modelId":"black-forest-labs/flux-schnell"}' },
+    { id: 'dalle-3', displayName: 'DALL-E 3', category: 'image', costPerUnit: 6, marginRate: 1.4, styleHint: 'vibrant digital art', adapterType: 'openai', adapterConfig: '{"modelId":"dall-e-3"}' },
+    { id: 'stable-diffusion-35', displayName: 'Stable Diffusion 3.5', category: 'image', costPerUnit: 3, marginRate: 1.5, styleHint: 'artistic, painterly quality', adapterType: 'stability', adapterConfig: '{}' },
+    { id: 'leonardo-phoenix', displayName: 'Leonardo Phoenix', category: 'image', costPerUnit: 4, marginRate: 1.4, styleHint: 'photorealistic, sharp details', adapterType: 'replicate', adapterConfig: '{"modelId":"black-forest-labs/flux-1.1-pro"}' },
   ];
 
   for (const p of providers) {
