@@ -46,6 +46,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       },
     });
 
+    // Increment parent's forkCount
+    await db.prompt.update({ where: { id: parent.id }, data: { forkCount: { increment: 1 } } });
+
     await logEvent('prompt.forked', {
       promptId: fork.id,
       forkedFromId: parent.id,

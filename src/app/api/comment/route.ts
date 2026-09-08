@@ -26,6 +26,14 @@ export async function POST(req: NextRequest) {
       data: { targetType, targetId, userId: user.id, body: text.slice(0, 1000) },
       include: { user: true },
     });
+
+    // Update denormalized count
+    if (targetType === 'prompt') {
+      await db.prompt.update({ where: { id: targetId }, data: { commentCount: { increment: 1 } } });
+    } else {
+      await db.artifact.update({ where: { id: targetId }, data: { commentCount: { increment: 1 } } });
+    }
+
     return ok(serializeComment(comment));
   } catch (e) {
     return fail(e);

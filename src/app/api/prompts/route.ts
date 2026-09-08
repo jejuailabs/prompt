@@ -5,11 +5,11 @@ import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getSessionUserFast, HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
-import { loadPromptExtras, loadSocial, serializePrompt, serializePrompts, serializePromptSingle } from '@/lib/server/serialize';
+import { parseJson, serializePromptSingle, toUserBrief } from '@/lib/server/serialize';
 import { logEvent } from '@/lib/events';
+import type { PromptDTO } from '@/lib/types';
 
 const DEFAULT_LIMIT = 48;
-const POPULAR_POOL = 200;
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,32 +33,48 @@ export async function GET(req: NextRequest) {
     if (category) where.category = category;
     if (q) where.OR = [{ title: { contains: q } }, { body: { contains: q } }];
 
-    const take = sort === 'popular' || sort === 'forked' ? POPULAR_POOL : limit;
+    const orderBy: Prisma.PromptOrderByWithRelationInput =
+      sort === 'popular' ? { likeCount: 'desc' } :
+      sort === 'forked' ? { forkCount: 'desc' } :
+      { createdAt: 'desc' };
+
     const rows = await db.prompt.findMany({
       where,
       include: { owner: true },
-      orderBy: { createdAt: 'desc' },
-      take,
+      orderBy,
+      take: limit,
     });
 
-    let result = rows;
-    if (sort === 'popular' || sort === 'forked') {
-      const [social, extras] = await Promise.all([
-        loadSocial('prompt', rows.map((p) => p.id), user?.id ?? null),
-        loadPromptExtras(rows.map((p) => p.id)),
-      ]);
-      result = [...rows]
-        .sort((a, b) => {
-          if (sort === 'forked') {
-            return (extras.forks.get(b.id) ?? 0) - (extras.forks.get(a.id) ?? 0);
-          }
-          return (social.likes.get(b.id) ?? 0) - (social.likes.get(a.id) ?? 0);
-        })
-        .slice(0, limit);
-      return ok(result.map((p) => serializePrompt(p, social, extras)));
+    // Check likedByMe in a single query if user is logged in
+    let likedSet = new Set<string>();
+    if (user && rows.length) {
+      const myVotes = await db.vote.findMany({
+        where: { targetType: 'prompt', targetId: { in: rows.map(r => r.id) }, userId: user.id },
+        select: { targetId: true },
+      });
+      likedSet = new Set(myVotes.map(v => v.targetId));
     }
 
-    return ok(await serializePrompts(result.slice(0, limit), user?.id ?? null));
+    const result: PromptDTO[] = rows.map(p => ({
+      id: p.id,
+      title: p.title,
+      body: p.body,
+      category: p.category,
+      modelTags: parseJson<string[]>(p.modelTags, []),
+      thumbnailUrl: p.thumbnailUrl ?? null,
+      ownerId: p.ownerId,
+      owner: toUserBrief(p.owner),
+      forkedFromId: p.forkedFromId,
+      status: p.status,
+      createdAt: p.createdAt.toISOString(),
+      likeCount: p.likeCount,
+      commentCount: p.commentCount,
+      forkCount: p.forkCount,
+      artifactCount: p.artifactCount,
+      likedByMe: likedSet.has(p.id),
+    }));
+
+    return ok(result);
   } catch (e) {
     return fail(e);
   }

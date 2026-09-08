@@ -33,6 +33,13 @@ export async function POST(req: NextRequest) {
       liked = true;
     }
 
+    const delta = liked ? 1 : -1;
+    if (targetType === 'prompt') {
+      await db.prompt.update({ where: { id: targetId }, data: { likeCount: { increment: delta } } });
+    } else {
+      await db.artifact.update({ where: { id: targetId }, data: { likeCount: { increment: delta } } });
+    }
+
     const likeCount = await db.vote.count({ where: { targetType, targetId } });
     return ok({ liked, likeCount });
   } catch (e) {

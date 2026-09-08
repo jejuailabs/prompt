@@ -5,11 +5,11 @@ import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { getSessionUserFast, HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
-import { serializeArtifacts, serializeArtifactSingle } from '@/lib/server/serialize';
+import { parseJson, serializeArtifactSingle, toUserBrief } from '@/lib/server/serialize';
 import { logEvent } from '@/lib/events';
+import type { ArtifactDTO, ArtifactMetadata, ArtifactType, ExecutionTier } from '@/lib/types';
 
 const DEFAULT_LIMIT = 24;
-const POPULAR_POOL = 200;
 
 interface CreateBody {
   title?: string;
@@ -42,7 +42,6 @@ export async function GET(req: NextRequest) {
       where.ownerId = user.id;
       if (scope === 'drafts') where.status = 'draft';
     } else {
-      // feed: published + public
       where.status = 'published';
       where.visibility = 'public';
     }
@@ -53,32 +52,65 @@ export async function GET(req: NextRequest) {
       where.OR = [{ title: { contains: q } }, { description: { contains: q } }];
     }
 
-    const take = sort === 'popular' ? POPULAR_POOL : limit;
+    const orderBy: Prisma.ArtifactOrderByWithRelationInput =
+      sort === 'popular' ? { likeCount: 'desc' } : { createdAt: 'desc' };
+
     const rows = await db.artifact.findMany({
       where,
       include: { owner: true },
-      orderBy: { createdAt: 'desc' },
-      take,
+      orderBy,
+      take: limit,
     });
 
+    // Filter disabled modules for feed scope
     let result = rows;
     if (scope === 'feed') {
-      // Filter out artifacts whose sourceModule refers to a disabled module
       const modules = await db.module.findMany({ select: { id: true, enabled: true } });
       const disabled = new Set(modules.filter((m) => !m.enabled).map((m) => m.id));
       result = rows.filter((a) => !a.sourceModule || !disabled.has(a.sourceModule));
     }
 
-    if (sort === 'popular') {
-      const { loadSocial, serializeArtifact } = await import('@/lib/server/serialize');
-      const social = await loadSocial('artifact', result.map((a) => a.id), user?.id ?? null);
-      result = [...result]
-        .sort((a, b) => (social.likes.get(b.id) ?? 0) - (social.likes.get(a.id) ?? 0))
-        .slice(0, limit);
-      return ok(result.map((a) => serializeArtifact(a, social)));
+    let likedSet = new Set<string>();
+    if (user && result.length) {
+      const myVotes = await db.vote.findMany({
+        where: { targetType: 'artifact', targetId: { in: result.map(r => r.id) }, userId: user.id },
+        select: { targetId: true },
+      });
+      likedSet = new Set(myVotes.map(v => v.targetId));
     }
 
-    return ok(await serializeArtifacts(result.slice(0, limit), user?.id ?? null));
+    const dtos: ArtifactDTO[] = result.map(a => {
+      const meta = parseJson<Partial<ArtifactMetadata>>(a.metadata, {});
+      const metadata: ArtifactMetadata = {
+        ...meta,
+        tags: meta.tags ?? [],
+        stats: meta.stats ?? { views: a.views, plays: 0, likes: a.likeCount, completionRate: 0 },
+      };
+      return {
+        id: a.id,
+        type: a.type as ArtifactType,
+        title: a.title,
+        description: a.description,
+        ownerId: a.ownerId,
+        owner: toUserBrief(a.owner),
+        sourcePromptId: a.sourcePromptId,
+        sourceModule: a.sourceModule,
+        fileUrl: a.fileUrl,
+        contentUrl: a.contentUrl,
+        metadata,
+        executionTier: (a.executionTier ?? null) as ExecutionTier | null,
+        status: a.status as ArtifactDTO['status'],
+        visibility: a.visibility,
+        version: a.version,
+        views: a.views,
+        createdAt: a.createdAt.toISOString(),
+        likeCount: a.likeCount,
+        commentCount: a.commentCount,
+        likedByMe: likedSet.has(a.id),
+      };
+    });
+
+    return ok(dtos);
   } catch (e) {
     return fail(e);
   }
@@ -108,6 +140,14 @@ export async function POST(req: NextRequest) {
       },
       include: { owner: true },
     });
+
+    // Increment parent prompt's artifactCount
+    if (body.sourcePromptId) {
+      await db.prompt.update({
+        where: { id: body.sourcePromptId },
+        data: { artifactCount: { increment: 1 } },
+      }).catch(() => {});
+    }
 
     await logEvent(status === 'published' ? 'artifact.published' : 'artifact.created', {
       artifactId: artifact.id,
