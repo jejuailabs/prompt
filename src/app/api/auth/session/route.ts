@@ -1,4 +1,4 @@
-// GET /api/auth/session — returns SessionUser | null based on the demo cookie
+// GET /api/auth/session — returns SessionUser | null based on Supabase Auth
 import { getSessionUser } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 

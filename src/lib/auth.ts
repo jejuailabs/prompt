@@ -1,8 +1,6 @@
-// Server-only session helpers (demo cookie auth — swap point for real OAuth later)
-import { cookies } from 'next/headers';
+// Server-only session helpers — Supabase Auth (Google OAuth)
+import { createClient } from '@/lib/supabase/server';
 import { db } from '@/lib/db';
-
-export const SESSION_COOKIE = 'pl_session';
 
 export interface DbSessionUser {
   id: string;
@@ -15,14 +13,16 @@ export interface DbSessionUser {
 }
 
 export async function getSessionUser(): Promise<DbSessionUser | null> {
-  const store = await cookies();
-  const id = store.get(SESSION_COOKIE)?.value;
-  if (!id) return null;
+  const supabase = await createClient();
+  const { data: { user: supaUser } } = await supabase.auth.getUser();
+  if (!supaUser) return null;
+
   const user = await db.profile.findUnique({
-    where: { id },
+    where: { id: supaUser.id },
     include: { credits: true },
   });
   if (!user || user.banned) return null;
+
   return {
     id: user.id,
     username: user.username,
