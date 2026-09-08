@@ -1,8 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// PLAYLAB — Full schema for Phase 1~5 (per docs/05-database-schema.md)
+// SQLite adaptation: text[] → JSON string columns, enums → String fields.
+// Principle C: all core tables exist from day one.
 
 generator client {
   provider = "prisma-client-js"
@@ -13,20 +11,338 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
+// ────────────────────────────── Phase 1 core ──────────────────────────────
+
+model Profile {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  avatarUrl String?
+  locale    String   @default("ko")
+  role      String   @default("user") // 'user' | 'admin'
+  banned    Boolean  @default(false)
+  title     String? // role label e.g. 'Creator'
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  prompts            Prompt[]
+  artifacts          Artifact[]
+  votes              Vote[]
+  comments           Comment[]
+  credits            Credits?
+  creditTransactions CreditTransaction[]
+  generationJobs     GenerationJob[]
+  paymentAccount     PaymentAccount?
+  smokeTests         SmokeTest[]         @relation("RequestedBy")
+  briefs             ProblemBrief[]
+  bids               Bid[]
+  listings           MarketplaceListing[]
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
+model Module {
+  id             String    @id // 'main-gallery', 'model-lab', ...
+  phase          Int
+  titleKo        String
+  titleEn        String
+  descKo         String    @default("")
+  descEn         String    @default("")
+  icon           String    @default("sparkles")
+  navOrder       Int       @default(0)
+  enabled        Boolean   @default(false)
+  status         String    @default("active") // 'active' | 'new' | 'beta' | 'coming-soon'
+  newUntil       DateTime?
+  mainScreenSlot String    @default("none") // 'hero' | 'feed' | 'sidebar' | 'none'
+  entryView      String    @default("home")
+  requiresAuth   Boolean   @default(false)
+  adminOnly      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+}
+
+model Prompt {
+  id           String   @id @default(uuid())
+  ownerId      String
+  owner        Profile  @relation(fields: [ownerId], references: [id])
+  title        String
+  body         String
+  category     String   @default("general")
+  modelTags    String   @default("[]") // JSON string[]
+  forkedFromId String?
+  forkParent   Prompt?  @relation("PromptForks", fields: [forkedFromId], references: [id])
+  forks        Prompt[] @relation("PromptForks")
+  visibility   String   @default("public")
+  status       String   @default("active") // 'active' | 'hidden'
+  reportCount  Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  versions  PromptVersion[]
+  artifacts Artifact[]
+  // votes/comments are polymorphic (targetType+targetId) — counted via queries
+}
+
+model PromptVersion {
+  id          String   @id @default(uuid())
+  promptId    String
+  prompt      Prompt   @relation(fields: [promptId], references: [id])
+  body        String
+  versionNote String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+}
+
+model Artifact {
+  id             String   @id @default(uuid())
+  ownerId        String
+  owner          Profile  @relation(fields: [ownerId], references: [id])
+  type           String // 'image' | 'text' | 'video' | '3d_asset' | 'landing_page' | 'game' | 'app'
+  title          String
+  description    String   @default("")
+  sourcePromptId String?
+  sourcePrompt   Prompt?  @relation(fields: [sourcePromptId], references: [id])
+  sourceModule   String?
+  fileUrl        String?
+  contentUrl     String? // executable html (iframe sandbox) url
+  metadata       String   @default("{}") // JSON: model, tags, frames[], html, content, stats, versions[]
+  executionTier  String? // 'iframe' | 'webcontainer' | 'microvm' | null
+  visibility     String   @default("public")
+  status         String   @default("draft") // 'draft' | 'published' | 'archived' | 'hidden'
+  reportCount    Int      @default(0)
+  version        String   @default("v1.0.0")
+  views          Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  // votes/comments are polymorphic (targetType+targetId) — counted via queries
+  generationJob GenerationJob?  @relation("GenJobResult")
+  pipelineRun   PipelineRun?
+  revenueShares RevenueShare[]
+  adCampaigns   AdCampaign[]
+  smokeTests    SmokeTest[]
+  listing       MarketplaceListing?
+}
+
+model Vote {
+  id         String   @id @default(uuid())
+  targetType String // 'prompt' | 'artifact'
+  targetId   String
+  userId     String
+  user       Profile  @relation(fields: [userId], references: [id])
+  value      Int      @default(1)
+  createdAt  DateTime @default(now())
+
+  @@unique([targetType, targetId, userId])
+}
+
+model Comment {
+  id         String   @id @default(uuid())
+  targetType String // 'prompt' | 'artifact'
+  targetId   String
+  userId     String
+  user       Profile  @relation(fields: [userId], references: [id])
+  body       String
+  createdAt  DateTime @default(now())
+}
+
+model EventLog {
+  id        String   @id @default(uuid())
+  type      String // 'artifact.created', 'artifact.published', 'prompt.created', ...
+  payload   String   @default("{}")
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+}
+
+// ────────────────────────────── Phase 2: model lab ──────────────────────────────
+
+model ModelProvider {
+  id          String   @id // 'midjourney-v7', 'dalle-3', ...
+  displayName String
+  category    String   @default("image") // 'image' | 'video' | 'text' | '3d'
+  costPerUnit Float    @default(4)
+  active      Boolean  @default(true)
+  styleHint   String   @default("") // appended to gen prompt to differentiate "models"
+  jobs        GenerationJob[]
+}
+
+model GenerationJob {
+  id               String    @id @default(uuid())
+  userId           String
+  user             Profile   @relation(fields: [userId], references: [id])
+  promptId         String?
+  promptText       String
+  providerId       String
+  provider         ModelProvider @relation(fields: [providerId], references: [id])
+  aspect           String    @default("1:1")
+  style            String?
+  status           String    @default("queued") // 'queued' | 'running' | 'done' | 'failed'
+  resultArtifactId String?  @unique
+  resultArtifact   Artifact? @relation("GenJobResult", fields: [resultArtifactId], references: [id])
+  costActual       Float     @default(0)
+  creditCharged    Float     @default(0)
+  error            String?
+  createdAt        DateTime  @default(now())
+  completedAt      DateTime?
+}
+
+model Credits {
+  userId  String @id
+  user    Profile @relation(fields: [userId], references: [id])
+  balance Float  @default(0)
+}
+
+model CreditTransaction {
+  id        String   @id @default(uuid())
+  userId    String
+  user      Profile  @relation(fields: [userId], references: [id])
+  amount    Float // + charge, - use
+  reason    String // 'purchase' | 'generation_job' | 'refund' | 'pipeline_run' | 'smoke_test'
+  relatedId String?
+  createdAt DateTime @default(now())
+}
+
+// ────────────────────────────── Phase 3: pipelines ──────────────────────────────
+
+model Pipeline {
+  id             String   @id // 'pipeline-3d', 'pipeline-shortform', ...
+  displayNameKo  String
+  displayNameEn  String
+  descKo         String
+  descEn         String
+  icon           String   @default("wand-2")
+  creditCost     Float    @default(10)
+  wide           Boolean  @default(false)
+  active         Boolean  @default(true)
+  runs           PipelineRun[]
+}
+
+model PipelineRun {
+  id               String   @id @default(uuid())
+  pipelineId       String
+  pipeline         Pipeline @relation(fields: [pipelineId], references: [id])
+  userId           String
+  inputPayload     String   @default("{}")
+  status           String   @default("running") // 'running' | 'done' | 'failed'
+  progress         Int      @default(0) // 0~100
+  resultArtifactId String?  @unique
+  resultArtifact   Artifact? @relation(fields: [resultArtifactId], references: [id])
+  creditCharged    Float    @default(0)
+  error            String?
+  createdAt        DateTime @default(now())
+  completedAt      DateTime?
+}
+
+// ────────────────────────────── Phase 4: launch infra ──────────────────────────────
+
+model PaymentAccount {
+  userId            String   @id
+  user              Profile  @relation(fields: [userId], references: [id])
+  provider          String   @default("stripe_connect")
+  externalAccountId String?
+  status            String   @default("pending") // 'pending' | 'active' | 'restricted'
+  totalEarned       Float    @default(0)
+  createdAt         DateTime @default(now())
+}
+
+model RevenueShare {
+  id          String   @id @default(uuid())
+  artifactId  String
+  artifact    Artifact @relation(fields: [artifactId], references: [id])
+  payeeUserId String
+  sharePercent Float   @default(70)
+  amount      Float    @default(0)
+  period      String // '2026-09'
+  status      String   @default("pending") // 'pending' | 'settled'
+  createdAt   DateTime @default(now())
+}
+
+model AdCampaign {
+  id         String    @id @default(uuid())
+  artifactId String
+  artifact   Artifact  @relation(fields: [artifactId], references: [id])
+  budget     Float     @default(0)
+  startAt    DateTime?
+  endAt      DateTime?
+  status     String    @default("draft") // 'draft' | 'running' | 'completed' | 'paused'
+  createdAt  DateTime  @default(now())
+}
+
+model SmokeTest {
+  id            String    @id @default(uuid())
+  artifactId    String
+  artifact      Artifact  @relation(fields: [artifactId], references: [id])
+  requestedById String
+  requestedBy   Profile   @relation("RequestedBy", fields: [requestedById], references: [id])
+  status        String    @default("requested") // 'requested' | 'approved' | 'running' | 'completed'
+  budget        Float     @default(0)
+  days          Int       @default(14)
+  adCampaignId  String?
+  requestedAt   DateTime  @default(now())
+  completedAt   DateTime?
+  report        SmokeTestReport?
+}
+
+model SmokeTestReport {
+  id             String    @id @default(uuid())
+  smokeTestId    String    @unique
+  smokeTest      SmokeTest @relation(fields: [smokeTestId], references: [id])
+  metrics        String    @default("{}") // JSON: impressions, clicks, ctr, signups, conversions, cac, daily[{date,visitors,signups}]
+  recommendation String    @default("[]") // JSON string[] insights
+  successScore   Float     @default(0)
+  createdAt      DateTime  @default(now())
+}
+
+model MarketplaceListing {
+  id           String   @id @default(uuid())
+  artifactId   String   @unique
+  artifact     Artifact @relation(fields: [artifactId], references: [id])
+  listedById   String
+  listedBy     Profile  @relation(fields: [listedById], references: [id])
+  revenueModel String   @default("ad_share") // 'ad_share' | 'paid' | 'freemium'
+  price        Float?
+  status       String   @default("active") // 'active' | 'paused'
+  createdAt    DateTime @default(now())
+}
+
+// ────────────────────────────── Phase 5: matching marketplace ──────────────────────────────
+
+model ProblemBrief {
+  id             String   @id @default(uuid())
+  authorId       String
+  author         Profile  @relation(fields: [authorId], references: [id])
+  title          String   @default("")
+  rawText        String
+  structuredSpec String   @default("{}") // AI-structured spec JSON
+  category       String?
+  budget         Float?
+  status         String   @default("draft") // 'draft' | 'submitted' | 'approved' | 'rejected' | 'matched'
+  createdAt      DateTime @default(now())
+  bids           Bid[]
+  match          Match?
+}
+
+model Bid {
+  id          String       @id @default(uuid())
+  briefId     String
+  brief       ProblemBrief @relation(fields: [briefId], references: [id])
+  developerId String
+  developer   Profile      @relation(fields: [developerId], references: [id])
+  proposal    String
+  price       Float
+  etaDays     Int          @default(14)
+  status      String       @default("pending") // 'pending' | 'accepted' | 'rejected'
+  match       Match?
+  createdAt   DateTime     @default(now())
+}
+
+model Match {
+  id        String       @id @default(uuid())
+  briefId   String       @unique
+  brief     ProblemBrief @relation(fields: [briefId], references: [id])
+  bidId     String       @unique
+  bid       Bid          @relation(fields: [bidId], references: [id])
+  contract  Contract?
+  matchedAt DateTime     @default(now())
+}
+
+model Contract {
+  id                 String   @id @default(uuid())
+  matchId            String   @unique
+  match              Match    @relation(fields: [matchId], references: [id])
+  revenueShareTerms  String   @default("{}") // JSON: developerShare, platformShare, terms[]
+  status             String   @default("active") // 'active' | 'completed' | 'terminated'
+  createdAt          DateTime @default(now())
 }

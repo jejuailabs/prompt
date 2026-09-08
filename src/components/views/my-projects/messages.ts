@@ -1,0 +1,41 @@
+// my-projects view namespace — 내 프로젝트 (owned by views-a)
+const messages = {
+  ko: {
+    title: '프로젝트',
+    subtitle: '내 결과물과 프롬프트를 한곳에서 관리하세요',
+    upload: '결과물 업로드',
+    needLoginTitle: '로그인이 필요합니다',
+    needLoginDesc: '로그인하면 내 결과물과 프롬프트를 관리할 수 있습니다',
+    tabPublished: '게시됨',
+    tabDrafts: '초안',
+    tabPrompts: '내 프롬프트',
+    emptyPublishedTitle: '게시한 결과물이 없습니다',
+    emptyPublishedDesc: '전시실에 결과물을 게시해 다른 사람들과 공유해 보세요',
+    emptyDraftsTitle: '작성 중인 초안이 없습니다',
+    emptyDraftsDesc: '업로드하거나 생성한 결과물의 초안이 여기에 표시됩니다',
+    emptyPromptsTitle: '작성한 프롬프트가 없습니다',
+    emptyPromptsDesc: '갤러리에서 새 프롬프트를 작성해 보세요',
+    publishedToast: '게시되었습니다',
+    loadError: '목록을 불러오지 못했습니다',
+  },
+  en: {
+    title: 'My Projects',
+    subtitle: 'Manage your results and prompts in one place',
+    upload: 'Upload Result',
+    needLoginTitle: 'Login required',
+    needLoginDesc: 'Log in to manage your results and prompts',
+    tabPublished: 'Published',
+    tabDrafts: 'Drafts',
+    tabPrompts: 'My Prompts',
+    emptyPublishedTitle: 'No published results yet',
+    emptyPublishedDesc: 'Publish your results to the gallery and share them with others',
+    emptyDraftsTitle: 'No drafts in progress',
+    emptyDraftsDesc: 'Drafts of uploaded or generated results will appear here',
+    emptyPromptsTitle: 'No prompts written yet',
+    emptyPromptsDesc: 'Write a new prompt in the gallery',
+    publishedToast: 'Published',
+    loadError: 'Failed to load the list',
+  },
+} as const;
+
+export default messages;

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>심해의 침입자</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0714;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;overflow:hidden;touch-action:none}
+  #wrap{position:relative}
+  canvas{display:block;border-radius:12px;box-shadow:0 0 40px #001f3f55;background:#0b0714;max-width:96vw;max-height:96vh}
+  #hud{position:absolute;top:10px;left:14px;right:14px;display:flex;justify-content:space-between;color:#fff;font-size:12px;letter-spacing:1px;text-shadow:0 0 6px #001f3f;pointer-events:none}
+  #overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,3,12,.74);color:#fff;text-align:center;backdrop-filter:blur(2px);border-radius:12px}
+  #overlay h1{margin:0 0 6px;font-size:24px;color:#001f3f;letter-spacing:2px}
+  #overlay p{margin:3px 0;font-size:12px;color:#c9c2e0}
+  #overlay button{margin-top:14px;padding:10px 26px;font-size:14px;font-weight:700;color:#fff;background:linear-gradient(135deg,#001f3f,#5b21b6);border:0;border-radius:999px;cursor:pointer}
+  #overlay button:hover{filter:brightness(1.15)}
+  .badge{font-size:10px;color:#8f86ad;margin-top:12px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="420" height="640"></canvas>
+  <div id="hud"><span id="hScore">SCORE 0</span><span id="hWave">WAVE 1</span><span id="hLives">HP ♥♥♥</span></div>
+  <div id="overlay">
+    <h1>심해의 침입자</h1>
+    <p>이동: ← → 또는 A D · 모바일은 터치 드래그</p>
+    <p>발사: 스페이스 (정지 시 자동 발사)</p>
+    <button id="btnStart">게임 시작</button>
+    <div class="badge">PLAYLAB SANDBOX · TIER 1 IFRAME ENGINE</div>
+  </div>
+</div>
+<script>
+(() => {
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const hScore = document.getElementById('hScore'), hWave = document.getElementById('hWave'), hLives = document.getElementById('hLives');
+  const W = cv.width, H = cv.height;
+  const ACCENT = '#001f3f';
+  const SPEED = 4; // 1~5 difficulty
+  let running = false, raf = 0;
+
+  // Starfield
+  const stars = Array.from({ length: 70 }, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    z: 0.4 + Math.random() * 1.6, r: Math.random() * 1.6 + 0.4
+  }));
+
+  const player = { x: W / 2, y: H - 70, w: 34, h: 26, speed: 4.4, cooldown: 0 };
+  let bullets = [], enemies = [], particles = [];
+  let score = 0, wave = 1, lives = 3, keys = {}, touchX = null;
+
+  document.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if (e.key === ' ') e.preventDefault(); });
+  document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+  cv.addEventListener('pointerdown', e => { touchX = toGameX(e); });
+  cv.addEventListener('pointermove', e => { if (touchX !== null) touchX = toGameX(e); });
+  cv.addEventListener('pointerup', () => { touchX = null; });
+  function toGameX(e) { const r = cv.getBoundingClientRect(); return (e.clientX - r.left) * (W / r.width); }
+
+  function spawnWave() {
+    enemies = [];
+    const rows = Math.min(2 + wave, 5), cols = 6;
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      enemies.push({
+        x: 50 + c * ((W - 100) / (cols - 1)), y: 60 + r * 44,
+        w: 26, h: 20, t: Math.random() * 6.28, hp: r === 0 ? 2 : 1, phase: r * 0.6
+      });
+    }
+  }
+
+  function fire() {
+    bullets.push({ x: player.x, y: player.y - 18, vy: -7.5 * (0.9 + SPEED * 0.06) });
+  }
+
+  function boom(x, y, color) {
+    for (let i = 0; i < 12; i++) particles.push({
+      x, y, vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.5) * 5,
+      life: 1, color
+    });
+  }
+
+  function update(dt) {
+    // stars
+    stars.forEach(s => { s.y += s.z * 1.4 * SPEED * dt * 60; if (s.y > H) { s.y = 0; s.x = Math.random() * W; } });
+    // player move
+    if (keys['arrowleft'] || keys['a']) player.x -= player.speed * dt * 60;
+    if (keys['arrowright'] || keys['d']) player.x += player.speed * dt * 60;
+    if (touchX !== null) player.x += (touchX - player.x) * 0.22;
+    player.x = Math.max(24, Math.min(W - 24, player.x));
+    // auto-fire cooldown
+    player.cooldown -= dt;
+    const firing = keys[' '] || touchX !== null;
+    if (firing && player.cooldown <= 0) { fire(); player.cooldown = 0.24; }
+    // bullets
+    bullets.forEach(b => b.y += b.vy * dt * 60);
+    bullets = bullets.filter(b => b.y > -10);
+    // enemies
+    const dir = Math.sin(wave) >= 0 ? 1 : -1;
+    enemies.forEach(en => {
+      en.t += dt * 2 * SPEED;
+      en.x += Math.sin(en.t) * 22 * dt + dir * 6 * dt * SPEED;
+      en.y += 7 * dt * SPEED;
+    });
+    // hit detection
+    for (const b of bullets) for (const en of enemies) {
+      if (!en.hp) continue;
+      if (Math.abs(b.x - en.x) < en.w / 2 + 3 && Math.abs(b.y - en.y) < en.h / 2 + 6) {
+        en.hp--; b.y = -100; score += 10;
+        if (en.hp <= 0) { boom(en.x, en.y, ACCENT); score += 15; }
+      }
+    }
+    enemies = enemies.filter(en => en.hp > 0 && en.y < H - 90);
+    // enemy reaches player zone
+    for (const en of enemies) if (en.y > H - 110) { lives--; en.hp = 0; boom(en.x, en.y, '#ff4d6d'); }
+    enemies = enemies.filter(en => en.hp > 0);
+    // particles
+    particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= dt * 1.8; });
+    particles = particles.filter(p => p.life > 0);
+    // wave clear
+    if (!enemies.length) { wave++; score += 50; spawnWave(); }
+    // hud
+    hScore.textContent = 'SCORE ' + score;
+    hWave.textContent = 'WAVE ' + wave;
+    hLives.textContent = 'HP ' + '♥'.repeat(Math.max(0, lives));
+    if (lives <= 0) gameOver();
+  }
+
+  function draw() {
+    ctx.fillStyle = '#0b0714'; ctx.fillRect(0, 0, W, H);
+    stars.forEach(s => { ctx.globalAlpha = 0.3 + s.z * 0.35; ctx.fillStyle = '#cfc4f2'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.28); ctx.fill(); });
+    ctx.globalAlpha = 1;
+    // player ship
+    ctx.save(); ctx.translate(player.x, player.y);
+    ctx.fillStyle = ACCENT; ctx.beginPath();
+    ctx.moveTo(0, -16); ctx.lineTo(12, 12); ctx.lineTo(0, 6); ctx.lineTo(-12, 12); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, -2, 3, 0, 6.28); ctx.fill();
+    ctx.restore();
+    // bullets
+    ctx.fillStyle = '#fff'; ctx.shadowColor = ACCENT; ctx.shadowBlur = 8;
+    bullets.forEach(b => ctx.fillRect(b.x - 1.5, b.y - 8, 3, 10));
+    ctx.shadowBlur = 0;
+    // enemies
+    enemies.forEach(en => {
+      ctx.fillStyle = en.hp > 1 ? ACCENT : '#8f7bd8';
+      ctx.beginPath(); ctx.arc(en.x, en.y, 10, Math.PI, 0);
+      ctx.lineTo(en.x + 10, en.y + 8); ctx.lineTo(en.x - 10, en.y + 8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#0b0714'; ctx.fillRect(en.x - 5, en.y - 5, 3, 3); ctx.fillRect(en.x + 2, en.y - 5, 3, 3);
+    });
+    // particles
+    particles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.fillRect(p.x - 2, p.y - 2, 4, 4); });
+    ctx.globalAlpha = 1;
+  }
+
+  let last = 0;
+  function loop(ts) {
+    if (!running) return;
+    const dt = Math.min((ts - last) / 1000, 0.05); last = ts;
+    update(dt); draw();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function start() {
+    score = 0; wave = 1; lives = 3; bullets = []; particles = [];
+    player.x = W / 2; spawnWave();
+    overlay.style.display = 'none';
+    running = true; last = performance.now();
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+  }
+  function gameOver() {
+    running = false; cancelAnimationFrame(raf);
+    overlay.querySelector('h1').textContent = 'GAME OVER';
+    overlay.querySelectorAll('p')[0].textContent = '최종 점수: ' + score + ' · 도달 웨이브: ' + wave;
+    overlay.querySelector('button').textContent = '다시 도전';
+    overlay.style.display = 'flex';
+  }
+  document.getElementById('btnStart').addEventListener('click', start);
+})();
+</script>
+</body>
+</html>
