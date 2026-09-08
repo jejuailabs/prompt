@@ -6,6 +6,7 @@ import { useAppStore } from '@/lib/store';
 import HomeView from '@/components/views/home';
 import GalleryView from '@/components/views/gallery';
 import PromptDetailView from '@/components/views/prompt';
+import PromptWikiView from '@/components/views/prompt-wiki';
 import ProjectDetailView from '@/components/views/project';
 import ModelLabView from '@/components/views/lab';
 import PipelinesView from '@/components/views/pipelines';
@@ -32,6 +33,8 @@ export default function ViewRouter() {
       return <PromptDetailView key={params.id ?? 'none'} />;
     case 'project':
       return <ProjectDetailView key={params.id ?? 'none'} />;
+    case 'prompt-wiki':
+      return <PromptWikiView />;
     case 'lab':
       return <ModelLabView key={`${params.promptId ?? ''}-${params.promptText ?? ''}`} />;
     case 'pipelines':

@@ -20,6 +20,7 @@ export type ViewKey =
   | 'home'
   | 'gallery'
   | 'prompt'
+  | 'prompt-wiki'
   | 'project'
   | 'lab'
   | 'pipelines'
