@@ -47,8 +47,9 @@ local-*
 dev.log
 dev.out.log
 test
-prompt
+/prompt
 
 server.log
 # Skills directory
 /skills/
+.vercel
