@@ -273,13 +273,15 @@ function RunInner({ pipeline }: { pipeline: PipelineDTO }) {
         />
       );
     }
-    const previewClass =
-      artifact.type === 'image' || artifact.type === '3d_asset' ? 'aspect-[4/3] w-full' : 'aspect-video w-full';
+    const isLanding = artifact.type === 'landing_page';
+    const previewClass = isLanding
+      ? 'min-h-[400px] w-full'
+      : artifact.type === 'image' || artifact.type === '3d_asset' ? 'aspect-[4/3] w-full' : 'aspect-video w-full';
     const isPublished = publishedFor === artifact.id;
 
     return (
       <Card className="overflow-hidden p-0 py-0">
-        <PreviewRenderer artifact={artifact} className={previewClass} />
+        <PreviewRenderer artifact={artifact} expanded={isLanding} className={previewClass} />
         <div className="space-y-4 p-6">
           <div>
             <p className="text-xs text-muted-foreground">{t('resultTitle')}</p>

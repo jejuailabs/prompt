@@ -225,7 +225,7 @@ export default function ProjectView() {
         {/* Preview */}
         <Card className={`overflow-hidden ${isExecutable ? 'lg:order-2' : ''}`}>
           <div className="relative">
-            <PreviewRenderer artifact={a} playing={isPlaying} className={isExecutable ? 'aspect-[4/3] w-full' : 'w-full'} />
+            <PreviewRenderer artifact={a} playing={isPlaying} expanded={a.type === 'landing_page'} className={isExecutable ? 'aspect-[4/3] w-full' : a.type === 'landing_page' ? 'min-h-[400px] w-full' : 'w-full'} />
             {isExecutable && !isPlaying && (
               <button
                 type="button"

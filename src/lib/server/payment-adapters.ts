@@ -1,35 +1,61 @@
 // Payment provider adapter pattern
-// Phase 4 swaps DemoProvider → StripeProvider without touching credit logic.
+// PAYMENT_PROVIDER=demo → instant free top-up
+// PAYMENT_PROVIDER=stripe → Stripe Checkout Session (webhook completes the purchase)
 import { addCredits } from '@/lib/server/credits';
+import { findPackage, getStripe } from '@/lib/server/stripe';
 
 export interface PurchaseResult {
   balance: number;
-  transactionId?: string;
+  checkoutUrl?: string;
 }
 
 export interface IPaymentProvider {
   name: string;
-  createCheckout(userId: string, amount: number): Promise<PurchaseResult>;
+  createCheckout(userId: string, creditAmount: number, origin?: string): Promise<PurchaseResult>;
 }
 
 // ── Demo provider: instant credit top-up with no real payment ──
 class DemoPaymentProvider implements IPaymentProvider {
   name = 'demo';
-  async createCheckout(userId: string, amount: number): Promise<PurchaseResult> {
-    const balance = await addCredits(userId, amount, 'purchase');
+  async createCheckout(userId: string, creditAmount: number): Promise<PurchaseResult> {
+    const balance = await addCredits(userId, creditAmount, 'purchase');
     return { balance };
   }
 }
 
-// ── Stripe provider: placeholder for Phase 4 ──
+// ── Stripe provider: creates a Checkout Session, credits added on webhook ──
 class StripePaymentProvider implements IPaymentProvider {
   name = 'stripe';
-  async createCheckout(_userId: string, _amount: number): Promise<PurchaseResult> {
-    // Phase 4: implement Stripe Checkout Session creation
-    // 1. Create Stripe Checkout Session with amount
-    // 2. Return session URL for client redirect
-    // 3. On webhook confirmation, call addCredits()
-    throw new Error('Stripe 결제는 아직 준비 중입니다');
+  async createCheckout(userId: string, creditAmount: number, origin?: string): Promise<PurchaseResult> {
+    const pkg = findPackage(creditAmount);
+    if (!pkg) throw new Error('지원되지 않는 충전 금액입니다');
+
+    const stripe = getStripe();
+    const baseUrl = origin || process.env.NEXT_PUBLIC_APP_URL || 'https://prompt-two-theta.vercel.app';
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      currency: 'krw',
+      line_items: [{
+        price_data: {
+          currency: 'krw',
+          unit_amount: pkg.priceKrw,
+          product_data: {
+            name: pkg.label,
+            description: `PLAYLAB 크레딧 ${pkg.credits.toLocaleString()}개`,
+          },
+        },
+        quantity: 1,
+      }],
+      metadata: {
+        userId,
+        credits: String(pkg.credits),
+      },
+      success_url: `${baseUrl}?checkout=success`,
+      cancel_url: `${baseUrl}?checkout=cancel`,
+    });
+
+    return { balance: -1, checkoutUrl: session.url ?? undefined };
   }
 }
 
