@@ -220,12 +220,12 @@ export default function ProjectView() {
         </div>
       </div>
 
-      {/* two-column body — preview lives in the right column on desktop */}
-      <div className="grid items-start gap-6 lg:grid-cols-[1fr_1.1fr]">
-        {/* RIGHT column (first in DOM → top on mobile) */}
-        <Card className="overflow-hidden lg:order-2">
+      {/* body — single column for static types, two-column for executable */}
+      <div className={`grid items-start gap-6 ${isExecutable ? 'lg:grid-cols-[1fr_1.1fr]' : 'mx-auto max-w-4xl'}`}>
+        {/* Preview */}
+        <Card className={`overflow-hidden ${isExecutable ? 'lg:order-2' : ''}`}>
           <div className="relative">
-            <PreviewRenderer artifact={a} playing={isPlaying} className="aspect-[4/3] w-full" />
+            <PreviewRenderer artifact={a} playing={isPlaying} className={isExecutable ? 'aspect-[4/3] w-full' : 'w-full'} />
             {isExecutable && !isPlaying && (
               <button
                 type="button"
@@ -244,8 +244,8 @@ export default function ProjectView() {
           </div>
         </Card>
 
-        {/* LEFT column */}
-        <div className="min-w-0 lg:order-1">
+        {/* Info */}
+        <div className={`min-w-0 ${isExecutable ? 'lg:order-1' : ''}`}>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight">{a.title}</h1>
             <Badge variant="secondary">{categoryLabel}</Badge>
