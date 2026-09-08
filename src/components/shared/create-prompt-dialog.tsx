@@ -83,6 +83,7 @@ export function CreatePromptDialog({ open, onOpenChange }: { open: boolean; onOp
 
       if (file) {
         const { url } = await uploadFile(file);
+        await api.patch(`/api/prompts/${prompt.id}`, { thumbnailUrl: url });
         await api.post('/api/artifacts', {
           title: title.trim(),
           type: 'image',

@@ -29,6 +29,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         body: body.body?.trim() || parent.body,
         category: parent.category,
         modelTags: parent.modelTags,
+        thumbnailUrl: parent.thumbnailUrl,
         forkedFromId: parent.id,
         status: 'active',
         visibility: 'public',
