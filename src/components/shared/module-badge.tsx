@@ -27,7 +27,7 @@ export function ModuleStatusBadge({ status, newUntil }: { status: string; newUnt
       </Badge>
     );
   }
-  if (status === 'coming-soon') {
+  if (status === 'coming-soon' || status === 'preparing') {
     return (
       <Badge variant="secondary" className="border-transparent px-1.5 py-0 text-[10px] text-muted-foreground">
         {t('comingSoon')}

@@ -3,7 +3,7 @@
 import type { ModuleDTO } from '@/lib/types';
 
 export interface ModuleConfigSeed extends Omit<ModuleDTO, 'newUntil'> {
-  newUntilDays?: number; // relative days from now, converted to ISO at seed time
+  newUntilDays?: number;
 }
 
 export const MODULE_CONFIGS: ModuleConfigSeed[] = [
@@ -26,18 +26,50 @@ export const MODULE_CONFIGS: ModuleConfigSeed[] = [
     icon: 'images', navOrder: 3, enabled: true, status: 'active',
     mainScreenSlot: 'none', entryView: 'gallery', requiresAuth: false, adminOnly: false,
   },
+  // ─── Tools group ───
   {
-    id: 'model-lab', phase: 2, titleKo: '모델 실험실', titleEn: 'Model Lab',
+    id: 'tool-prompt', phase: 1, titleKo: '프롬프트 작성', titleEn: 'New Prompt',
+    descKo: '프롬프트를 작성하세요', descEn: 'Write a prompt',
+    icon: 'pen-line', navOrder: 50, enabled: true, status: 'active',
+    mainScreenSlot: 'none', entryView: 'gallery', requiresAuth: false, adminOnly: false,
+    group: 'tools',
+  },
+  {
+    id: 'tool-lab', phase: 2, titleKo: '모델 실험', titleEn: 'Model Lab',
     descKo: '같은 프롬프트를 여러 모델에 태워 비교하세요', descEn: 'Compare one prompt across models',
-    icon: 'flask-conical', navOrder: 4, enabled: true, status: 'new', newUntilDays: 14,
+    icon: 'flask-conical', navOrder: 51, enabled: true, status: 'active',
     mainScreenSlot: 'none', entryView: 'lab', requiresAuth: false, adminOnly: false,
+    group: 'tools',
   },
   {
-    id: 'pipeline-hub', phase: 3, titleKo: '파이프라인', titleEn: 'Pipelines',
-    descKo: 'AI 자동화 도구로 아이디어를 완성하세요', descEn: 'Finish ideas with AI automation',
-    icon: 'workflow', navOrder: 5, enabled: true, status: 'beta',
-    mainScreenSlot: 'none', entryView: 'pipelines', requiresAuth: false, adminOnly: false,
+    id: 'tool-3d', phase: 3, titleKo: '3D 에셋 생성', titleEn: '3D Asset',
+    descKo: '3D 에셋을 생성하세요', descEn: 'Generate 3D assets',
+    icon: 'box', navOrder: 52, enabled: true, status: 'preparing',
+    mainScreenSlot: 'none', entryView: 'pipeline-run', requiresAuth: false, adminOnly: false,
+    group: 'tools',
   },
+  {
+    id: 'tool-shortform', phase: 3, titleKo: '숏폼 영상', titleEn: 'Shortform',
+    descKo: '숏폼 영상을 생성하세요', descEn: 'Generate short videos',
+    icon: 'clapperboard', navOrder: 53, enabled: true, status: 'active',
+    mainScreenSlot: 'none', entryView: 'pipeline-run', requiresAuth: false, adminOnly: false,
+    group: 'tools',
+  },
+  {
+    id: 'tool-detailpage', phase: 3, titleKo: '상세페이지 제작', titleEn: 'Detail Page',
+    descKo: '상세페이지를 자동 생성하세요', descEn: 'Auto-generate detail pages',
+    icon: 'layout-panel-left', navOrder: 54, enabled: true, status: 'preparing',
+    mainScreenSlot: 'none', entryView: 'pipeline-run', requiresAuth: false, adminOnly: false,
+    group: 'tools',
+  },
+  {
+    id: 'tool-game', phase: 3, titleKo: '게임 만들기', titleEn: 'Make a Game',
+    descKo: '게임을 만들어 보세요', descEn: 'Create a game',
+    icon: 'gamepad-2', navOrder: 55, enabled: true, status: 'preparing',
+    mainScreenSlot: 'none', entryView: 'pipeline-run', requiresAuth: false, adminOnly: false,
+    group: 'tools',
+  },
+  // ─── Other features ───
   {
     id: 'smoke-test', phase: 4, titleKo: '스모크 테스트', titleEn: 'Smoke Test',
     descKo: '광고 검증으로 출시 성공 가능성을 확인하세요', descEn: 'Validate launch potential with ads',

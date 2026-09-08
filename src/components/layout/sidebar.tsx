@@ -183,6 +183,32 @@ function AccountRow() {
 
 // ─── sidebar ───────────────────────────────────────────────────────────────
 
+function NavItem({ m, active, locale, onClick }: { m: { id: string; icon: string; status: string; newUntil: string | null; titleKo: string; titleEn: string }; active: boolean; locale: string; onClick: () => void }) {
+  const isPreparing = m.status === 'preparing';
+  return (
+    <button
+      key={m.id}
+      type="button"
+      onClick={isPreparing ? undefined : onClick}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        isPreparing
+          ? 'cursor-default text-muted-foreground/50'
+          : active
+            ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
+            : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
+      )}
+    >
+      <Icon name={m.icon} className="size-4 shrink-0" />
+      <span className="truncate">{moduleTitle(m, locale)}</span>
+      <span className="ml-auto inline-flex shrink-0">
+        <ModuleStatusBadge status={m.status} newUntil={m.newUntil} />
+      </span>
+    </button>
+  );
+}
+
 /** Desktop-only fixed-left navigation (md+). Hidden below md — mobile uses the bottom tab bar. */
 export default function Sidebar() {
   const t = useTranslations('core');
@@ -191,8 +217,11 @@ export default function Sidebar() {
   const view = useAppStore((s) => s.view);
   const navigate = useAppStore((s) => s.navigate);
   const { data: modules = [] } = useModules();
+  const [toolsOpen, setToolsOpen] = useState(true);
 
   const navItems = modules.filter((m) => (m.adminOnly ? session?.role === 'admin' : true));
+  const mainItems = navItems.filter((m) => !m.group);
+  const toolItems = navItems.filter((m) => m.group === 'tools');
 
   return (
     <aside className="sticky top-0 z-30 hidden h-screen w-60 shrink-0 flex-col border-r bg-sidebar md:flex">
@@ -201,29 +230,36 @@ export default function Sidebar() {
       </button>
 
       <nav className="scrollbar-thin flex-1 space-y-1 overflow-y-auto px-3 py-3" aria-label={t('brand')}>
-        {navItems.map((m) => {
+        {mainItems.map((m) => {
           const active = m.entryView === view;
           return (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => navigate(m.entryView as ViewKey)}
-              aria-current={active ? 'page' : undefined}
-              className={cn(
-                'flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                active
-                  ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
-                  : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground',
-              )}
-            >
-              <Icon name={m.icon} className="size-4 shrink-0" />
-              <span className="truncate">{moduleTitle(m, locale)}</span>
-              <span className="ml-auto inline-flex shrink-0">
-                <ModuleStatusBadge status={m.status} newUntil={m.newUntil} />
-              </span>
-            </button>
+            <NavItem key={m.id} m={m} active={active} locale={locale} onClick={() => navigate(m.entryView as ViewKey)} />
           );
         })}
+
+        {toolItems.length > 0 && (
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setToolsOpen(!toolsOpen)}
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-sidebar-accent-foreground"
+            >
+              <Icon name="wrench" className="size-3.5" />
+              <span>{locale === 'en' ? 'Tools' : '도구'}</span>
+              <Icon name={toolsOpen ? 'chevron-down' : 'chevron-right'} className="ml-auto size-3.5" />
+            </button>
+            {toolsOpen && (
+              <div className="mt-1 space-y-0.5 pl-1">
+                {toolItems.map((m) => {
+                  const active = m.entryView === view && (m.entryView !== 'pipeline-run' || true);
+                  return (
+                    <NavItem key={m.id} m={m} active={active} locale={locale} onClick={() => navigate(m.entryView as ViewKey)} />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       <div className="mt-auto space-y-2 border-t p-3">

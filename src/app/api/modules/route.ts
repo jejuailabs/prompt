@@ -28,6 +28,7 @@ export async function GET() {
       entryView: (m.entryView as string) ?? '',
       requiresAuth: m.requiresAuth as boolean,
       adminOnly: m.adminOnly as boolean,
+      group: (m.navGroup as string) ?? undefined,
     }));
 
     return ok(modules);

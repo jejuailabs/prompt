@@ -54,6 +54,7 @@ model Module {
   entryView      String    @default("home")
   requiresAuth   Boolean   @default(false)
   adminOnly      Boolean   @default(false)
+  navGroup       String?
   createdAt      DateTime  @default(now())
 }
 

@@ -14,7 +14,7 @@ export type ArtifactType =
 
 export type ExecutionTier = 'iframe' | 'webcontainer' | 'microvm';
 
-export type ModuleStatus = 'active' | 'new' | 'beta' | 'coming-soon';
+export type ModuleStatus = 'active' | 'new' | 'beta' | 'coming-soon' | 'preparing';
 
 export type ViewKey =
   | 'home'
@@ -59,6 +59,7 @@ export interface ModuleDTO {
   entryView: string;
   requiresAuth: boolean;
   adminOnly: boolean;
+  group?: string;
 }
 
 // ─── Artifact metadata JSON shapes ───
