@@ -25,7 +25,7 @@ export default function AppShell() {
 
       <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col">
         <Header />
-        <main className="w-full min-w-0 flex-1 pb-20 md:pb-0">
+        <main className="w-full min-w-0 flex-1 px-4 py-4 pb-20 md:px-6 md:py-6 md:pb-6 lg:px-8">
           <ViewRouter />
         </main>
         <footer className="mt-auto border-t py-4 text-center text-xs text-muted-foreground">

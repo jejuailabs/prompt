@@ -31,13 +31,13 @@ export default function PromptDetailView() {
 
   const { data: prompt, isLoading, error } = useQuery({
     queryKey: ['prompt', promptId],
-    queryFn: () => api<PromptDetailDTO>(`/api/prompts/${promptId}`),
+    queryFn: () => api.get<PromptDetailDTO>(`/api/prompts/${promptId}`),
     enabled: !!promptId,
   });
 
   const { data: comments = [] } = useQuery({
     queryKey: ['comments', 'prompt', promptId],
-    queryFn: () => api<CommentDTO[]>(`/api/comments?targetType=prompt&targetId=${promptId}`),
+    queryFn: () => api.get<CommentDTO[]>(`/api/comments?targetType=prompt&targetId=${promptId}`),
     enabled: !!promptId,
   });
 
@@ -46,14 +46,14 @@ export default function PromptDetailView() {
 
   const handleLike = async () => {
     if (!requireLogin() || !promptId) return;
-    await api('/api/vote', { method: 'POST', body: { targetType: 'prompt', targetId: promptId } });
+    await api.post('/api/vote', { targetType: 'prompt', targetId: promptId });
     qc.invalidateQueries({ queryKey: ['prompt', promptId] });
   };
 
   const handleFork = async () => {
     if (!requireLogin() || !promptId) return;
     try {
-      const forked = await api<{ id: string }>(`/api/prompts/${promptId}/fork`, { method: 'POST' });
+      const forked = await api.post<{ id: string }>(`/api/prompts/${promptId}/fork`);
       toast({ title: '포크 완료', description: '새 프롬프트가 생성되었습니다' });
       navigate('prompt', { id: forked.id });
     } catch {
@@ -65,10 +65,7 @@ export default function PromptDetailView() {
     if (!requireLogin() || !commentText.trim() || !promptId) return;
     setSubmitting(true);
     try {
-      await api('/api/comment', {
-        method: 'POST',
-        body: { targetType: 'prompt', targetId: promptId, body: commentText.trim() },
-      });
+      await api.post('/api/comment', { targetType: 'prompt', targetId: promptId, body: commentText.trim() });
       setCommentText('');
       qc.invalidateQueries({ queryKey: ['comments', 'prompt', promptId] });
       qc.invalidateQueries({ queryKey: ['prompt', promptId] });
@@ -93,7 +90,7 @@ export default function PromptDetailView() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
       {/* Back */}
       <Button variant="ghost" size="sm" onClick={() => navigate('gallery')}>
         <ArrowLeft className="mr-1 h-4 w-4" /> {t('back')}
