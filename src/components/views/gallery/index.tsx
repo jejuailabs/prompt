@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type SortKey = 'new' | 'popular' | 'forked';
@@ -35,18 +34,8 @@ const CATEGORY_EN: Record<string, string> = {
 const CATEGORY_KEYS = ['catImage', 'catVideo', 'catCoding', 'catMarketing', 'catGame', 'catOther'] as const;
 const CATEGORY_VALUES = ['이미지', '영상', '코딩', '마케팅', '게임', '기타'] as const;
 
-function ListSkeleton({ cols }: { cols: string }) {
-  return (
-    <div className={`grid gap-4 ${cols}`}>
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Card key={i} className="gap-0 p-4">
-          <Skeleton className="h-4 w-2/3" />
-          <Skeleton className="mt-2 h-3 w-full" />
-          <Skeleton className="mt-1 h-3 w-1/2" />
-        </Card>
-      ))}
-    </div>
-  );
+function ListSkeleton() {
+  return null;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -219,7 +208,7 @@ export default function GalleryView() {
 
         {/* prompts tab */}
         <TabsContent value="prompts" className="mt-0">
-          {prompts.isLoading && <ListSkeleton cols="sm:grid-cols-2 xl:grid-cols-3" />}
+          {prompts.isLoading && <ListSkeleton />}
           {prompts.isError && (
             <EmptyState
               title={t('loadError')}
@@ -249,7 +238,7 @@ export default function GalleryView() {
 
         {/* artifacts tab */}
         <TabsContent value="artifacts" className="mt-0">
-          {artifacts.isLoading && <ListSkeleton cols="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />}
+          {artifacts.isLoading && <ListSkeleton />}
           {artifacts.isError && (
             <EmptyState
               title={t('loadError')}

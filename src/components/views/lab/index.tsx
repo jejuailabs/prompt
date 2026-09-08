@@ -15,7 +15,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/shared/empty-state';
 import { StepForm } from '@/components/shared/step-form';
@@ -210,35 +209,27 @@ export default function LabView() {
               },
               {
                 title: t('stepModels'),
-                content: providersQ.isLoading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                  </div>
-                ) : providers.length ? (
-                  <div className="space-y-2">
+                content: providers.length ? (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                     {providers.map((p) => (
-                      <Card
+                      <label
                         key={p.id}
-                        onClick={() => toggleProvider(p.id)}
-                        className={cn(
-                          'flex cursor-pointer items-center gap-3 p-3 transition-colors',
-                          selected.includes(p.id) ? 'border-primary/60 bg-primary/5' : 'hover:border-primary/40',
-                        )}
+                        className="flex cursor-pointer items-center gap-1.5 select-none"
                       >
                         <Checkbox
                           checked={selected.includes(p.id)}
                           onCheckedChange={() => toggleProvider(p.id)}
-                          onClick={(e) => e.stopPropagation()}
+                          className="size-3.5"
                         />
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium">{p.displayName}</span>
-                        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                          {(p.costPerUnit * 1.4).toFixed(0)} 크
+                        <span className="text-sm">{p.displayName}</span>
+                        <span className="text-[10px] tabular-nums text-muted-foreground">
+                          {(p.costPerUnit * 1.4).toFixed(0)}크
                         </span>
-                      </Card>
+                      </label>
                     ))}
                   </div>
+                ) : providersQ.isLoading ? (
+                  <p className="text-xs text-muted-foreground">로딩 중...</p>
                 ) : (
                   <p className="text-sm text-muted-foreground">{t('providersEmpty')}</p>
                 ),
@@ -319,12 +310,9 @@ export default function LabView() {
                     {g.jobs.map((job) => (
                       <div key={job.id} className="group relative aspect-square border-t">
                         {(job.status === 'queued' || job.status === 'running') && (
-                          <>
-                            <Skeleton className="absolute inset-0 size-full rounded-none" />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <Loader2 className="size-6 animate-spin text-primary" />
-                            </div>
-                          </>
+                          <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                            <Loader2 className="size-6 animate-spin text-primary" />
+                          </div>
                         )}
                         {job.status === 'failed' && (
                           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-3 text-center">

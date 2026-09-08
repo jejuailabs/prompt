@@ -39,7 +39,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -115,17 +114,7 @@ export default function ProjectView() {
     return <EmptyState title={t('notFound')} description={t('notFoundDesc')} />;
   }
   if (artifactQ.isLoading) {
-    return (
-      <div className="grid items-start gap-6 lg:grid-cols-[1fr_1.1fr]">
-        <div className="space-y-3 lg:order-1">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
-          <Skeleton className="h-10 w-1/2" />
-        </div>
-        <Skeleton className="aspect-[4/3] w-full rounded-xl lg:order-2" />
-      </div>
-    );
+    return null;
   }
   if (artifactQ.isError || !a) {
     return (
@@ -396,9 +385,7 @@ export default function ProjectView() {
         <TabsContent value="revenue" className="mt-4">
           {!isOwner ? (
             <EmptyState title={t('revenuePrivate')} description={t('revenuePrivateDesc')} />
-          ) : revenueQ.isLoading ? (
-            <Skeleton className="h-24 w-full rounded-xl" />
-          ) : shares.length ? (
+          ) : revenueQ.isLoading ? null : shares.length ? (
             <Card className="divide-y p-0 py-0">
               {shares.map((s) => (
                 <div key={s.id} className="flex items-center gap-3 p-4">
@@ -438,12 +425,7 @@ export default function ProjectView() {
               </Button>
             </div>
             <div className="mt-6 space-y-4">
-              {commentsQ.isLoading ? (
-                <>
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                </>
-              ) : (commentsQ.data ?? []).length ? (
+              {commentsQ.isLoading ? null : (commentsQ.data ?? []).length ? (
                 (commentsQ.data ?? []).map((c) => (
                   <div key={c.id} className="flex gap-3">
                     <Avatar className="size-7">

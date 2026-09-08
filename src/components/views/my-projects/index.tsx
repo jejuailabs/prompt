@@ -16,7 +16,6 @@ import { ViewHeader } from '@/components/shared/view-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const CATEGORY_EN: Record<string, string> = {
@@ -29,19 +28,7 @@ const CATEGORY_EN: Record<string, string> = {
 };
 
 function GridSkeleton() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <Card key={i} className="gap-0 overflow-hidden p-0">
-          <Skeleton className="aspect-video w-full rounded-none" />
-          <div className="space-y-2 p-4">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-1/2" />
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
+  return null;
 }
 
 export default function MyProjectsView() {
@@ -218,13 +205,7 @@ export default function MyProjectsView() {
 
         {/* my prompts */}
         <TabsContent value="prompts" className="mt-0">
-          {prompts.isLoading && (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full rounded-xl" />
-              ))}
-            </div>
-          )}
+          {prompts.isLoading && null}
           {prompts.isError && (
             <EmptyState
               title={t('loadError')}
