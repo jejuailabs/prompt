@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft, Edit2, FlaskConical, GitFork, Heart, Loader2, MessageCircle, Send, Trash2 } from 'lucide-react';
@@ -61,6 +61,16 @@ export default function PromptDetailView() {
   const isOwner = !!session && !!prompt && session.id === prompt.ownerId;
   const canEdit = isOwner;
 
+  useEffect(() => {
+    if (params.autoEdit === 'true' && prompt && isOwner && !editOpen) {
+      setEditTitle(prompt.title);
+      setEditBody(prompt.body);
+      setEditCategory(prompt.category);
+      setEditThumb(prompt.thumbnailUrl ?? null);
+      setEditOpen(true);
+    }
+  }, [prompt, isOwner, params.autoEdit]);
+
   const handleLike = async () => {
     if (!requireLogin() || !promptId) return;
     await api.post('/api/vote', { targetType: 'prompt', targetId: promptId });
@@ -71,8 +81,8 @@ export default function PromptDetailView() {
     if (!requireLogin() || !promptId) return;
     try {
       const forked = await api.post<{ id: string }>(`/api/prompts/${promptId}/fork`);
-      toast({ title: '포크 완료', description: '새 프롬프트가 생성되었습니다' });
-      navigate('prompt', { id: forked.id });
+      toast({ title: '포크 완료', description: '새 프롬프트가 생성되었습니다. 수정해서 나만의 버전을 만들어보세요!' });
+      navigate('prompt', { id: forked.id, autoEdit: 'true' });
     } catch {
       toast({ title: '오류', description: '포크에 실패했습니다', variant: 'destructive' });
     }
