@@ -1,7 +1,7 @@
 // GET /api/prompts/[id] — PromptDetailDTO (versions, artifacts, forkParent)
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { getSessionUser, HttpError } from '@/lib/auth';
+import { getSessionUserFast, HttpError } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 import { serializePromptDetail } from '@/lib/server/serialize';
 
@@ -10,7 +10,7 @@ type RouteParams = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const user = await getSessionUser();
+    const user = await getSessionUserFast();
     const prompt = await db.prompt.findUnique({
       where: { id },
       include: {

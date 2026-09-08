@@ -1,7 +1,7 @@
 // GET /api/search?q= — search prompts + published artifacts
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { getSessionUser } from '@/lib/auth';
+import { getSessionUserFast } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 import { serializeArtifacts, serializePrompts } from '@/lib/server/serialize';
 
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const q = (searchParams.get('q') ?? '').trim();
-    const user = await getSessionUser();
+    const user = await getSessionUserFast();
     const userId = user?.id ?? null;
 
     if (!q) return ok({ prompts: [], artifacts: [] });

@@ -34,6 +34,30 @@ export async function getSessionUser(): Promise<DbSessionUser | null> {
   };
 }
 
+// Fast path for read-only routes: parses JWT locally, no network call.
+// Only use for GET endpoints where user ID is needed for non-critical features (likedByMe etc).
+export async function getSessionUserFast(): Promise<DbSessionUser | null> {
+  const supabase = await createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return null;
+
+  const user = await db.profile.findUnique({
+    where: { id: session.user.id },
+    include: { credits: true },
+  });
+  if (!user || user.banned) return null;
+
+  return {
+    id: user.id,
+    username: user.username,
+    avatarUrl: user.avatarUrl,
+    role: user.role,
+    banned: user.banned,
+    title: user.title,
+    credits: user.credits?.balance ?? 0,
+  };
+}
+
 export async function requireUser(): Promise<DbSessionUser> {
   const user = await getSessionUser();
   if (!user) throw new HttpError('로그인이 필요합니다', 401);

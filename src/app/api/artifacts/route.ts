@@ -3,7 +3,7 @@
 import { NextRequest } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
-import { getSessionUser, HttpError, requireUser } from '@/lib/auth';
+import { getSessionUserFast, HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { serializeArtifacts, serializeArtifactSingle } from '@/lib/server/serialize';
 import { logEvent } from '@/lib/events';
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     const moduleId = searchParams.get('moduleId') || undefined;
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || DEFAULT_LIMIT, 1), 100);
 
-    const user = await getSessionUser();
+    const user = await getSessionUserFast();
     const where: Prisma.ArtifactWhereInput = {};
 
     if (scope === 'mine' || scope === 'drafts') {

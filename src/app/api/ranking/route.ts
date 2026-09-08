@@ -1,12 +1,12 @@
 // GET /api/ranking — top 5 prompts & top 5 published artifacts by likeCount
 import { db } from '@/lib/db';
-import { getSessionUser } from '@/lib/auth';
+import { getSessionUserFast } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 import { loadPromptExtras, loadSocial, serializeArtifacts, serializePrompt } from '@/lib/server/serialize';
 
 export async function GET() {
   try {
-    const user = await getSessionUser();
+    const user = await getSessionUserFast();
     const userId = user?.id ?? null;
 
     const [promptRows, artifactRows] = await Promise.all([

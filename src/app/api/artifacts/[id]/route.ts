@@ -3,7 +3,7 @@
 // DELETE /api/artifacts/[id] — owner delete (with FK-safe cleanup)
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { getSessionUser, HttpError, requireUser } from '@/lib/auth';
+import { getSessionUserFast, HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { parseJson, serializeArtifactSingle } from '@/lib/server/serialize';
 import { logEvent } from '@/lib/events';
@@ -13,7 +13,7 @@ type RouteParams = { params: Promise<{ id: string }> };
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const user = await getSessionUser();
+    const user = await getSessionUserFast();
     const artifact = await db.artifact.findUnique({ where: { id }, include: { owner: true } });
     if (!artifact) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
     await db.artifact.update({ where: { id: artifact.id }, data: { views: { increment: 1 } } });
