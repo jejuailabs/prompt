@@ -59,8 +59,7 @@ export default function PromptDetailView() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   const isOwner = !!session && !!prompt && session.id === prompt.ownerId;
-  const isAdmin = session?.role === 'admin';
-  const canEdit = isOwner || isAdmin;
+  const canEdit = isOwner;
 
   const handleLike = async () => {
     if (!requireLogin() || !promptId) return;
