@@ -1,11 +1,11 @@
 // GET /api/artifacts?scope=feed|mine|drafts&type=&q=&sort=new|popular&moduleId=&limit=
 // POST /api/artifacts — create artifact (draft or published)
 import { NextRequest } from 'next/server';
-import { Prisma } from '@prisma/client';
+import { supaAdmin } from '@/lib/supabase/admin';
 import { db } from '@/lib/db';
 import { getSessionUserFast, HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
-import { parseJson, serializeArtifactSingle, toUserBrief } from '@/lib/server/serialize';
+import { serializeArtifactSingle } from '@/lib/server/serialize';
 import { logEvent } from '@/lib/events';
 import type { ArtifactDTO, ArtifactMetadata, ArtifactType, ExecutionTier } from '@/lib/types';
 
@@ -24,6 +24,12 @@ interface CreateBody {
   visibility?: string;
 }
 
+function parseJsonSafe<T>(raw: unknown, fallback: T): T {
+  if (!raw) return fallback;
+  if (typeof raw === 'object') return raw as T;
+  try { return JSON.parse(raw as string); } catch { return fallback; }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -35,78 +41,88 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || DEFAULT_LIMIT, 1), 100);
 
     const user = await getSessionUserFast();
-    const where: Prisma.ArtifactWhereInput = {};
+
+    let query = supaAdmin
+      .from('Artifact')
+      .select('*, owner:Profile!Artifact_ownerId_fkey(*)')
+      .limit(limit);
 
     if (scope === 'mine' || scope === 'drafts') {
       if (!user) throw new HttpError('로그인이 필요합니다', 401);
-      where.ownerId = user.id;
-      if (scope === 'drafts') where.status = 'draft';
+      query = query.eq('ownerId', user.id);
+      if (scope === 'drafts') query = query.eq('status', 'draft');
     } else {
-      where.status = 'published';
-      where.visibility = 'public';
+      query = query.eq('status', 'published').eq('visibility', 'public');
     }
 
-    if (type) where.type = type;
-    if (moduleId) where.sourceModule = moduleId;
-    if (q) {
-      where.OR = [{ title: { contains: q } }, { description: { contains: q } }];
+    if (type) query = query.eq('type', type);
+    if (moduleId) query = query.eq('sourceModule', moduleId);
+    if (q) query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+
+    if (sort === 'popular') {
+      query = query.order('likeCount', { ascending: false });
+    } else {
+      query = query.order('createdAt', { ascending: false });
     }
 
-    const orderBy: Prisma.ArtifactOrderByWithRelationInput =
-      sort === 'popular' ? { likeCount: 'desc' } : { createdAt: 'desc' };
-
-    const rows = await db.artifact.findMany({
-      where,
-      include: { owner: true },
-      orderBy,
-      take: limit,
-    });
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
 
     // Filter disabled modules for feed scope
-    let result = rows;
+    let filtered = rows ?? [];
     if (scope === 'feed') {
-      const modules = await db.module.findMany({ select: { id: true, enabled: true } });
-      const disabled = new Set(modules.filter((m) => !m.enabled).map((m) => m.id));
-      result = rows.filter((a) => !a.sourceModule || !disabled.has(a.sourceModule));
+      const { data: modules } = await supaAdmin
+        .from('Module')
+        .select('id, enabled');
+      const disabled = new Set((modules ?? []).filter((m: Record<string, unknown>) => !m.enabled).map((m: Record<string, unknown>) => m.id as string));
+      filtered = filtered.filter((a: Record<string, unknown>) => !a.sourceModule || !disabled.has(a.sourceModule as string));
     }
 
     let likedSet = new Set<string>();
-    if (user && result.length) {
-      const myVotes = await db.vote.findMany({
-        where: { targetType: 'artifact', targetId: { in: result.map(r => r.id) }, userId: user.id },
-        select: { targetId: true },
-      });
-      likedSet = new Set(myVotes.map(v => v.targetId));
+    if (user && filtered.length) {
+      const { data: votes } = await supaAdmin
+        .from('Vote')
+        .select('targetId')
+        .eq('targetType', 'artifact')
+        .eq('userId', user.id)
+        .in('targetId', filtered.map((r: Record<string, unknown>) => r.id as string));
+      if (votes) likedSet = new Set(votes.map((v: Record<string, unknown>) => v.targetId as string));
     }
 
-    const dtos: ArtifactDTO[] = result.map(a => {
-      const meta = parseJson<Partial<ArtifactMetadata>>(a.metadata, {});
+    const dtos: ArtifactDTO[] = filtered.map((a: Record<string, unknown>) => {
+      const owner = a.owner as Record<string, unknown> | null;
+      const meta = parseJsonSafe<Partial<ArtifactMetadata>>(a.metadata, {});
       const metadata: ArtifactMetadata = {
         ...meta,
         tags: meta.tags ?? [],
-        stats: meta.stats ?? { views: a.views, plays: 0, likes: a.likeCount, completionRate: 0 },
+        stats: meta.stats ?? { views: (a.views as number) ?? 0, plays: 0, likes: (a.likeCount as number) ?? 0, completionRate: 0 },
       };
       return {
-        id: a.id,
+        id: a.id as string,
         type: a.type as ArtifactType,
-        title: a.title,
-        description: a.description,
-        ownerId: a.ownerId,
-        owner: toUserBrief(a.owner),
-        sourcePromptId: a.sourcePromptId,
-        sourceModule: a.sourceModule,
-        fileUrl: a.fileUrl,
-        contentUrl: a.contentUrl,
+        title: a.title as string,
+        description: (a.description as string) ?? '',
+        ownerId: a.ownerId as string,
+        owner: {
+          id: owner?.id as string ?? '',
+          username: owner?.username as string ?? '',
+          avatarUrl: (owner?.avatarUrl as string) ?? null,
+          role: (owner?.role as string) ?? 'user',
+        },
+        sourcePromptId: (a.sourcePromptId as string) ?? null,
+        sourceModule: (a.sourceModule as string) ?? null,
+        fileUrl: (a.fileUrl as string) ?? null,
+        contentUrl: (a.contentUrl as string) ?? null,
         metadata,
         executionTier: (a.executionTier ?? null) as ExecutionTier | null,
         status: a.status as ArtifactDTO['status'],
-        visibility: a.visibility,
-        version: a.version,
-        views: a.views,
-        createdAt: a.createdAt.toISOString(),
-        likeCount: a.likeCount,
-        commentCount: a.commentCount,
-        likedByMe: likedSet.has(a.id),
+        visibility: a.visibility as string,
+        version: String((a.version as number) ?? 1),
+        views: (a.views as number) ?? 0,
+        createdAt: a.createdAt as string,
+        likeCount: (a.likeCount as number) ?? 0,
+        commentCount: (a.commentCount as number) ?? 0,
+        likedByMe: likedSet.has(a.id as string),
       };
     });
 
@@ -141,7 +157,6 @@ export async function POST(req: NextRequest) {
       include: { owner: true },
     });
 
-    // Increment parent prompt's artifactCount
     if (body.sourcePromptId) {
       await db.prompt.update({
         where: { id: body.sourcePromptId },

@@ -1,45 +1,125 @@
 // GET /api/search?q= — search prompts + published artifacts
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { supaAdmin } from '@/lib/supabase/admin';
 import { getSessionUserFast } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
-import { serializeArtifacts, serializePrompts } from '@/lib/server/serialize';
+import type { ArtifactDTO, ArtifactMetadata, ArtifactType, ExecutionTier, PromptDTO } from '@/lib/types';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const q = (searchParams.get('q') ?? '').trim();
     const user = await getSessionUserFast();
-    const userId = user?.id ?? null;
 
     if (!q) return ok({ prompts: [], artifacts: [] });
 
-    const [promptRows, artifactRows] = await Promise.all([
-      db.prompt.findMany({
-        where: {
-          status: 'active',
-          OR: [{ title: { contains: q } }, { body: { contains: q } }],
-        },
-        include: { owner: true },
-        orderBy: { createdAt: 'desc' },
-        take: 8,
-      }),
-      db.artifact.findMany({
-        where: {
-          status: 'published',
-          visibility: 'public',
-          OR: [{ title: { contains: q } }, { description: { contains: q } }],
-        },
-        include: { owner: true },
-        orderBy: { createdAt: 'desc' },
-        take: 8,
-      }),
+    const [promptRes, artifactRes] = await Promise.all([
+      supaAdmin
+        .from('Prompt')
+        .select('*, owner:Profile!Prompt_ownerId_fkey(*)')
+        .eq('status', 'active')
+        .or(`title.ilike.%${q}%,body.ilike.%${q}%`)
+        .order('createdAt', { ascending: false })
+        .limit(8),
+      supaAdmin
+        .from('Artifact')
+        .select('*, owner:Profile!Artifact_ownerId_fkey(*)')
+        .eq('status', 'published')
+        .eq('visibility', 'public')
+        .or(`title.ilike.%${q}%,description.ilike.%${q}%`)
+        .order('createdAt', { ascending: false })
+        .limit(8),
     ]);
 
-    return ok({
-      prompts: await serializePrompts(promptRows, userId),
-      artifacts: await serializeArtifacts(artifactRows, userId),
+    if (promptRes.error) throw new Error(promptRes.error.message);
+    if (artifactRes.error) throw new Error(artifactRes.error.message);
+
+    let likedSet = new Set<string>();
+    if (user) {
+      const allIds = [
+        ...(promptRes.data ?? []).map((p: Record<string, unknown>) => p.id as string),
+        ...(artifactRes.data ?? []).map((a: Record<string, unknown>) => a.id as string),
+      ];
+      if (allIds.length) {
+        const { data: votes } = await supaAdmin
+          .from('Vote')
+          .select('targetId')
+          .eq('userId', user.id)
+          .in('targetId', allIds);
+        if (votes) likedSet = new Set(votes.map((v: Record<string, unknown>) => v.targetId as string));
+      }
+    }
+
+    const prompts: PromptDTO[] = (promptRes.data ?? []).map((p: Record<string, unknown>) => {
+      const owner = p.owner as Record<string, unknown> | null;
+      let modelTags: string[] = [];
+      try { modelTags = typeof p.modelTags === 'string' ? JSON.parse(p.modelTags as string) : []; } catch {}
+      return {
+        id: p.id as string,
+        title: p.title as string,
+        body: p.body as string,
+        category: p.category as string,
+        modelTags,
+        thumbnailUrl: (p.thumbnailUrl as string) ?? null,
+        ownerId: p.ownerId as string,
+        owner: {
+          id: owner?.id as string ?? '',
+          username: owner?.username as string ?? '',
+          avatarUrl: (owner?.avatarUrl as string) ?? null,
+          role: (owner?.role as string) ?? 'user',
+        },
+        forkedFromId: (p.forkedFromId as string) ?? null,
+        status: p.status as string,
+        createdAt: p.createdAt as string,
+        likeCount: (p.likeCount as number) ?? 0,
+        commentCount: (p.commentCount as number) ?? 0,
+        forkCount: (p.forkCount as number) ?? 0,
+        artifactCount: (p.artifactCount as number) ?? 0,
+        likedByMe: likedSet.has(p.id as string),
+      };
     });
+
+    const artifacts: ArtifactDTO[] = (artifactRes.data ?? []).map((a: Record<string, unknown>) => {
+      const owner = a.owner as Record<string, unknown> | null;
+      let meta: Partial<ArtifactMetadata> = {};
+      try {
+        meta = typeof a.metadata === 'string' ? JSON.parse(a.metadata as string) : (a.metadata as Partial<ArtifactMetadata>) ?? {};
+      } catch {}
+      const metadata: ArtifactMetadata = {
+        ...meta,
+        tags: meta.tags ?? [],
+        stats: meta.stats ?? { views: (a.views as number) ?? 0, plays: 0, likes: (a.likeCount as number) ?? 0, completionRate: 0 },
+      };
+      return {
+        id: a.id as string,
+        type: a.type as ArtifactType,
+        title: a.title as string,
+        description: (a.description as string) ?? '',
+        ownerId: a.ownerId as string,
+        owner: {
+          id: owner?.id as string ?? '',
+          username: owner?.username as string ?? '',
+          avatarUrl: (owner?.avatarUrl as string) ?? null,
+          role: (owner?.role as string) ?? 'user',
+        },
+        sourcePromptId: (a.sourcePromptId as string) ?? null,
+        sourceModule: (a.sourceModule as string) ?? null,
+        fileUrl: (a.fileUrl as string) ?? null,
+        contentUrl: (a.contentUrl as string) ?? null,
+        metadata,
+        executionTier: (a.executionTier ?? null) as ExecutionTier | null,
+        status: a.status as ArtifactDTO['status'],
+        visibility: a.visibility as string,
+        version: String((a.version as number) ?? 1),
+        views: (a.views as number) ?? 0,
+        createdAt: a.createdAt as string,
+        likeCount: (a.likeCount as number) ?? 0,
+        commentCount: (a.commentCount as number) ?? 0,
+        likedByMe: likedSet.has(a.id as string),
+      };
+    });
+
+    return ok({ prompts, artifacts });
   } catch (e) {
     return fail(e);
   }

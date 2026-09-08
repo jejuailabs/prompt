@@ -1,11 +1,11 @@
 // GET /api/prompts?scope=all|mine&sort=new|popular|forked&category=&q=
-// POST /api/prompts — create prompt (initial version row included)
+// POST /api/prompts — create prompt
 import { NextRequest } from 'next/server';
-import { Prisma } from '@prisma/client';
+import { supaAdmin } from '@/lib/supabase/admin';
 import { db } from '@/lib/db';
 import { getSessionUserFast, HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
-import { parseJson, serializePromptSingle, toUserBrief } from '@/lib/server/serialize';
+import { serializePromptSingle } from '@/lib/server/serialize';
 import { logEvent } from '@/lib/events';
 import type { PromptDTO } from '@/lib/types';
 
@@ -21,58 +21,74 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(Math.max(Number(searchParams.get('limit')) || DEFAULT_LIMIT, 1), 100);
 
     const user = await getSessionUserFast();
-    const where: Prisma.PromptWhereInput = {};
+
+    // Build Supabase query — single HTTP call, no Prisma cold start
+    let query = supaAdmin
+      .from('Prompt')
+      .select('*, owner:Profile!Prompt_ownerId_fkey(*)')
+      .limit(limit);
 
     if (scope === 'mine') {
       if (!user) throw new HttpError('로그인이 필요합니다', 401);
-      where.ownerId = user.id;
+      query = query.eq('ownerId', user.id);
     } else {
-      where.status = 'active';
+      query = query.eq('status', 'active');
     }
 
-    if (category) where.category = category;
-    if (q) where.OR = [{ title: { contains: q } }, { body: { contains: q } }];
+    if (category) query = query.eq('category', category);
+    if (q) query = query.or(`title.ilike.%${q}%,body.ilike.%${q}%`);
 
-    const orderBy: Prisma.PromptOrderByWithRelationInput =
-      sort === 'popular' ? { likeCount: 'desc' } :
-      sort === 'forked' ? { forkCount: 'desc' } :
-      { createdAt: 'desc' };
+    if (sort === 'popular') {
+      query = query.order('likeCount', { ascending: false });
+    } else if (sort === 'forked') {
+      query = query.order('forkCount', { ascending: false });
+    } else {
+      query = query.order('createdAt', { ascending: false });
+    }
 
-    const rows = await db.prompt.findMany({
-      where,
-      include: { owner: true },
-      orderBy,
-      take: limit,
-    });
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
 
-    // Check likedByMe in a single query if user is logged in
+    // likedByMe check
     let likedSet = new Set<string>();
-    if (user && rows.length) {
-      const myVotes = await db.vote.findMany({
-        where: { targetType: 'prompt', targetId: { in: rows.map(r => r.id) }, userId: user.id },
-        select: { targetId: true },
-      });
-      likedSet = new Set(myVotes.map(v => v.targetId));
+    if (user && rows?.length) {
+      const { data: votes } = await supaAdmin
+        .from('Vote')
+        .select('targetId')
+        .eq('targetType', 'prompt')
+        .eq('userId', user.id)
+        .in('targetId', rows.map((r: Record<string, unknown>) => r.id as string));
+      if (votes) likedSet = new Set(votes.map((v: Record<string, unknown>) => v.targetId as string));
     }
 
-    const result: PromptDTO[] = rows.map(p => ({
-      id: p.id,
-      title: p.title,
-      body: p.body,
-      category: p.category,
-      modelTags: parseJson<string[]>(p.modelTags, []),
-      thumbnailUrl: p.thumbnailUrl ?? null,
-      ownerId: p.ownerId,
-      owner: toUserBrief(p.owner),
-      forkedFromId: p.forkedFromId,
-      status: p.status,
-      createdAt: p.createdAt.toISOString(),
-      likeCount: p.likeCount,
-      commentCount: p.commentCount,
-      forkCount: p.forkCount,
-      artifactCount: p.artifactCount,
-      likedByMe: likedSet.has(p.id),
-    }));
+    const result: PromptDTO[] = (rows ?? []).map((p: Record<string, unknown>) => {
+      const owner = p.owner as Record<string, unknown> | null;
+      let modelTags: string[] = [];
+      try { modelTags = typeof p.modelTags === 'string' ? JSON.parse(p.modelTags as string) : []; } catch {}
+      return {
+        id: p.id as string,
+        title: p.title as string,
+        body: p.body as string,
+        category: p.category as string,
+        modelTags,
+        thumbnailUrl: (p.thumbnailUrl as string) ?? null,
+        ownerId: p.ownerId as string,
+        owner: {
+          id: owner?.id as string ?? '',
+          username: owner?.username as string ?? '',
+          avatarUrl: (owner?.avatarUrl as string) ?? null,
+          role: (owner?.role as string) ?? 'user',
+        },
+        forkedFromId: (p.forkedFromId as string) ?? null,
+        status: p.status as string,
+        createdAt: p.createdAt as string,
+        likeCount: (p.likeCount as number) ?? 0,
+        commentCount: (p.commentCount as number) ?? 0,
+        forkCount: (p.forkCount as number) ?? 0,
+        artifactCount: (p.artifactCount as number) ?? 0,
+        likedByMe: likedSet.has(p.id as string),
+      };
+    });
 
     return ok(result);
   } catch (e) {
