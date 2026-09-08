@@ -34,27 +34,22 @@ export async function getSessionUser(): Promise<DbSessionUser | null> {
   };
 }
 
-// Fast path for read-only routes: parses JWT locally, no network call.
-// Only use for GET endpoints where user ID is needed for non-critical features (likedByMe etc).
+// Ultrafast path for read-only GET routes: JWT parse only, zero DB queries.
+// Returns a minimal user object with just the ID — enough for social queries (likedByMe).
 export async function getSessionUserFast(): Promise<DbSessionUser | null> {
   const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return null;
 
-  const user = await db.profile.findUnique({
-    where: { id: session.user.id },
-    include: { credits: true },
-  });
-  if (!user || user.banned) return null;
-
+  const u = session.user;
   return {
-    id: user.id,
-    username: user.username,
-    avatarUrl: user.avatarUrl,
-    role: user.role,
-    banned: user.banned,
-    title: user.title,
-    credits: user.credits?.balance ?? 0,
+    id: u.id,
+    username: u.user_metadata?.name ?? u.email?.split('@')[0] ?? '',
+    avatarUrl: u.user_metadata?.avatar_url ?? null,
+    role: 'user',
+    banned: false,
+    title: null,
+    credits: 0,
   };
 }
 

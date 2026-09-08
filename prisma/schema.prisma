@@ -68,6 +68,7 @@ model Prompt {
   forkedFromId String?
   forkParent   Prompt?  @relation("PromptForks", fields: [forkedFromId], references: [id])
   forks        Prompt[] @relation("PromptForks")
+  thumbnailUrl String?
   visibility   String   @default("public")
   status       String   @default("active") // 'active' | 'hidden'
   reportCount  Int      @default(0)

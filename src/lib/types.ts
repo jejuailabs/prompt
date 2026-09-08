@@ -134,6 +134,7 @@ export interface PromptDTO {
   body: string;
   category: string;
   modelTags: string[];
+  thumbnailUrl?: string | null;
   ownerId: string;
   owner: UserBrief;
   forkedFromId?: string | null;

@@ -1,11 +1,10 @@
 'use client';
 
-// Prompt detail view — shows prompt body, versions, linked artifacts, comments
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, FlaskConical, GitFork, Heart, Loader2, MessageCircle, Send } from 'lucide-react';
-import { api } from '@/lib/api-client';
+import { ArrowLeft, Edit2, FlaskConical, GitFork, Heart, Loader2, MessageCircle, Send, Trash2 } from 'lucide-react';
+import { api, ApiError, uploadFile } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import type { CommentDTO, PromptDetailDTO } from '@/lib/types';
@@ -15,6 +14,15 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,6 +51,17 @@ export default function PromptDetailView() {
 
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editBody, setEditBody] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editThumb, setEditThumb] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  const isOwner = !!session && !!prompt && session.id === prompt.ownerId;
+  const isAdmin = session?.role === 'admin';
+  const canEdit = isOwner || isAdmin;
 
   const handleLike = async () => {
     if (!requireLogin() || !promptId) return;
@@ -76,9 +95,66 @@ export default function PromptDetailView() {
     }
   };
 
+  const openEdit = () => {
+    if (!prompt) return;
+    setEditTitle(prompt.title);
+    setEditBody(prompt.body);
+    setEditCategory(prompt.category);
+    setEditThumb(prompt.thumbnailUrl ?? null);
+    setEditOpen(true);
+  };
+
+  const handleThumbUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const { url } = await uploadFile(file);
+      setEditThumb(url);
+    } catch (err) {
+      toast({ title: '업로드 실패', description: err instanceof ApiError ? err.message : '다시 시도해주세요', variant: 'destructive' });
+    }
+  };
+
+  const saveEdit = async () => {
+    if (!promptId) return;
+    setBusy('edit');
+    try {
+      await api.patch(`/api/prompts/${promptId}`, {
+        title: editTitle.trim(),
+        body: editBody,
+        category: editCategory,
+        thumbnailUrl: editThumb,
+      });
+      qc.invalidateQueries({ queryKey: ['prompt', promptId] });
+      qc.invalidateQueries({ queryKey: ['prompts'] });
+      toast({ title: '수정 완료' });
+      setEditOpen(false);
+    } catch (err) {
+      toast({ title: '오류', description: err instanceof ApiError ? err.message : '수정에 실패했습니다', variant: 'destructive' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!promptId) return;
+    setBusy('delete');
+    try {
+      await api.del(`/api/prompts/${promptId}`);
+      toast({ title: '삭제 완료' });
+      qc.invalidateQueries({ queryKey: ['prompts'] });
+      navigate('gallery');
+    } catch (err) {
+      toast({ title: '오류', description: err instanceof ApiError ? err.message : '삭제에 실패했습니다', variant: 'destructive' });
+    } finally {
+      setBusy(null);
+      setDeleteConfirm(false);
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="space-y-4 p-6">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-40 w-full" />
       </div>
@@ -98,7 +174,19 @@ export default function PromptDetailView() {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">{prompt.title}</h1>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-2xl font-bold">{prompt.title}</h1>
+          {canEdit && (
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={openEdit}>
+                <Edit2 className="mr-1 h-4 w-4" /> 수정
+              </Button>
+              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setDeleteConfirm(true)}>
+                <Trash2 className="mr-1 h-4 w-4" /> 삭제
+              </Button>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
           <span>@{prompt.owner.username}</span>
           <Badge variant="outline">{prompt.category}</Badge>
@@ -109,6 +197,13 @@ export default function PromptDetailView() {
           )}
         </div>
       </div>
+
+      {/* Thumbnail */}
+      {prompt.thumbnailUrl && (
+        <div className="overflow-hidden rounded-xl">
+          <img src={prompt.thumbnailUrl} alt={prompt.title} className="w-full max-h-80 object-cover" />
+        </div>
+      )}
 
       {/* Prompt body */}
       <Card className="p-4 bg-muted/50">
@@ -167,7 +262,6 @@ export default function PromptDetailView() {
         </TabsContent>
 
         <TabsContent value="comments" className="space-y-4 mt-4">
-          {/* Comment input */}
           {session && (
             <div className="flex gap-2">
               <Textarea
@@ -201,6 +295,52 @@ export default function PromptDetailView() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>프롬프트 수정</DialogTitle>
+            <DialogDescription>제목, 내용, 썸네일을 수정할 수 있습니다.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="제목" />
+            <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} rows={6} placeholder="프롬프트 내용" />
+            <div className="space-y-2">
+              <p className="text-sm font-medium">썸네일 이미지</p>
+              {editThumb && (
+                <div className="relative">
+                  <img src={editThumb} alt="" className="h-32 w-full rounded-lg object-cover" />
+                  <Button variant="destructive" size="sm" className="absolute top-1 right-1 h-7 text-xs" onClick={() => setEditThumb(null)}>제거</Button>
+                </div>
+              )}
+              <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleThumbUpload} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditOpen(false)}>취소</Button>
+            <Button onClick={() => void saveEdit()} disabled={busy === 'edit' || !editTitle.trim() || !editBody.trim()}>
+              {busy === 'edit' && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} 저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>프롬프트 삭제</DialogTitle>
+            <DialogDescription>정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteConfirm(false)}>취소</Button>
+            <Button variant="destructive" onClick={() => void handleDelete()} disabled={busy === 'delete'}>
+              {busy === 'delete' && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} 삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

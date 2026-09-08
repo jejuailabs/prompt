@@ -12,7 +12,16 @@ import type { Locale } from '@/lib/types';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const locale = useAppStore((s) => s.locale);
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 30_000,
+        gcTime: 5 * 60_000,
+        refetchOnWindowFocus: false,
+        retry: 1,
+      },
+    },
+  }));
   const messages = useMemo(() => getMessages(locale), [locale]);
 
   return (

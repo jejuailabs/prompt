@@ -49,6 +49,19 @@ function ListSkeleton({ cols }: { cols: string }) {
   );
 }
 
+const CATEGORY_COLORS: Record<string, string> = {
+  이미지: 'from-pink-500/20 to-violet-500/20',
+  영상: 'from-blue-500/20 to-cyan-500/20',
+  코딩: 'from-emerald-500/20 to-teal-500/20',
+  마케팅: 'from-orange-500/20 to-amber-500/20',
+  게임: 'from-purple-500/20 to-indigo-500/20',
+  기타: 'from-slate-500/20 to-gray-500/20',
+};
+
+const CATEGORY_ICONS: Record<string, string> = {
+  이미지: '🎨', 영상: '🎬', 코딩: '💻', 마케팅: '📊', 게임: '🎮', 기타: '✨',
+};
+
 function PromptCard({
   prompt,
   categoryLabel,
@@ -60,6 +73,8 @@ function PromptCard({
 }) {
   const locale = useAppStore((s) => s.locale);
   const num = (n: number) => n.toLocaleString(locale === 'en' ? 'en-US' : 'ko-KR');
+  const gradient = CATEGORY_COLORS[prompt.category] ?? CATEGORY_COLORS['기타'];
+  const emoji = CATEGORY_ICONS[prompt.category] ?? '✨';
   return (
     <Card
       role="button"
@@ -71,30 +86,41 @@ function PromptCard({
           onOpen();
         }
       }}
-      className="cursor-pointer gap-0 p-4 transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+      className="cursor-pointer gap-0 overflow-hidden p-0 transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
     >
-      <h3 className="line-clamp-1 font-semibold">{prompt.title}</h3>
-      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{prompt.body}</p>
-      <div className="mt-3 flex items-center gap-1.5">
-        <Badge variant="secondary">{categoryLabel}</Badge>
-        {prompt.modelTags.slice(0, 2).map((tag) => (
-          <Badge key={tag} variant="outline" className="text-[10px]">
-            {tag}
-          </Badge>
-        ))}
-        <span className="min-w-2 flex-1" />
-        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Heart className="size-3.5" aria-hidden="true" />
-          <span className="tabular-nums">{num(prompt.likeCount)}</span>
-        </span>
-        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          <MessageCircle className="size-3.5" aria-hidden="true" />
-          <span className="tabular-nums">{num(prompt.commentCount)}</span>
-        </span>
-        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          <GitFork className="size-3.5" aria-hidden="true" />
-          <span className="tabular-nums">{num(prompt.forkCount)}</span>
-        </span>
+      {prompt.thumbnailUrl ? (
+        <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+          <img src={prompt.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+        </div>
+      ) : (
+        <div className={`flex aspect-[16/9] w-full items-center justify-center bg-gradient-to-br ${gradient}`}>
+          <span className="text-4xl">{emoji}</span>
+        </div>
+      )}
+      <div className="p-4">
+        <h3 className="line-clamp-1 font-semibold">{prompt.title}</h3>
+        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{prompt.body}</p>
+        <div className="mt-3 flex items-center gap-1.5">
+          <Badge variant="secondary">{categoryLabel}</Badge>
+          {prompt.modelTags.slice(0, 2).map((tag) => (
+            <Badge key={tag} variant="outline" className="text-[10px]">
+              {tag}
+            </Badge>
+          ))}
+          <span className="min-w-2 flex-1" />
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Heart className="size-3.5" aria-hidden="true" />
+            <span className="tabular-nums">{num(prompt.likeCount)}</span>
+          </span>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <MessageCircle className="size-3.5" aria-hidden="true" />
+            <span className="tabular-nums">{num(prompt.commentCount)}</span>
+          </span>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <GitFork className="size-3.5" aria-hidden="true" />
+            <span className="tabular-nums">{num(prompt.forkCount)}</span>
+          </span>
+        </div>
       </div>
     </Card>
   );

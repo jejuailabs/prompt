@@ -202,6 +202,7 @@ export function serializePrompt(
     body: p.body,
     category: p.category,
     modelTags: parseJson<string[]>(p.modelTags, []),
+    thumbnailUrl: p.thumbnailUrl ?? null,
     ownerId: p.ownerId,
     owner: toUserBrief(p.owner),
     forkedFromId: p.forkedFromId,
