@@ -1,11 +1,10 @@
 // Fire-and-forget async runners: lab generation jobs, pipeline executions, smoke test completion
-import fs from 'fs/promises';
-import path from 'path';
 import { db } from '@/lib/db';
 import { logEvent } from '@/lib/events';
 import { refundCredits } from '@/lib/server/credits';
 import { chatJson, generateImage } from '@/lib/server/ai';
 import { gameCoverUrl, isHexColor, renderGameHtml, writeGameBundle } from '@/lib/server/game-template';
+import { uploadBuffer } from '@/lib/server/storage';
 import type { LandingContent } from '@/lib/types';
 
 const SIZE_BY_ASPECT: Record<string, '1024x1024' | '1344x768' | '768x1344'> = {
@@ -15,11 +14,8 @@ const SIZE_BY_ASPECT: Record<string, '1024x1024' | '1344x768' | '768x1344'> = {
 };
 
 async function savePng(jobKey: string, buffer: Buffer, sub: string): Promise<string> {
-  const dir = path.join(process.cwd(), 'public', 'uploads', sub);
-  await fs.mkdir(dir, { recursive: true });
-  const filename = `${jobKey}.png`;
-  await fs.writeFile(path.join(dir, filename), buffer);
-  return `/uploads/${sub}/${filename}`;
+  const filename = `${sub}/${jobKey}.png`;
+  return uploadBuffer(filename, buffer, 'image/png');
 }
 
 function errorMessage(e: unknown): string {
@@ -365,7 +361,7 @@ async function runGamePipeline(
 
   await setProgress(55);
   const html = renderGameHtml(gameSpec.title, gameSpec.palette, gameSpec.speed);
-  const contentUrl = writeGameBundle(runId, html);
+  const contentUrl = await writeGameBundle(runId, html);
   await setProgress(90);
 
   return {

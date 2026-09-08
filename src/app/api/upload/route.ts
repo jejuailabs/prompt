@@ -1,7 +1,6 @@
-// POST /api/upload — multipart image upload (png/jpeg/webp ≤ 5MB)
+// POST /api/upload — image upload (png/jpeg/webp ≤ 5MB) → Vercel Blob
 import { NextRequest } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { put } from '@vercel/blob';
 import { HttpError, requireUser } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 
@@ -19,13 +18,15 @@ export async function POST(req: NextRequest) {
     }
     if (file.size > MAX_SIZE) throw new HttpError('파일 크기는 5MB 이하여야 합니다', 400);
 
-    const bytes = Buffer.from(await file.arrayBuffer());
     const safeName = (file.name || 'image.png').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-60);
-    const filename = `${Date.now()}-${safeName}`;
-    const dir = path.join(process.cwd(), 'public', 'uploads', 'upl');
-    await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(path.join(dir, filename), bytes);
-    return ok({ url: `/uploads/upl/${filename}` });
+    const pathname = `uploads/${Date.now()}-${safeName}`;
+
+    const blob = await put(pathname, file, {
+      access: 'public',
+      addRandomSuffix: false,
+    });
+
+    return ok({ url: blob.url });
   } catch (e) {
     return fail(e);
   }

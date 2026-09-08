@@ -1,5 +1,5 @@
 // PLAYLAB — Full schema for Phase 1~5 (per docs/05-database-schema.md)
-// SQLite adaptation: text[] → JSON string columns, enums → String fields.
+// PostgreSQL (Supabase) — deployed via Vercel + Supabase.
 // Principle C: all core tables exist from day one.
 
 generator client {
@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ────────────────────────────── Phase 1 core ──────────────────────────────
@@ -74,7 +75,6 @@ model Prompt {
 
   versions  PromptVersion[]
   artifacts Artifact[]
-  // votes/comments are polymorphic (targetType+targetId) — counted via queries
 }
 
 model PromptVersion {
@@ -99,7 +99,7 @@ model Artifact {
   sourceModule   String?
   fileUrl        String?
   contentUrl     String? // executable html (iframe sandbox) url
-  metadata       String   @default("{}") // JSON: model, tags, frames[], html, content, stats, versions[]
+  metadata       String   @default("{}") // JSON blob
   executionTier  String? // 'iframe' | 'webcontainer' | 'microvm' | null
   visibility     String   @default("public")
   status         String   @default("draft") // 'draft' | 'published' | 'archived' | 'hidden'
@@ -108,7 +108,6 @@ model Artifact {
   views          Int      @default(0)
   createdAt      DateTime @default(now())
 
-  // votes/comments are polymorphic (targetType+targetId) — counted via queries
   generationJob GenerationJob?  @relation("GenJobResult")
   pipelineRun   PipelineRun?
   revenueShares RevenueShare[]
@@ -154,7 +153,7 @@ model ModelProvider {
   category    String   @default("image") // 'image' | 'video' | 'text' | '3d'
   costPerUnit Float    @default(4)
   active      Boolean  @default(true)
-  styleHint   String   @default("") // appended to gen prompt to differentiate "models"
+  styleHint   String   @default("")
   jobs        GenerationJob[]
 }
 
@@ -279,8 +278,8 @@ model SmokeTestReport {
   id             String    @id @default(uuid())
   smokeTestId    String    @unique
   smokeTest      SmokeTest @relation(fields: [smokeTestId], references: [id])
-  metrics        String    @default("{}") // JSON: impressions, clicks, ctr, signups, conversions, cac, daily[{date,visitors,signups}]
-  recommendation String    @default("[]") // JSON string[] insights
+  metrics        String    @default("{}") // JSON
+  recommendation String    @default("[]") // JSON string[]
   successScore   Float     @default(0)
   createdAt      DateTime  @default(now())
 }
@@ -342,7 +341,7 @@ model Contract {
   id                 String   @id @default(uuid())
   matchId            String   @unique
   match              Match    @relation(fields: [matchId], references: [id])
-  revenueShareTerms  String   @default("{}") // JSON: developerShare, platformShare, terms[]
+  revenueShareTerms  String   @default("{}") // JSON
   status             String   @default("active") // 'active' | 'completed' | 'terminated'
   createdAt          DateTime @default(now())
 }

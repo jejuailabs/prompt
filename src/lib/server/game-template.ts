@@ -1,6 +1,7 @@
 // Space-shooter game template filler for pipeline-game runner
 import fs from 'fs';
 import path from 'path';
+import { uploadBuffer } from '@/lib/server/storage';
 
 function escapeHtml(s: string): string {
   return s
@@ -25,17 +26,12 @@ export function renderGameHtml(title: string, palette: string, speed: number): s
     .replace(/\{\{SPEED\}\}/g, String(Math.round(speed)));
 }
 
-/** Write game html under public/uploads/games/{runId}/index.html, return contentUrl. */
-export function writeGameBundle(runId: string, html: string): string {
-  const dir = path.join(process.cwd(), 'public', 'uploads', 'games', runId);
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'index.html'), html, 'utf-8');
-  return `/uploads/games/${runId}/index.html`;
+/** Upload game HTML to blob storage, return public URL. */
+export async function writeGameBundle(runId: string, html: string): Promise<string> {
+  return uploadBuffer(`games/${runId}/index.html`, html, 'text/html');
 }
 
-/** Cover thumbnail for generated games (falls back to an existing seed image). */
+/** Cover thumbnail for generated games (static seed image). */
 export function gameCoverUrl(): string {
-  const preferred = path.join(process.cwd(), 'public', 'uploads', 'seed', 'thumb-space-shooter.png');
-  if (fs.existsSync(preferred)) return '/uploads/seed/thumb-space-shooter.png';
-  return '/uploads/seed/thumb-cyberpunk.png';
+  return '/uploads/seed/thumb-space-shooter.png';
 }
