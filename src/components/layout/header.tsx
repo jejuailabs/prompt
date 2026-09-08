@@ -262,9 +262,9 @@ export default function Header() {
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
       <div className="flex h-14 items-center gap-2 px-3 md:px-6">
         {/* mobile logo */}
-        <div className="md:hidden">
+        <button type="button" className="md:hidden" onClick={() => navigate('home')}>
           <Logo compact />
-        </div>
+        </button>
 
         {/* desktop search */}
         <div className="relative hidden w-full max-w-md md:block">

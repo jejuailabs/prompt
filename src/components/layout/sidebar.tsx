@@ -196,9 +196,9 @@ export default function Sidebar() {
 
   return (
     <aside className="sticky top-0 z-30 hidden h-screen w-60 shrink-0 flex-col border-r bg-sidebar md:flex">
-      <div className="flex h-14 shrink-0 items-center px-4">
+      <button type="button" className="flex h-14 shrink-0 items-center px-4" onClick={() => navigate('home')}>
         <Logo />
-      </div>
+      </button>
 
       <nav className="scrollbar-thin flex-1 space-y-1 overflow-y-auto px-3 py-3" aria-label={t('brand')}>
         {navItems.map((m) => {
