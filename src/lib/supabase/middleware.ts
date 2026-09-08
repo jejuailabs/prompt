@@ -25,8 +25,9 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Refresh session if expired
-  await supabase.auth.getUser();
+  // getSession() reads JWT locally (fast) — no network call
+  // getUser() is only called in API routes that actually need auth
+  await supabase.auth.getSession();
 
   return supabaseResponse;
 }

@@ -18,7 +18,7 @@ import {
 import { api, ApiError } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import type { ArtifactDTO, CommentDTO, LandingContent, RevenueOverviewDTO, SmokeTestDTO } from '@/lib/types';
+import type { ArtifactDTO, CommentDTO, LandingContent, RevenueOverviewDTO } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,13 +39,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/shared/empty-state';
 import { PreviewRenderer } from '@/components/shared/preview-renderer';
-import { ScoreGauge } from '@/components/shared/score-gauge';
 import { StatCard } from '@/components/shared/stat-card';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -88,7 +86,6 @@ export default function ProjectView() {
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [comment, setComment] = useState('');
-  const [budget, setBudget] = useState(100000);
   const [busy, setBusy] = useState<string | null>(null);
 
   const artifactQ = useQuery({
@@ -109,12 +106,6 @@ export default function ProjectView() {
     queryKey: ['revenue'],
     queryFn: () => api.get<RevenueOverviewDTO>('/api/revenue'),
     enabled: isOwner,
-  });
-
-  const smokeQ = useQuery({
-    queryKey: ['smoke', 'artifact', id],
-    queryFn: () => api.get<SmokeTestDTO[]>(`/api/smoke-tests?scope=artifact&artifactId=${id}`),
-    enabled: !!id,
   });
 
   const toastErr = (e: unknown) => toast({ title: tc('error'), description: errMsg(e), variant: 'destructive' });
@@ -155,7 +146,6 @@ export default function ProjectView() {
   const isPlaying = playingId === a.id;
   const categoryLabel = meta.categoryLabel ?? TYPE_LABELS[a.type]?.[locale] ?? a.type;
   const shares = (revenueQ.data?.shares ?? []).filter((s) => s.artifactId === a.id);
-  const smoke = [...(smokeQ.data ?? [])].sort((x, y) => y.requestedAt.localeCompare(x.requestedAt))[0];
 
   // ── actions ──
   const share = async () => {
@@ -217,22 +207,6 @@ export default function ProjectView() {
       toastErr(e);
     }
   };
-
-  const applySmoke = async () => {
-    if (!requireLogin()) return;
-    setBusy('smoke');
-    try {
-      await api.post('/api/smoke-tests', { artifactId: a.id, budget, days: 14 });
-      toast({ title: t('smokeApplied') });
-      await qc.invalidateQueries({ queryKey: ['smoke', 'artifact', a.id] });
-    } catch (e) {
-      toastErr(e);
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const scoreLabel = (score: number) => (score >= 70 ? t('scoreHigh') : score >= 40 ? t('scoreMid') : t('scoreLow'));
 
   // ── render ──
   return (
@@ -372,7 +346,6 @@ export default function ProjectView() {
           <TabsTrigger value="overview">{t('tabOverview')}</TabsTrigger>
           <TabsTrigger value="analytics">{t('tabAnalytics')}</TabsTrigger>
           <TabsTrigger value="revenue">{t('tabRevenue')}</TabsTrigger>
-          <TabsTrigger value="smoke">{t('tabSmoke')}</TabsTrigger>
           <TabsTrigger value="comments">
             {t('tabComments')} ({a.commentCount.toLocaleString()})
           </TabsTrigger>
@@ -445,65 +418,6 @@ export default function ProjectView() {
             </Card>
           ) : (
             <EmptyState title={t('revenueEmpty')} />
-          )}
-        </TabsContent>
-
-        {/* 스모크테스트 */}
-        <TabsContent value="smoke" className="mt-4">
-          {smokeQ.isLoading ? (
-            <Skeleton className="h-32 w-full rounded-xl" />
-          ) : !smoke ? (
-            <Card className="mx-auto max-w-md space-y-4 p-6">
-              <div>
-                <p className="font-medium">{t('smokeApplyTitle')}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{t('smokeApplyDesc')}</p>
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-sm text-muted-foreground">{t('budgetLabel')}</p>
-                <Select value={String(budget)} onValueChange={(v) => setBudget(Number(v))}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[50000, 100000, 150000].map((b) => (
-                      <SelectItem key={b} value={String(b)}>
-                        {fmtWon(b)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button className="w-full" disabled={busy === 'smoke'} onClick={() => void applySmoke()}>
-                {busy === 'smoke' && <Loader2 className="animate-spin" />} {t('applySmoke')}
-              </Button>
-            </Card>
-          ) : smoke.status === 'completed' && smoke.report ? (
-            <Card className="p-6">
-              <div className="flex flex-col items-center gap-6 sm:flex-row">
-                <ScoreGauge score={smoke.report.successScore} label={scoreLabel(smoke.report.successScore)} />
-                <div className="min-w-0 flex-1 text-center sm:text-left">
-                  <p className="font-medium">{t('smokeDoneTitle')}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {fmtWon(smoke.budget)} · {smoke.days}
-                    {t('daysUnit')}
-                  </p>
-                  <Button size="sm" className="mt-3" onClick={() => navigate('smoke', { id: smoke.id })}>
-                    {t('viewReport')}
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ) : (
-            <Card className="flex items-center gap-3 p-6">
-              <Loader2 className="size-5 shrink-0 animate-spin text-primary" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium">{smoke.status === 'running' ? t('smokeRunning') : t('smokeWaiting')}</p>
-                <p className="text-xs text-muted-foreground">
-                  {fmtWon(smoke.budget)} · {smoke.days}
-                  {t('daysUnit')}
-                </p>
-              </div>
-            </Card>
           )}
         </TabsContent>
 
