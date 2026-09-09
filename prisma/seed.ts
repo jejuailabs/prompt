@@ -127,10 +127,10 @@ async function main() {
     // ── OpenAI GPT Image 2.5 (2종) ──
     { id: 'gpt-image-25-sunburst', displayName: 'GPT Image 2.5 Sunburst', category: 'image', costPerUnit: 138, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-2.5-sunburst"}' },
     { id: 'gpt-image-25-flare', displayName: 'GPT Image 2.5 Flare', category: 'image', costPerUnit: 69, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-2.5-flare"}' },
-    // ── Google Imagen 4 (3종) ──
-    { id: 'imagen-4-ultra', displayName: 'Imagen 4 Ultra', category: 'image', costPerUnit: 83, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"imagen-4.0-ultra-generate-001"}' },
-    { id: 'imagen-4-standard', displayName: 'Imagen 4 Standard', category: 'image', costPerUnit: 55, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"imagen-4.0-generate-001"}' },
-    { id: 'imagen-4-fast', displayName: 'Imagen 4 Fast', category: 'image', costPerUnit: 28, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"imagen-4.0-fast-generate-001"}' },
+    // ── Google Gemini Image (3종, generateContent + responseModalities:IMAGE) ──
+    { id: 'imagen-4-ultra', displayName: 'Imagen 4 Ultra', category: 'image', costPerUnit: 83, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"gemini-3-pro-image"}' },
+    { id: 'imagen-4-standard', displayName: 'Imagen 4 Standard', category: 'image', costPerUnit: 55, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"gemini-3.1-flash-image"}' },
+    { id: 'imagen-4-fast', displayName: 'Imagen 4 Fast', category: 'image', costPerUnit: 28, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"gemini-2.5-flash-image"}' },
     // ── Stability AI (2종) ──
     { id: 'stable-image-ultra', displayName: 'Stable Image Ultra', category: 'image', costPerUnit: 110, marginRate: 1.4, styleHint: 'artistic, painterly quality', adapterType: 'stability', adapterConfig: '{"endpoint":"ultra"}' },
     { id: 'stable-image-core', displayName: 'Stable Image Core', category: 'image', costPerUnit: 41, marginRate: 1.4, styleHint: '', adapterType: 'stability', adapterConfig: '{"endpoint":"core"}' },

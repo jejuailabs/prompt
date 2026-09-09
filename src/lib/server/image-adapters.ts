@@ -64,24 +64,22 @@ class OpenAIAdapter implements IImageAdapter {
   }
 }
 
-// ── Google Imagen 4 adapter (via Gemini API) ──
+// ── Google Imagen adapter (via Gemini generateContent API) ──
+// Uses responseModalities: ["IMAGE"] to get image output from Gemini models.
 class ImagenAdapter implements IImageAdapter {
   async generate(prompt: string, _size: string, config: AdapterConfig): Promise<ImageResult> {
     const apiKey = config.apiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
-    const model = config.model || 'imagen-4.0-generate-001';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
+    const model = config.model || 'nano-banana-pro-preview';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: [{ prompt }],
-        parameters: {
-          sampleCount: 1,
-          outputOptions: { mimeType: 'image/png' },
-        },
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ['IMAGE'] },
       }),
     });
 
@@ -91,10 +89,12 @@ class ImagenAdapter implements IImageAdapter {
     }
 
     const json = await res.json() as {
-      predictions?: { bytesBase64Encoded?: string }[];
+      candidates?: { content?: { parts?: { inlineData?: { data: string; mimeType: string } }[] } }[];
     };
-    const b64 = json.predictions?.[0]?.bytesBase64Encoded;
-    if (!b64) throw new Error('Empty image response from Imagen');
+    const parts = json.candidates?.[0]?.content?.parts ?? [];
+    const imgPart = parts.find((p) => p.inlineData?.data);
+    if (!imgPart?.inlineData) throw new Error('Empty image response from Imagen');
+    const b64 = imgPart.inlineData.data;
     return { base64: b64, buffer: Buffer.from(b64, 'base64') };
   }
 }
