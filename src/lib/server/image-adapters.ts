@@ -20,6 +20,8 @@ export interface IImageAdapter {
 }
 
 // ── OpenAI adapter (GPT Image 2 / 2.5) ──
+// Uses the gpt-image-1 endpoint. GPT Image 2+ models do NOT support response_format;
+// use output_format instead and read b64_json from the response.
 class OpenAIAdapter implements IImageAdapter {
   async generate(prompt: string, size: string, config: AdapterConfig): Promise<ImageResult> {
     const apiKey = config.apiKey || process.env.OPENAI_API_KEY;
@@ -31,7 +33,6 @@ class OpenAIAdapter implements IImageAdapter {
       prompt,
       n: 1,
       size: normalizeSize(size),
-      response_format: 'b64_json',
     };
     if (config.quality) body.quality = config.quality;
 
@@ -49,10 +50,17 @@ class OpenAIAdapter implements IImageAdapter {
       throw new Error(`OpenAI API error ${res.status}: ${err.slice(0, 200)}`);
     }
 
-    const json = await res.json() as { data?: { b64_json?: string }[] };
-    const b64 = json.data?.[0]?.b64_json;
-    if (!b64) throw new Error('Empty image response from OpenAI');
-    return { base64: b64, buffer: Buffer.from(b64, 'base64') };
+    const json = await res.json() as { data?: { b64_json?: string; url?: string }[] };
+    const item = json.data?.[0];
+    if (item?.b64_json) {
+      return { base64: item.b64_json, buffer: Buffer.from(item.b64_json, 'base64') };
+    }
+    if (item?.url) {
+      const imgRes = await fetch(item.url);
+      const buf = Buffer.from(await imgRes.arrayBuffer());
+      return { base64: buf.toString('base64'), buffer: buf };
+    }
+    throw new Error('Empty image response from OpenAI');
   }
 }
 
@@ -126,23 +134,31 @@ class StabilityAdapter implements IImageAdapter {
 }
 
 // ── Replicate adapter (FLUX, Seedream, etc.) ──
+// Uses the model-specific predictions endpoint: /v1/models/{owner}/{name}/predictions
+// This avoids the "version is required" error on official models.
 class ReplicateAdapter implements IImageAdapter {
   async generate(prompt: string, size: string, config: AdapterConfig): Promise<ImageResult> {
     const apiKey = config.apiKey || process.env.REPLICATE_API_TOKEN;
     if (!apiKey) throw new Error('Replicate API token not configured');
 
     const modelId = config.modelId || 'black-forest-labs/flux-schnell';
-    const [w, h] = normalizeSize(size).split('x').map(Number);
+    const nSize = normalizeSize(size);
+    const [w, h] = nSize.split('x').map(Number);
+    const aspectMap: Record<string, string> = {
+      '1024x1024': '1:1', '768x1344': '9:16', '1344x768': '16:9',
+    };
+    const aspect = aspectMap[nSize] || '1:1';
 
-    const createRes = await fetch('https://api.replicate.com/v1/predictions', {
+    const endpoint = `https://api.replicate.com/v1/models/${modelId}/predictions`;
+    const createRes = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
+        'Prefer': 'wait=55',
       },
       body: JSON.stringify({
-        model: modelId,
-        input: { prompt, width: w || 1024, height: h || 1024 },
+        input: { prompt, aspect_ratio: aspect, width: w || 1024, height: h || 1024 },
       }),
     });
 
@@ -151,11 +167,22 @@ class ReplicateAdapter implements IImageAdapter {
       throw new Error(`Replicate API error ${createRes.status}: ${err.slice(0, 200)}`);
     }
 
-    const prediction = await createRes.json() as { id: string; status: string; urls?: { get?: string } };
+    const prediction = await createRes.json() as {
+      id: string; status: string; output?: string[] | string; error?: string;
+      urls?: { get?: string };
+    };
+
+    if (prediction.status === 'succeeded') {
+      return this.downloadOutput(prediction.output);
+    }
+    if (prediction.status === 'failed') {
+      throw new Error(prediction.error || 'Replicate generation failed');
+    }
+
     const pollUrl = prediction.urls?.get;
     if (!pollUrl) throw new Error('No poll URL from Replicate');
 
-    const deadline = Date.now() + 120_000;
+    const deadline = Date.now() + 55_000;
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 2000));
       const pollRes = await fetch(pollUrl, {
@@ -164,14 +191,18 @@ class ReplicateAdapter implements IImageAdapter {
       const state = await pollRes.json() as { status: string; output?: string[] | string; error?: string };
       if (state.status === 'failed') throw new Error(state.error || 'Replicate generation failed');
       if (state.status === 'succeeded') {
-        const outputUrl = Array.isArray(state.output) ? state.output[0] : state.output;
-        if (!outputUrl) throw new Error('Empty output from Replicate');
-        const imgRes = await fetch(outputUrl);
-        const buf = Buffer.from(await imgRes.arrayBuffer());
-        return { base64: buf.toString('base64'), buffer: buf };
+        return this.downloadOutput(state.output);
       }
     }
     throw new Error('Replicate generation timed out');
+  }
+
+  private async downloadOutput(output: string[] | string | undefined): Promise<ImageResult> {
+    const outputUrl = Array.isArray(output) ? output[0] : output;
+    if (!outputUrl) throw new Error('Empty output from Replicate');
+    const imgRes = await fetch(outputUrl);
+    const buf = Buffer.from(await imgRes.arrayBuffer());
+    return { base64: buf.toString('base64'), buffer: buf };
   }
 }
 
