@@ -105,6 +105,17 @@ async function main() {
     await prisma.module.upsert({ where: { id: m.id }, update: m, create: m });
   }
 
+  console.log('Cleaning up old model providers...');
+  const validProviderIds = [
+    'gpt-image-2-high','gpt-image-2-medium','gpt-image-2-low',
+    'gpt-image-25-sunburst','gpt-image-25-flare',
+    'imagen-4-ultra','imagen-4-standard','imagen-4-fast',
+    'stable-image-ultra','stable-image-core',
+    'flux-2-pro','flux-3',
+    'seedream-5-pro','seedream-5-lite',
+  ];
+  await prisma.modelProvider.deleteMany({ where: { id: { notIn: validProviderIds } } });
+
   console.log('Seeding model providers...');
   // costPerUnit = 원가(KRW), marginRate = 마진율 (유저단가 = costPerUnit × marginRate)
   // 1크레딧 = ₩1
