@@ -1,9 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { CheckCircle, Info, Loader2, Radar, Shield } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Info, Loader2, Radar, RotateCcw, Shield, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useSession } from '@/hooks/use-session';
@@ -142,6 +143,7 @@ export default function AdminView() {
               )}
             </TabsTrigger>
             <TabsTrigger value="users">{t('tabUsers')}</TabsTrigger>
+            <TabsTrigger value="logs">{t('tabLogs')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="modules" className="mt-4">
@@ -158,6 +160,9 @@ export default function AdminView() {
           </TabsContent>
           <TabsContent value="users" className="mt-4">
             <UsersTab users={overviewQ.data?.users ?? []} />
+          </TabsContent>
+          <TabsContent value="logs" className="mt-4">
+            <ApiLogsTab />
           </TabsContent>
         </Tabs>
       )}
@@ -556,6 +561,181 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
           ))}
         </TableBody>
       </Table>
+    </div>
+  );
+}
+
+// ─── API logs ──────────────────────────────────────────────────────────────
+
+interface LogJob {
+  id: string;
+  username: string;
+  provider: string;
+  adapterType: string;
+  promptText: string;
+  aspect: string;
+  status: string;
+  creditCharged: number;
+  error: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  durationMs: number | null;
+}
+
+interface LogSummary { status: string; count: number; totalCredits: number; }
+interface LogsResponse { jobs: LogJob[]; total: number; page: number; limit: number; summary: LogSummary[]; }
+
+const statusIcon = (s: string) => {
+  switch (s) {
+    case 'done': return <CheckCircle className="size-4 text-green-500" />;
+    case 'failed': return <AlertTriangle className="size-4 text-red-500" />;
+    case 'running': return <Loader2 className="size-4 animate-spin text-blue-500" />;
+    default: return <Clock className="size-4 text-muted-foreground" />;
+  }
+};
+
+function ApiLogsTab() {
+  const t = useTranslations('admin');
+  const locale = useAppStore((s) => s.locale);
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const logsQ = useQuery({
+    queryKey: ['admin', 'logs', page, statusFilter],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page), limit: '50' });
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      return api.get<LogsResponse>(`/api/admin/logs?${params}`);
+    },
+  });
+
+  const cleanupM = useMutation({
+    mutationFn: () => api.post<{ cleaned: number; refunded: number }>('/api/admin/logs', { action: 'cleanup-stuck' }),
+    onSuccess: (data) => {
+      toast({ title: `${data.cleaned}건 정리 완료 (${data.refunded}크레딧 환불)` });
+      void qc.invalidateQueries({ queryKey: ['admin', 'logs'] });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: 'destructive' }),
+  });
+
+  const jobs = logsQ.data?.jobs ?? [];
+  const total = logsQ.data?.total ?? 0;
+  const summary = logsQ.data?.summary ?? [];
+  const totalPages = Math.ceil(total / 50);
+  const stuckCount = summary.filter((s) => s.status === 'queued' || s.status === 'running').reduce((a, s) => a + s.count, 0);
+
+  return (
+    <div className="space-y-4">
+      {/* Summary */}
+      <div className="flex flex-wrap gap-3">
+        {summary.map((s) => (
+          <Card key={s.status} className="flex items-center gap-2 px-4 py-2">
+            {statusIcon(s.status)}
+            <span className="text-sm font-medium capitalize">{s.status}</span>
+            <Badge variant="secondary">{s.count}</Badge>
+            <span className="text-xs text-muted-foreground">{s.totalCredits.toLocaleString()}크</span>
+          </Card>
+        ))}
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center gap-3">
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-8 w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('logsAll')}</SelectItem>
+            <SelectItem value="done">done</SelectItem>
+            <SelectItem value="failed">failed</SelectItem>
+            <SelectItem value="running">running</SelectItem>
+            <SelectItem value="queued">queued</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {stuckCount > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-8 text-xs"
+            disabled={cleanupM.isPending}
+            onClick={() => cleanupM.mutate()}
+          >
+            {cleanupM.isPending ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
+            &nbsp;멈춘 job {stuckCount}건 정리 + 환불
+          </Button>
+        )}
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto h-8 text-xs"
+          onClick={() => void qc.invalidateQueries({ queryKey: ['admin', 'logs'] })}
+        >
+          <RotateCcw className="size-3" /> 새로고침
+        </Button>
+      </div>
+
+      {/* Table */}
+      {logsQ.isLoading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-10 rounded-md" />)}
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-md border scrollbar-thin">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10" />
+                <TableHead>유저</TableHead>
+                <TableHead>모델</TableHead>
+                <TableHead>프롬프트</TableHead>
+                <TableHead className="text-right">크레딧</TableHead>
+                <TableHead>소요</TableHead>
+                <TableHead>에러</TableHead>
+                <TableHead>시간</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {jobs.map((j) => (
+                <TableRow key={j.id} className={j.status === 'failed' ? 'bg-red-500/5' : j.status === 'running' ? 'bg-blue-500/5' : undefined}>
+                  <TableCell>{statusIcon(j.status)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-xs">@{j.username}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <span className="text-xs font-medium">{j.provider}</span>
+                    <span className="ml-1 text-[10px] text-muted-foreground">{j.adapterType}</span>
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground" title={j.promptText}>
+                    {j.promptText}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-xs">{j.creditCharged}</TableCell>
+                  <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+                    {j.durationMs != null ? `${(j.durationMs / 1000).toFixed(1)}s` : '—'}
+                  </TableCell>
+                  <TableCell className="max-w-[200px] truncate text-xs text-red-500" title={j.error ?? ''}>
+                    {j.error ?? ''}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                    {fmtDate(j.createdAt, locale)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button variant="outline" size="sm" className="h-7" disabled={page <= 1} onClick={() => setPage(page - 1)}>←</Button>
+          <span className="text-xs text-muted-foreground">{page} / {totalPages}</span>
+          <Button variant="outline" size="sm" className="h-7" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>→</Button>
+        </div>
+      )}
     </div>
   );
 }

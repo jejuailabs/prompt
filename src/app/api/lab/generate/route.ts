@@ -10,12 +10,12 @@ import { serializeJobs } from '@/lib/server/serialize';
 interface GenerateBody {
   promptText?: string;
   providerIds?: string[];
-  aspect?: '1:1' | '16:9' | '9:16';
+  aspect?: string;
   style?: string;
   promptId?: string;
 }
 
-const VALID_ASPECTS = ['1:1', '16:9', '9:16'];
+const VALID_ASPECTS = ['1:1', '3:4', '4:3', '16:9', '9:16'];
 
 export async function POST(req: NextRequest) {
   try {
