@@ -29,10 +29,10 @@ function errorMessage(e: unknown): string {
 // ────────────────────────────── Model Lab job runner ──────────────────────────────
 
 export async function processGenerationJobs(jobIds: string[]): Promise<void> {
-  await Promise.all(jobIds.map((id) => processGenerationJob(id).catch((e) => console.error('[lab-job]', id, e))));
+  await Promise.all(jobIds.map((id) => processOneGenerationJob(id).catch((e) => console.error('[lab-job]', id, e))));
 }
 
-async function processGenerationJob(jobId: string): Promise<void> {
+export async function processOneGenerationJob(jobId: string): Promise<void> {
   const job = await db.generationJob.findUnique({
     where: { id: jobId },
     include: { provider: true },

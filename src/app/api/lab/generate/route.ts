@@ -1,10 +1,10 @@
-// POST /api/lab/generate — charge credits upfront, create jobs per provider, process async
+// POST /api/lab/generate — charge credits upfront, create jobs per provider (queued)
+// Jobs are NOT processed here — client polls /api/lab/jobs and triggers /api/lab/jobs/process per job.
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { chargeCredits } from '@/lib/server/credits';
-import { processGenerationJobs } from '@/lib/server/runners';
 import { serializeJobs } from '@/lib/server/serialize';
 
 interface GenerateBody {
@@ -58,8 +58,7 @@ export async function POST(req: NextRequest) {
       jobs.push(job);
     }
 
-    // Fire-and-forget async processing (do NOT block the request)
-    void processGenerationJobs(jobs.map((j) => j.id));
+    // Jobs stay queued — client polling triggers /api/lab/jobs/process per job
 
     const withRelations = await db.generationJob.findMany({
       where: { id: { in: jobs.map((j) => j.id) } },

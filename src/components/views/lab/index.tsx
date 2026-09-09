@@ -90,8 +90,9 @@ export default function LabView() {
   const hasActive = jobs.some((j) => j.status === 'queued' || j.status === 'running');
   const hasDone = jobs.some((j) => j.status === 'done' && j.resultArtifact);
 
-  // ── polling ──
+  // ── polling + trigger processing ──
   const jobsRef = useRef<JobDTO[]>([]);
+  const triggeringRef = useRef<Set<string>>(new Set());
   useEffect(() => { jobsRef.current = jobs; }, [jobs]);
 
   useEffect(() => {
@@ -100,6 +101,14 @@ export default function LabView() {
       const active = jobsRef.current.filter((j) => j.status === 'queued' || j.status === 'running');
       if (!active.length) return;
       void (async () => {
+        // Trigger processing for queued jobs (one request per job, runs within Vercel timeout)
+        const queued = active.filter((j) => j.status === 'queued' && !triggeringRef.current.has(j.id));
+        for (const j of queued) {
+          triggeringRef.current.add(j.id);
+          api.post('/api/lab/jobs/process', { jobId: j.id })
+            .catch(() => undefined)
+            .finally(() => triggeringRef.current.delete(j.id));
+        }
         try {
           const ids = active.map((j) => j.id).join(',');
           const updated = await api.get<JobDTO[]>(`/api/lab/jobs?ids=${ids}`);
