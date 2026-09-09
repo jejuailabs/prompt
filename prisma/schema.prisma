@@ -36,6 +36,7 @@ model Profile {
   briefs             ProblemBrief[]
   bids               Bid[]
   listings           MarketplaceListing[]
+  gamePlays          GamePlay[]
 }
 
 model Module {
@@ -122,6 +123,8 @@ model Artifact {
   adCampaigns   AdCampaign[]
   smokeTests    SmokeTest[]
   listing       MarketplaceListing?
+  gamePlays     GamePlay[]
+  adImpressions AdImpression[]
 }
 
 model Vote {
@@ -355,4 +358,27 @@ model Contract {
   revenueShareTerms  String   @default("{}") // JSON
   status             String   @default("active") // 'active' | 'completed' | 'terminated'
   createdAt          DateTime @default(now())
+}
+
+// ─── Game Room ───
+
+model GamePlay {
+  id         String   @id @default(uuid())
+  artifactId String
+  artifact   Artifact @relation(fields: [artifactId], references: [id])
+  userId     String?
+  user       Profile? @relation(fields: [userId], references: [id])
+  durationMs Int      @default(0)
+  createdAt  DateTime @default(now())
+}
+
+model AdImpression {
+  id         String   @id @default(uuid())
+  artifactId String
+  artifact   Artifact @relation(fields: [artifactId], references: [id])
+  userId     String?
+  slotType   String // 'banner' | 'interstitial' | 'rewarded'
+  clicked    Boolean  @default(false)
+  revenue    Int      @default(0) // estimated microcents
+  createdAt  DateTime @default(now())
 }

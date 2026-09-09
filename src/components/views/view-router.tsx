@@ -17,6 +17,8 @@ import MarketplaceView from '@/components/views/market';
 import CommunityView from '@/components/views/community';
 import AcademyView from '@/components/views/academy';
 import MyProjectsView from '@/components/views/my-projects';
+import GameRoomView from '@/components/views/game-room';
+import GamePlayView from '@/components/views/game-room/play';
 import AdminView from '@/components/views/admin';
 
 export default function ViewRouter() {
@@ -53,6 +55,10 @@ export default function ViewRouter() {
       return <AcademyView />;
     case 'my-projects':
       return <MyProjectsView />;
+    case 'game-room':
+      return <GameRoomView />;
+    case 'game-play':
+      return <GamePlayView key={params.id ?? 'none'} />;
     case 'admin':
       return <AdminView />;
     default:

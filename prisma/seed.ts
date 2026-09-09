@@ -66,6 +66,13 @@ async function main() {
       icon: 'graduation-cap', navOrder: 9, enabled: true, status: 'coming-soon',
       mainScreenSlot: 'none', entryView: 'academy', requiresAuth: false, adminOnly: false,
     },
+    {
+      id: 'game-room', phase: 3, titleKo: '게임룸', titleEn: 'Game Room',
+      descKo: '바이브코딩 게임을 플레이하고 공유하세요',
+      descEn: 'Play and share vibe-coded games',
+      icon: 'gamepad-2', navOrder: 5, enabled: true, status: 'active',
+      mainScreenSlot: 'none', entryView: 'game-room', requiresAuth: false, adminOnly: false,
+    },
     // ─── Tools group ───
     {
       id: 'tool-3d', phase: 3, titleKo: '3D 에셋 생성', titleEn: '3D Asset',

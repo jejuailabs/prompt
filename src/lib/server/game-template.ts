@@ -28,7 +28,7 @@ export function renderGameHtml(title: string, palette: string, speed: number): s
 
 /** Upload game HTML to blob storage, return public URL. */
 export async function writeGameBundle(runId: string, html: string): Promise<string> {
-  return uploadBuffer(`games/${runId}/index.html`, html, 'text/html');
+  return uploadBuffer(`games/${runId}/index.html`, Buffer.from(html, 'utf-8'), 'text/html');
 }
 
 /** Cover thumbnail for generated games (static seed image). */

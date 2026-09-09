@@ -31,6 +31,8 @@ export type ViewKey =
   | 'community'
   | 'academy'
   | 'my-projects'
+  | 'game-room'
+  | 'game-play'
   | 'admin';
 
 // ─── Users / Modules ───
