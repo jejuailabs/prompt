@@ -205,47 +205,64 @@ function ModulesTab() {
       {modulesQ.isLoading ? (
         <div className="space-y-3">
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-16 rounded-xl" />
+            <Skeleton key={i} className="h-12 rounded-xl" />
           ))}
         </div>
       ) : (
-        <div className="space-y-3">
-          {modules.map((m) => (
-            <Card key={m.id} className="flex flex-wrap items-center gap-4 p-4">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Icon name={m.icon} className="size-5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{locale === 'ko' ? m.titleKo : m.titleEn}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                  <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-                    P{m.phase}
-                  </Badge>
-                  <ModuleStatusBadge status={m.status} newUntil={m.newUntil} />
-                  <span>{m.entryView}</span>
-                </div>
-              </div>
-              <Select
-                value={m.status}
-                onValueChange={(v) => patchM.mutate({ id: m.id, status: v as ModuleDTO['status'] })}
-              >
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">{t('modActive')}</SelectItem>
-                  <SelectItem value="new">{t('modNew')}</SelectItem>
-                  <SelectItem value="beta">{t('modBeta')}</SelectItem>
-                  <SelectItem value="coming-soon">{t('modComingSoon')}</SelectItem>
-                </SelectContent>
-              </Select>
-              <Switch
-                checked={m.enabled}
-                onCheckedChange={(enabled) => patchM.mutate({ id: m.id, enabled })}
-                disabled={patchM.isPending}
-              />
-            </Card>
-          ))}
+        <div className="overflow-x-auto rounded-md border scrollbar-thin">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10" />
+                <TableHead>{t('thModule') ?? '모듈'}</TableHead>
+                <TableHead className="w-16">Phase</TableHead>
+                <TableHead className="w-32">{t('thStatus') ?? '상태'}</TableHead>
+                <TableHead className="w-20">ON/OFF</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {modules.map((m) => (
+                <TableRow key={m.id}>
+                  <TableCell>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <Icon name={m.icon} className="size-4" />
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <p className="text-sm font-medium">{locale === 'ko' ? m.titleKo : m.titleEn}</p>
+                    <p className="text-xs text-muted-foreground">{m.entryView}</p>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px]">P{m.phase}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={m.status}
+                      onValueChange={(v) => patchM.mutate({ id: m.id, status: v as ModuleDTO['status'] })}
+                    >
+                      <SelectTrigger className="h-8 w-28">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">{t('modActive')}</SelectItem>
+                        <SelectItem value="new">{t('modNew')}</SelectItem>
+                        <SelectItem value="beta">{t('modBeta')}</SelectItem>
+                        <SelectItem value="coming-soon">{t('modComingSoon')}</SelectItem>
+                        <SelectItem value="preparing">{t('modPreparing') ?? '준비 중'}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={m.enabled}
+                      onCheckedChange={(enabled) => patchM.mutate({ id: m.id, enabled })}
+                      disabled={patchM.isPending}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

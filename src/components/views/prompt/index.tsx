@@ -169,7 +169,7 @@ export default function PromptDetailView() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 w-full max-w-6xl mx-auto">
       {/* Back */}
       <Button variant="ghost" size="sm" onClick={() => navigate('gallery')}>
         <ArrowLeft className="mr-1 h-4 w-4" /> {t('back')}
@@ -301,14 +301,14 @@ export default function PromptDetailView() {
 
       {/* Edit dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>프롬프트 수정</DialogTitle>
             <DialogDescription>제목, 내용, 썸네일을 수정할 수 있습니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="제목" />
-            <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} rows={6} placeholder="프롬프트 내용" />
+            <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} rows={12} placeholder="프롬프트 내용" className="min-h-[200px]" />
             <div className="space-y-2">
               <p className="text-sm font-medium">썸네일 이미지</p>
               {editThumb && (
