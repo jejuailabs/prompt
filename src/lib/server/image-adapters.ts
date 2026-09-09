@@ -1,6 +1,5 @@
 // Multi-model image generation adapter gateway
 // Each vendor gets its own adapter; the runner dispatches by ModelProvider.adapterType.
-import { generateImage } from '@/lib/server/ai';
 
 export interface ImageResult {
   base64: string;
@@ -8,7 +7,9 @@ export interface ImageResult {
 }
 
 export interface AdapterConfig {
-  apiEndpoint?: string;
+  model?: string;
+  quality?: string;
+  endpoint?: string;
   modelId?: string;
   apiKey?: string;
   [key: string]: unknown;
@@ -18,34 +19,29 @@ export interface IImageAdapter {
   generate(prompt: string, size: string, config: AdapterConfig): Promise<ImageResult>;
 }
 
-// ── Default adapter: uses the project's built-in zai SDK ──
-class DefaultAdapter implements IImageAdapter {
-  async generate(prompt: string, size: string): Promise<ImageResult> {
-    return generateImage(prompt, size as '1024x1024' | '768x1344' | '1344x768');
-  }
-}
-
-// ── OpenAI-compatible adapter (DALL-E 3, etc.) ──
+// ── OpenAI adapter (GPT Image 2 / 2.5) ──
 class OpenAIAdapter implements IImageAdapter {
   async generate(prompt: string, size: string, config: AdapterConfig): Promise<ImageResult> {
-    const endpoint = config.apiEndpoint || 'https://api.openai.com/v1/images/generations';
     const apiKey = config.apiKey || process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error('OpenAI API key not configured');
 
-    const model = config.modelId || 'dall-e-3';
-    const res = await fetch(endpoint, {
+    const model = config.model || 'gpt-image-1';
+    const body: Record<string, unknown> = {
+      model,
+      prompt,
+      n: 1,
+      size: normalizeSize(size),
+      response_format: 'b64_json',
+    };
+    if (config.quality) body.quality = config.quality;
+
+    const res = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model,
-        prompt,
-        size: normalizeSize(size),
-        n: 1,
-        response_format: 'b64_json',
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -60,12 +56,49 @@ class OpenAIAdapter implements IImageAdapter {
   }
 }
 
-// ── Stability AI adapter (Stable Diffusion 3.5, etc.) ──
+// ── Google Imagen 4 adapter (via Gemini API) ──
+class ImagenAdapter implements IImageAdapter {
+  async generate(prompt: string, _size: string, config: AdapterConfig): Promise<ImageResult> {
+    const apiKey = config.apiKey || process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+
+    const model = config.model || 'imagen-4.0-generate-001';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        instances: [{ prompt }],
+        parameters: {
+          sampleCount: 1,
+          outputOptions: { mimeType: 'image/png' },
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text().catch(() => '');
+      throw new Error(`Imagen API error ${res.status}: ${err.slice(0, 200)}`);
+    }
+
+    const json = await res.json() as {
+      predictions?: { bytesBase64Encoded?: string }[];
+    };
+    const b64 = json.predictions?.[0]?.bytesBase64Encoded;
+    if (!b64) throw new Error('Empty image response from Imagen');
+    return { base64: b64, buffer: Buffer.from(b64, 'base64') };
+  }
+}
+
+// ── Stability AI adapter (Ultra / Core endpoints) ──
 class StabilityAdapter implements IImageAdapter {
   async generate(prompt: string, size: string, config: AdapterConfig): Promise<ImageResult> {
-    const endpoint = config.apiEndpoint || 'https://api.stability.ai/v2beta/stable-image/generate/sd3';
     const apiKey = config.apiKey || process.env.STABILITY_API_KEY;
     if (!apiKey) throw new Error('Stability API key not configured');
+
+    const tier = config.endpoint || 'core';
+    const endpoint = `https://api.stability.ai/v2beta/stable-image/generate/${tier}`;
 
     const [w, h] = normalizeSize(size).split('x').map(Number);
     const form = new FormData();
@@ -73,7 +106,6 @@ class StabilityAdapter implements IImageAdapter {
     form.append('output_format', 'png');
     if (w) form.append('width', String(w));
     if (h) form.append('height', String(h));
-    if (config.modelId) form.append('model', config.modelId);
 
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -93,7 +125,7 @@ class StabilityAdapter implements IImageAdapter {
   }
 }
 
-// ── Replicate adapter (Midjourney proxies, Flux, Leonardo, etc.) ──
+// ── Replicate adapter (FLUX, Seedream, etc.) ──
 class ReplicateAdapter implements IImageAdapter {
   async generate(prompt: string, size: string, config: AdapterConfig): Promise<ImageResult> {
     const apiKey = config.apiKey || process.env.REPLICATE_API_TOKEN;
@@ -123,7 +155,6 @@ class ReplicateAdapter implements IImageAdapter {
     const pollUrl = prediction.urls?.get;
     if (!pollUrl) throw new Error('No poll URL from Replicate');
 
-    // Poll until completed (max 120s)
     const deadline = Date.now() + 120_000;
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 2000));
@@ -146,14 +177,16 @@ class ReplicateAdapter implements IImageAdapter {
 
 // ── Registry ──
 const adapters: Record<string, IImageAdapter> = {
-  default: new DefaultAdapter(),
   openai: new OpenAIAdapter(),
+  imagen: new ImagenAdapter(),
   stability: new StabilityAdapter(),
   replicate: new ReplicateAdapter(),
 };
 
 export function getImageAdapter(adapterType: string): IImageAdapter {
-  return adapters[adapterType] || adapters.default;
+  const adapter = adapters[adapterType];
+  if (!adapter) throw new Error(`Unknown image adapter: ${adapterType}`);
+  return adapter;
 }
 
 function normalizeSize(size: string): string {

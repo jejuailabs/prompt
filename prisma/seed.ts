@@ -106,11 +106,29 @@ async function main() {
   }
 
   console.log('Seeding model providers...');
+  // costPerUnit = 원가(KRW), marginRate = 마진율 (유저단가 = costPerUnit × marginRate)
+  // 1크레딧 = ₩1
   const providers = [
-    { id: 'midjourney-v7', displayName: 'Midjourney v7', category: 'image', costPerUnit: 8, marginRate: 1.4, styleHint: 'highly detailed, cinematic lighting', adapterType: 'replicate', adapterConfig: '{"modelId":"black-forest-labs/flux-schnell"}' },
-    { id: 'dalle-3', displayName: 'DALL-E 3', category: 'image', costPerUnit: 6, marginRate: 1.4, styleHint: 'vibrant digital art', adapterType: 'openai', adapterConfig: '{"modelId":"dall-e-3"}' },
-    { id: 'stable-diffusion-35', displayName: 'Stable Diffusion 3.5', category: 'image', costPerUnit: 3, marginRate: 1.5, styleHint: 'artistic, painterly quality', adapterType: 'stability', adapterConfig: '{}' },
-    { id: 'leonardo-phoenix', displayName: 'Leonardo Phoenix', category: 'image', costPerUnit: 4, marginRate: 1.4, styleHint: 'photorealistic, sharp details', adapterType: 'replicate', adapterConfig: '{"modelId":"black-forest-labs/flux-1.1-pro"}' },
+    // ── OpenAI GPT Image 2 (품질별 3종) ──
+    { id: 'gpt-image-2-high', displayName: 'GPT Image 2 (High)', category: 'image', costPerUnit: 290, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-1","quality":"high"}' },
+    { id: 'gpt-image-2-medium', displayName: 'GPT Image 2 (Medium)', category: 'image', costPerUnit: 73, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-1","quality":"medium"}' },
+    { id: 'gpt-image-2-low', displayName: 'GPT Image 2 (Low)', category: 'image', costPerUnit: 8, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-1","quality":"low"}' },
+    // ── OpenAI GPT Image 2.5 (2종) ──
+    { id: 'gpt-image-25-sunburst', displayName: 'GPT Image 2.5 Sunburst', category: 'image', costPerUnit: 138, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-2.5-sunburst"}' },
+    { id: 'gpt-image-25-flare', displayName: 'GPT Image 2.5 Flare', category: 'image', costPerUnit: 69, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-2.5-flare"}' },
+    // ── Google Imagen 4 (3종) ──
+    { id: 'imagen-4-ultra', displayName: 'Imagen 4 Ultra', category: 'image', costPerUnit: 83, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"imagen-4.0-ultra-generate-001"}' },
+    { id: 'imagen-4-standard', displayName: 'Imagen 4 Standard', category: 'image', costPerUnit: 55, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"imagen-4.0-generate-001"}' },
+    { id: 'imagen-4-fast', displayName: 'Imagen 4 Fast', category: 'image', costPerUnit: 28, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"imagen-4.0-fast-generate-001"}' },
+    // ── Stability AI (2종) ──
+    { id: 'stable-image-ultra', displayName: 'Stable Image Ultra', category: 'image', costPerUnit: 110, marginRate: 1.4, styleHint: 'artistic, painterly quality', adapterType: 'stability', adapterConfig: '{"endpoint":"ultra"}' },
+    { id: 'stable-image-core', displayName: 'Stable Image Core', category: 'image', costPerUnit: 41, marginRate: 1.4, styleHint: '', adapterType: 'stability', adapterConfig: '{"endpoint":"core"}' },
+    // ── FLUX via Replicate (2종) ──
+    { id: 'flux-2-pro', displayName: 'FLUX 2 Pro', category: 'image', costPerUnit: 55, marginRate: 1.4, styleHint: '', adapterType: 'replicate', adapterConfig: '{"modelId":"black-forest-labs/flux-2-pro"}' },
+    { id: 'flux-3', displayName: 'FLUX 3', category: 'image', costPerUnit: 69, marginRate: 1.4, styleHint: '', adapterType: 'replicate', adapterConfig: '{"modelId":"black-forest-labs/flux-3"}' },
+    // ── Seedream 5.0 via Replicate (2종) ──
+    { id: 'seedream-5-pro', displayName: 'Seedream 5.0 Pro', category: 'image', costPerUnit: 62, marginRate: 1.4, styleHint: '', adapterType: 'replicate', adapterConfig: '{"modelId":"bytedance/seedream-5-pro"}' },
+    { id: 'seedream-5-lite', displayName: 'Seedream 5.0 Lite', category: 'image', costPerUnit: 55, marginRate: 1.4, styleHint: '', adapterType: 'replicate', adapterConfig: '{"modelId":"bytedance/seedream-5-lite"}' },
   ];
 
   for (const p of providers) {

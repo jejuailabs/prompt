@@ -115,6 +115,9 @@ id            text (PK)   -- 'openai-image', 'anthropic-claude', 'runway-video' 
 display_name  text
 category      text        -- 'image' | 'video' | 'text' | '3d'
 cost_per_unit numeric      -- 원가 (내부 계측용)
+margin_rate   float default 1.4  -- 관리자 조정 가능한 마진율 (원가 × marginRate = 과금 크레딧)
+adapter_type  text default 'default'  -- 'default' | 'openai' | 'stability' | 'replicate'
+adapter_config text default '{}'  -- 벤더별 추가 설정 JSON (모델명, API 엔드포인트 등)
 active        bool
 ```
 

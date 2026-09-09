@@ -295,10 +295,28 @@ export default function LabView() {
                     </span>
                   </div>
                 )}
-                <div className="flex items-baseline justify-between">
-                  <span className="text-sm text-muted-foreground">{t('neededCredits')}</span>
-                  <strong className="text-lg tabular-nums text-primary">{totalCost.toLocaleString()}</strong>
-                </div>
+
+                {selected.length > 0 && (
+                  <div className="space-y-1.5 rounded-md border border-dashed border-muted-foreground/30 px-3 py-2">
+                    <p className="text-xs font-medium text-muted-foreground">{t('estimatedCost')}</p>
+                    {providers
+                      .filter((p) => selected.includes(p.id))
+                      .map((p) => (
+                        <div key={p.id} className="flex items-center justify-between text-xs">
+                          <span className="truncate text-muted-foreground">{p.displayName}</span>
+                          <span className="tabular-nums">{Math.round(p.costPerUnit * p.marginRate).toLocaleString()} 크레딧</span>
+                        </div>
+                      ))}
+                    <div className="flex items-center justify-between border-t border-muted-foreground/20 pt-1.5 text-sm font-semibold">
+                      <span>{t('totalEstimate')}</span>
+                      <span className="tabular-nums text-primary">{totalCost.toLocaleString()} 크레딧</span>
+                    </div>
+                    <p className="text-[10px] leading-tight text-muted-foreground/60">
+                      {t('costDisclaimer')}
+                    </p>
+                  </div>
+                )}
+
                 <Button
                   size="lg"
                   className="w-full"
