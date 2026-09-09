@@ -8,8 +8,10 @@ import { gameCoverUrl, isHexColor, renderGameHtml, writeGameBundle } from '@/lib
 import { uploadBuffer } from '@/lib/server/storage';
 import type { LandingContent } from '@/lib/types';
 
-const SIZE_BY_ASPECT: Record<string, '1024x1024' | '1344x768' | '768x1344'> = {
+const SIZE_BY_ASPECT: Record<string, string> = {
   '1:1': '1024x1024',
+  '3:4': '768x1344',
+  '4:3': '1344x768',
   '16:9': '1344x768',
   '9:16': '768x1344',
 };
