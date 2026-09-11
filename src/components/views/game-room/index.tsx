@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Gamepad2, Heart, Loader2, Play, TrendingUp, Clock } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Gamepad2, Heart, Loader2, Play, TrendingUp, Clock, Plus } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -10,6 +10,9 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import messages from './messages';
 
 interface GameDTO {
@@ -29,7 +32,14 @@ export default function GameRoomView() {
   const locale = useAppStore((s) => s.locale);
   const navigate = useAppStore((s) => s.navigate);
   const t = messages[locale] ?? messages.ko;
+  const session = useAppStore((s) => s.session);
+  const setLoginOpen = useAppStore((s) => s.setLoginOpen);
+  const qc = useQueryClient();
   const [sort, setSort] = useState<'popular' | 'recent'>('popular');
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [form, setForm] = useState({ title: '', url: '', description: '', thumbnailUrl: '', tags: '', controls: '' });
+  const [submitError, setSubmitError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['game-room', sort],
@@ -37,6 +47,14 @@ export default function GameRoomView() {
   });
 
   const games = data?.games ?? [];
+  const pending = useQuery({ queryKey: ['game-room', 'pending'], queryFn: () => api.get<{ games: GameDTO[] }>('/api/game-room?scope=pending'), enabled: session?.role === 'admin' });
+  const submitGame = async () => {
+    if (!session) { setSubmitOpen(false); setLoginOpen(true); return; }
+    setSubmitting(true); setSubmitError('');
+    try { await api.post('/api/game-room/submit', { ...form, tags: form.tags.split(',').map((s) => s.trim()).filter(Boolean) }); setForm({ title: '', url: '', description: '', thumbnailUrl: '', tags: '', controls: '' }); setSubmitOpen(false); }
+    catch (e) { setSubmitError(e instanceof Error ? e.message : '등록 요청에 실패했습니다.'); } finally { setSubmitting(false); }
+  };
+  const moderate = async (id: string, action: 'approve' | 'reject') => { await api.post(`/api/game-room/${id}/moderate`, { action }); await qc.invalidateQueries({ queryKey: ['game-room'] }); };
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6">
@@ -49,6 +67,7 @@ export default function GameRoomView() {
           <p className="text-sm text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
         <div className="flex gap-2">
+          <Button size="sm" onClick={() => setSubmitOpen(true)}><Plus className="mr-1 h-4 w-4" />게임 등록</Button>
           <Button
             variant={sort === 'popular' ? 'default' : 'outline'}
             size="sm"
@@ -65,6 +84,8 @@ export default function GameRoomView() {
           </Button>
         </div>
       </div>
+
+      {session?.role === 'admin' && (pending.data?.games.length ?? 0) > 0 && <Card className="p-4"><h2 className="font-semibold">게임 심사 대기</h2><div className="mt-3 space-y-2">{pending.data!.games.map((game) => <div key={game.id} className="flex flex-wrap items-center gap-3 rounded-md border p-3"><div className="min-w-0 flex-1"><p className="font-medium">{game.title}</p><a className="block truncate text-xs text-primary underline" href={game.contentUrl ?? '#'} target="_blank" rel="noreferrer">{game.contentUrl}</a></div><Button size="sm" onClick={() => void moderate(game.id, 'approve')}>승인</Button><Button size="sm" variant="destructive" onClick={() => void moderate(game.id, 'reject')}>반려</Button></div>)}</div></Card>}
 
       {/* Game Grid */}
       {isLoading ? (
@@ -134,6 +155,8 @@ export default function GameRoomView() {
           ))}
         </div>
       )}
+
+      <Dialog open={submitOpen} onOpenChange={setSubmitOpen}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>게임 등록 요청</DialogTitle><DialogDescription>공개 HTTPS 배포 URL을 제출하면 관리자 승인 후 게임룸에 공개됩니다.</DialogDescription></DialogHeader><div className="space-y-3"><Input placeholder="게임 제목" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /><Input placeholder="게임 배포 URL (https://...)" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} /><Input placeholder="썸네일 URL (선택)" value={form.thumbnailUrl} onChange={(e) => setForm({ ...form, thumbnailUrl: e.target.value })} /><Input placeholder="태그: 액션, 퍼즐, 캐주얼" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} /><Textarea placeholder="게임 소개" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /><Textarea placeholder="조작법 (예: 방향키 이동, 스페이스 발사)" value={form.controls} onChange={(e) => setForm({ ...form, controls: e.target.value })} />{submitError && <p className="text-sm text-destructive">{submitError}</p>}<Button className="w-full" onClick={() => void submitGame()} disabled={submitting}>{submitting ? '제출 중...' : '심사 요청하기'}</Button></div></DialogContent></Dialog>
     </div>
   );
 }
