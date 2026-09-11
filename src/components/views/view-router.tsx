@@ -21,6 +21,7 @@ import MyProjectsView from '@/components/views/my-projects';
 import GameRoomView from '@/components/views/game-room';
 import GamePlayView from '@/components/views/game-room/play';
 import AdminView from '@/components/views/admin';
+import ToolView from '@/components/views/tool';
 
 export default function ViewRouter() {
   const view = useAppStore((s) => s.view);
@@ -56,6 +57,8 @@ export default function ViewRouter() {
       return <AcademyView />;
     case 'ai-tools':
       return <AiToolsView />;
+    case 'tool':
+      return <ToolView key={params.slug ?? 'none'} />;
     case 'my-projects':
       return <MyProjectsView />;
     case 'game-room':

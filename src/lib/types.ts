@@ -31,6 +31,7 @@ export type ViewKey =
   | 'community'
   | 'academy'
   | 'ai-tools'
+  | 'tool'
   | 'my-projects'
   | 'game-room'
   | 'game-play'

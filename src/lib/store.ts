@@ -6,7 +6,7 @@ import type { Locale, SessionUser, ViewKey } from '@/lib/types';
 const VIEW_KEYS: ViewKey[] = [
   'home', 'gallery', 'prompt', 'project', 'lab', 'pipelines', 'pipeline-run',
   'smoke', 'revenue', 'market', 'community', 'academy', 'ai-tools', 'my-projects',
-  'game-room', 'game-play', 'admin',
+  'game-room', 'game-play', 'admin', 'tool',
 ];
 
 export function encodeHash(view: ViewKey, params?: Record<string, string>): string {
@@ -17,6 +17,11 @@ export function encodeHash(view: ViewKey, params?: Record<string, string>): stri
 export function parseHash(): { view: ViewKey; params: Record<string, string> } {
   if (typeof window === 'undefined') return { view: 'home', params: {} };
   const h = window.location.hash.replace(/^#\/?/, '');
+  // Direct tool URLs retain the PLAYLAB shell instead of becoming standalone pages.
+  if (!h) {
+    const match = window.location.pathname.match(/^\/tools\/([a-z0-9-]+)$/);
+    if (match) return { view: 'tool', params: { slug: match[1] } };
+  }
   const [v, q] = h.split('?');
   const view = (VIEW_KEYS as string[]).includes(v) ? (v as ViewKey) : 'home';
   const params = Object.fromEntries(new URLSearchParams(q || ''));
