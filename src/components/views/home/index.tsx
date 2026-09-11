@@ -1,16 +1,14 @@
 'use client';
 
 // 전시실 (home) — hero, quick actions, monthly usage, today's picks (docs/09 §3)
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
-import { QUICK_ACTIONS } from '@/lib/quick-actions';
-import type { ArtifactDTO, CreditStateDTO, ViewKey } from '@/lib/types';
+import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
+import type { ArtifactDTO, CreditStateDTO } from '@/lib/types';
 import { ArtifactCard } from '@/components/shared/artifact-card';
-import { CreatePromptDialog } from '@/components/shared/create-prompt-dialog';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Icon } from '@/components/layout/icon';
 import { Button } from '@/components/ui/button';
@@ -27,8 +25,6 @@ export default function HomeView() {
   const navigate = useAppStore((s) => s.navigate);
   const session = useAppStore((s) => s.session);
 
-  const [createOpen, setCreateOpen] = useState(false);
-
   const num = (n: number) => n.toLocaleString(locale === 'en' ? 'en-US' : 'ko-KR');
 
   const credits = useQuery({
@@ -42,12 +38,7 @@ export default function HomeView() {
     queryFn: () => api.get<ArtifactDTO[]>('/api/artifacts?scope=feed&sort=popular&limit=12'),
   });
 
-  const onQuickAction = (key: string) => {
-    const action = QUICK_ACTIONS.find((a) => a.key === key);
-    if (!action) return;
-    if (action.kind === 'dialog') setCreateOpen(true);
-    else if (action.view) navigate(action.view as ViewKey, action.params);
-  };
+  const openAiTool = (id: string) => navigate('tool', { slug: id.replace('tool-', '') });
 
   return (
     <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
@@ -64,7 +55,7 @@ export default function HomeView() {
             </h1>
             <p className="mt-4 text-muted-foreground">{tc('tagline')}</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button size="lg" onClick={() => setCreateOpen(true)}>
+              <Button size="lg" onClick={() => navigate('gallery')}>
                 {t('makeProject')}
               </Button>
               <Button size="lg" variant="outline" onClick={() => navigate('lab')}>
@@ -95,26 +86,27 @@ export default function HomeView() {
       {/* ── quick actions ────────────────────────────────────── */}
       <section className="mb-8">
         <h2 className="text-lg font-semibold">{tc('quickActionsTitle')}</h2>
-        <div className="mt-3 grid grid-cols-3 gap-3 md:grid-cols-6">
-          {QUICK_ACTIONS.map((action) => (
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {AI_STUDIO_TOOLS.slice(0, 12).map((action) => (
             <Card
-              key={action.key}
+              key={action.id}
               role="button"
               tabIndex={0}
-              onClick={() => onQuickAction(action.key)}
+              onClick={() => openAiTool(action.id)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  onQuickAction(action.key);
+                  openAiTool(action.id);
                 }
               }}
               className="cursor-pointer p-4 text-center transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             >
               <Icon name={action.icon} className="mx-auto h-6 w-6 text-primary" />
-              <p className="mt-2 text-xs">{locale === 'en' ? action.en : action.ko}</p>
+              <p className="mt-2 truncate text-xs">{action.titleKo}</p>
             </Card>
           ))}
         </div>
+        <div className="mt-3 flex justify-end"><Button variant="outline" size="sm" onClick={() => navigate('ai-tools')}>AI Tools 더보기 →</Button></div>
       </section>
 
       {/* ── monthly usage (logged in only) ───────────────────── */}
@@ -169,8 +161,6 @@ export default function HomeView() {
           </div>
         )}
       </section>
-
-      <CreatePromptDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }

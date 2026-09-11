@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAppStore } from '@/lib/store';
 
-const LIVE_TOOL_IDS = new Set(['tool-tts', 'tool-suno', 'tool-metaprompt', 'tool-qr', 'tool-thumbnail']);
+const LIVE_TOOL_IDS = new Set(['tool-tts', 'tool-suno', 'tool-metaprompt', 'tool-qr', 'tool-thumbnail', 'tool-storyboard', 'tool-detail', 'tool-detail2', 'tool-converter', 'tool-srt', 'tool-autocut']);
 const VISUALS: Record<string, { accent: string; soft: string; glow: string }> = {
   'tool-tts': { accent: 'from-cyan-500 to-blue-600', soft: 'bg-cyan-50 text-cyan-600', glow: 'group-hover:shadow-cyan-100' },
   'tool-storyboard': { accent: 'from-amber-400 to-orange-500', soft: 'bg-amber-50 text-amber-600', glow: 'group-hover:shadow-amber-100' },
