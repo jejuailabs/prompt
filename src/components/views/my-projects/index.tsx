@@ -8,7 +8,7 @@ import { Heart, Trash2, Upload, User } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import type { ArtifactDTO, PromptDTO } from '@/lib/types';
+import type { ArtifactDTO, PromptDTO, YoutubeAnalysisDTO } from '@/lib/types';
 import { ArtifactCard } from '@/components/shared/artifact-card';
 import { EmptyState } from '@/components/shared/empty-state';
 import { UploadArtifactDialog } from '@/components/shared/upload-artifact-dialog';
@@ -54,6 +54,12 @@ export default function MyProjectsView() {
   const prompts = useQuery({
     queryKey: ['prompts', 'mine'],
     queryFn: () => api.get<PromptDTO[]>('/api/prompts?scope=mine'),
+    enabled: !!session,
+  });
+
+  const savedYoutube = useQuery({
+    queryKey: ['youtube', 'saved'],
+    queryFn: () => api.get<YoutubeAnalysisDTO[]>('/api/youtube/saved'),
     enabled: !!session,
   });
 
@@ -128,6 +134,7 @@ export default function MyProjectsView() {
           <TabsTrigger value="published">{t('tabPublished')}</TabsTrigger>
           <TabsTrigger value="drafts">{t('tabDrafts')}</TabsTrigger>
           <TabsTrigger value="prompts">{t('tabPrompts')}</TabsTrigger>
+          <TabsTrigger value="youtube">영상 요약</TabsTrigger>
         </TabsList>
 
         {/* published */}
@@ -252,6 +259,25 @@ export default function MyProjectsView() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="youtube" className="mt-0">
+          {savedYoutube.isError && <EmptyState title="저장한 영상 요약을 불러오지 못했습니다" />}
+          {!savedYoutube.isLoading && !savedYoutube.isError && (savedYoutube.data?.length ?? 0) === 0 && (
+            <EmptyState title="저장한 영상 요약이 없습니다" description="YouTube 영상 요약하기에서 분석한 내용을 저장해보세요." />
+          )}
+          <div className="grid gap-4 md:grid-cols-2">
+            {(savedYoutube.data ?? []).map((video) => (
+              <Card key={video.id} className="gap-3 p-4">
+                <div className="flex gap-3">
+                  {video.thumbnailUrl && <img src={video.thumbnailUrl} alt="" className="h-16 w-28 rounded object-cover" />}
+                  <div className="min-w-0"><h3 className="line-clamp-2 font-medium">{video.title}</h3><p className="mt-1 text-xs text-muted-foreground">{video.channelTitle}</p></div>
+                </div>
+                <p className="line-clamp-3 text-sm text-muted-foreground">{video.summary}</p>
+                <a className="text-sm font-medium text-primary hover:underline" href={`/youtube-summary?analysis=${video.id}`} target="_blank" rel="noreferrer">요약 다시 보기</a>
+              </Card>
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
 

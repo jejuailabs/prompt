@@ -37,6 +37,96 @@ model Profile {
   bids               Bid[]
   listings           MarketplaceListing[]
   gamePlays          GamePlay[]
+  youtubeAnalysisJobs YoutubeAnalysisJob[]
+  savedYoutubeAnalyses SavedYoutubeAnalysis[]
+}
+
+// ────────────────────────────── Academy / YouTube learning ────────────────
+
+model AcademyPlaylist {
+  id          String   @id @default(uuid())
+  title       String
+  description String   @default("")
+  thumbnailUrl String?
+  sortOrder   Int      @default(0)
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  videos      AcademyVideo[]
+}
+
+model AcademyVideo {
+  id          String   @id @default(uuid())
+  playlistId  String
+  playlist    AcademyPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  videoId     String
+  title       String
+  description String   @default("")
+  thumbnailUrl String?
+  sortOrder   Int      @default(0)
+  analysisId  String?
+  analysis    YoutubeAnalysis? @relation(fields: [analysisId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([playlistId, videoId])
+  @@index([playlistId, sortOrder])
+  @@index([analysisId])
+}
+
+// One analysis cache per YouTube video. Results are reusable across playlists and users.
+model YoutubeAnalysis {
+  id              String   @id @default(uuid())
+  videoId         String   @unique
+  sourceUrl       String
+  title           String   @default("")
+  channelTitle    String   @default("")
+  description     String   @default("")
+  durationSeconds Int?
+  thumbnailUrl    String?
+  transcript      String   @default("")
+  transcriptLanguage String?
+  transcriptSource String?
+  qualityWarning  String?
+  category        String?
+  summary         String   @default("")
+  reportSummary   String   @default("")
+  chapterJson     String   @default("[]")
+  keywordsJson    String   @default("[]")
+  commentsSummary String   @default("")
+  contextSummary  String   @default("")
+  status          String   @default("queued") // queued | running | done | failed
+  error           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  academyVideos   AcademyVideo[]
+  jobs            YoutubeAnalysisJob[]
+  saves           SavedYoutubeAnalysis[]
+}
+
+model YoutubeAnalysisJob {
+  id          String   @id @default(uuid())
+  userId      String
+  user        Profile  @relation(fields: [userId], references: [id])
+  analysisId  String
+  analysis    YoutubeAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  status      String   @default("queued")
+  error       String?
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+
+  @@index([userId, createdAt])
+}
+
+model SavedYoutubeAnalysis {
+  id          String   @id @default(uuid())
+  userId      String
+  user        Profile  @relation(fields: [userId], references: [id])
+  analysisId  String
+  analysis    YoutubeAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, analysisId])
+  @@index([userId, createdAt])
 }
 
 model Module {

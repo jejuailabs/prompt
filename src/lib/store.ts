@@ -5,7 +5,7 @@ import type { Locale, SessionUser, ViewKey } from '@/lib/types';
 
 const VIEW_KEYS: ViewKey[] = [
   'home', 'gallery', 'prompt', 'project', 'lab', 'pipelines', 'pipeline-run',
-  'smoke', 'revenue', 'market', 'community', 'academy', 'my-projects',
+  'smoke', 'revenue', 'market', 'community', 'academy', 'ai-tools', 'my-projects',
   'game-room', 'game-play', 'admin',
 ];
 

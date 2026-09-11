@@ -217,9 +217,7 @@ export default function Sidebar() {
   const view = useAppStore((s) => s.view);
   const navigate = useAppStore((s) => s.navigate);
   const { data: modules = [] } = useModules();
-  const [toolsOpen, setToolsOpen] = useState(true);
-
-  const navItems = modules.filter((m) => (m.adminOnly ? session?.role === 'admin' : true));
+  const navItems = modules.filter((m) => !['revenue-dashboard', 'marketplace'].includes(m.id) && (m.adminOnly ? session?.role === 'admin' : true));
   const mainItems = navItems.filter((m) => !m.group);
   const toolItems = navItems.filter((m) => m.group === 'tools');
 
@@ -241,23 +239,13 @@ export default function Sidebar() {
           <div className="pt-2">
             <button
               type="button"
-              onClick={() => setToolsOpen(!toolsOpen)}
+              onClick={() => navigate('ai-tools')}
               className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-sidebar-accent-foreground"
             >
               <Icon name="wrench" className="size-3.5" />
-              <span>{locale === 'en' ? 'Tools' : '도구'}</span>
-              <Icon name={toolsOpen ? 'chevron-down' : 'chevron-right'} className="ml-auto size-3.5" />
+              <span>AI Tools</span>
+              <Icon name="chevron-right" className="ml-auto size-3.5" />
             </button>
-            {toolsOpen && (
-              <div className="mt-1 space-y-0.5 pl-1">
-                {toolItems.map((m) => {
-                  const active = m.entryView === view && (m.entryView !== 'pipeline-run' || true);
-                  return (
-                    <NavItem key={m.id} m={m} active={active} locale={locale} onClick={() => navigate(m.entryView as ViewKey)} />
-                  );
-                })}
-              </div>
-            )}
           </div>
         )}
       </nav>

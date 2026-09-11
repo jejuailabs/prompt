@@ -38,7 +38,7 @@ export default function MobileTabbar() {
     return m ? moduleTitle(m, locale) : locale === 'en' ? tab.en : tab.ko;
   };
 
-  const moreModules = modules.filter((m) => !m.adminOnly && !TAB_VIEWS.includes(m.entryView));
+  const moreModules = modules.filter((m) => !m.adminOnly && !m.group && !['revenue-dashboard', 'marketplace'].includes(m.id) && !TAB_VIEWS.includes(m.entryView));
   const moreActive = moreModules.some((m) => m.entryView === view);
 
   return (
@@ -85,6 +85,15 @@ export default function MobileTabbar() {
             <SheetTitle>{t('more')}</SheetTitle>
           </SheetHeader>
           <div className="grid gap-1 pb-2">
+            <button
+              type="button"
+              onClick={() => { navigate('ai-tools'); setMoreOpen(false); }}
+              className="flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-accent"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon name="wrench" className="size-4" /></span>
+              <span className="min-w-0 flex-1"><span className="text-sm font-medium">AI Tools</span><span className="mt-0.5 block truncate text-xs text-muted-foreground">AI 도구 모음</span></span>
+              <Icon name="chevron-right" className="size-4 shrink-0 text-muted-foreground" />
+            </button>
             {moreModules.map((m) => {
               const active = m.entryView === view;
               return (

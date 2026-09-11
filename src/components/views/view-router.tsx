@@ -16,6 +16,7 @@ import RevenueView from '@/components/views/revenue';
 import MarketplaceView from '@/components/views/market';
 import CommunityView from '@/components/views/community';
 import AcademyView from '@/components/views/academy';
+import AiToolsView from '@/components/views/ai-tools';
 import MyProjectsView from '@/components/views/my-projects';
 import GameRoomView from '@/components/views/game-room';
 import GamePlayView from '@/components/views/game-room/play';
@@ -53,6 +54,8 @@ export default function ViewRouter() {
       return <CommunityView />;
     case 'academy':
       return <AcademyView />;
+    case 'ai-tools':
+      return <AiToolsView />;
     case 'my-projects':
       return <MyProjectsView />;
     case 'game-room':

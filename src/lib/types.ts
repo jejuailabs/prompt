@@ -30,6 +30,7 @@ export type ViewKey =
   | 'market'
   | 'community'
   | 'academy'
+  | 'ai-tools'
   | 'my-projects'
   | 'game-room'
   | 'game-play'
@@ -63,6 +64,52 @@ export interface ModuleDTO {
   requiresAuth: boolean;
   adminOnly: boolean;
   group?: string;
+}
+
+// ─── Academy / YouTube learning ───
+
+export interface YoutubeChapter { title: string; summary: string; timestamp?: string; }
+
+export interface YoutubeAnalysisDTO {
+  id: string;
+  videoId: string;
+  sourceUrl: string;
+  title: string;
+  channelTitle: string;
+  description: string;
+  thumbnailUrl?: string | null;
+  transcript: string;
+  transcriptLanguage?: string | null;
+  transcriptSource?: string | null;
+  qualityWarning?: string | null;
+  category?: string | null;
+  summary: string;
+  reportSummary: string;
+  chapters: YoutubeChapter[];
+  keywords: string[];
+  commentsSummary: string;
+  contextSummary: string;
+  status: 'queued' | 'running' | 'done' | 'failed';
+  error?: string | null;
+}
+
+export interface AcademyVideoDTO {
+  id: string;
+  videoId: string;
+  title: string;
+  description: string;
+  thumbnailUrl?: string | null;
+  sortOrder: number;
+  analysis?: YoutubeAnalysisDTO | null;
+}
+
+export interface AcademyPlaylistDTO {
+  id: string;
+  title: string;
+  description: string;
+  thumbnailUrl?: string | null;
+  sortOrder: number;
+  videos: AcademyVideoDTO[];
 }
 
 // ─── Artifact metadata JSON shapes ───
