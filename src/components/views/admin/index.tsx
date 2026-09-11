@@ -222,7 +222,7 @@ function ModulesTab() {
                 <TableHead>{t('thModule') ?? '모듈'}</TableHead>
                 <TableHead className="w-16">Phase</TableHead>
                 <TableHead className="w-32">{t('thStatus') ?? '상태'}</TableHead>
-                <TableHead className="w-20">ON/OFF</TableHead>
+                <TableHead className="w-24">노출</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -258,11 +258,15 @@ function ModulesTab() {
                     </Select>
                   </TableCell>
                   <TableCell>
-                    <Switch
-                      checked={m.enabled}
-                      onCheckedChange={(enabled) => patchM.mutate({ id: m.id, enabled })}
-                      disabled={patchM.isPending}
-                    />
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={m.enabled}
+                        onCheckedChange={(enabled) => patchM.mutate({ id: m.id, enabled })}
+                        disabled={patchM.isPending}
+                        aria-label={`${m.titleKo} ${m.enabled ? '숨기기' : '노출하기'}`}
+                      />
+                      <span className="text-xs text-muted-foreground">{m.enabled ? '노출' : '숨김'}</span>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

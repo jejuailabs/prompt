@@ -15,7 +15,9 @@ export default function AiToolsView() {
   const locale = useAppStore((s) => s.locale);
   const navigate = useAppStore((s) => s.navigate);
   const tools = useQuery({ queryKey: ['modules'], queryFn: () => api.get<ModuleDTO[]>('/api/modules') });
-  const items = (tools.data ?? []).filter((m) => m.group === 'tools');
+  // Admin's module ON/OFF switch is the publication control: hidden tools
+  // stay registered but never appear in this public catalogue.
+  const items = (tools.data ?? []).filter((m) => m.group === 'tools' && m.enabled);
   return <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
     <ViewHeader title="AI Tools" subtitle="필요한 AI 도구를 선택해 바로 작업을 시작하세요" />
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
