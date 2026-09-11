@@ -53,8 +53,8 @@ export const MODULE_CONFIGS: ModuleConfigSeed[] = [
   },
   {
     id: 'community', phase: 1, titleKo: '커뮤니티', titleEn: 'Community',
-    descKo: '랭킹과 활동을 확인하세요', descEn: 'Rankings and activity',
-    icon: 'users', navOrder: 8, enabled: true, status: 'coming-soon',
+    descKo: '프롬프트 랭킹, 피드백과 도움 요청', descEn: 'Prompt rankings, feedback and help requests',
+    icon: 'users', navOrder: 8, enabled: true, status: 'active',
     mainScreenSlot: 'none', entryView: 'community', requiresAuth: false, adminOnly: false,
   },
   {

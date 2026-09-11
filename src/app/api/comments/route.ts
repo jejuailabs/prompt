@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const comments = await db.comment.findMany({
       where: {
         targetId,
-        ...(targetType === 'prompt' || targetType === 'artifact' ? { targetType } : {}),
+        ...(targetType === 'prompt' || targetType === 'artifact' || targetType === 'brief' ? { targetType } : {}),
       },
       include: { user: true },
       orderBy: { createdAt: 'asc' },

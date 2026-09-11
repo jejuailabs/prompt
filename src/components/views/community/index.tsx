@@ -2,6 +2,7 @@
 
 // 커뮤니티 — 🏆 ranking (top 5 prompts/artifacts) + recent activity feed (docs/09 §5)
 import type { ComponentType } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,7 +23,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
-import type { EventDTO, PromptDTO, ArtifactDTO } from '@/lib/types';
+import type { EventDTO, PromptDTO, ArtifactDTO, BriefDTO, CommentDTO } from '@/lib/types';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ViewHeader } from '@/components/shared/view-header';
 import { Button } from '@/components/ui/button';
@@ -30,8 +31,18 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 
 type RankingDTO = { prompts: PromptDTO[]; artifacts: ArtifactDTO[] };
+
+function HelpCard({ brief, onChanged }: { brief: BriefDTO; onChanged: () => void }) {
+  const requireLogin = useAppStore((s) => s.requireLogin); const session = useAppStore((s) => s.session);
+  const [reply, setReply] = useState(''); const [sending, setSending] = useState(false);
+  const comments = useQuery({ queryKey: ['brief-comments', brief.id], queryFn: () => api.get<CommentDTO[]>(`/api/comments?targetType=brief&targetId=${brief.id}`) });
+  const send = async () => { if (!requireLogin() || !reply.trim()) return; setSending(true); try { await api.post('/api/comment', { targetType: 'brief', targetId: brief.id, body: reply }); setReply(''); await comments.refetch(); } finally { setSending(false); } };
+  const resolve = async () => { await api.post(`/api/community/requests/${brief.id}/resolve`, {}); onChanged(); };
+  return <article className="rounded-lg border p-3"><div className="flex justify-between gap-2"><p className="font-medium">{brief.title}</p><span className="text-xs text-muted-foreground">{brief.status === 'matched' ? '해결됨' : '도움 필요'}</span></div><p className="mt-1 text-sm text-muted-foreground">{brief.rawText}</p><p className="mt-2 text-xs text-muted-foreground">@{brief.author.username} · 답변 {comments.data?.length ?? 0}개</p>{comments.data?.map((comment) => <p key={comment.id} className="mt-2 rounded bg-muted p-2 text-xs"><b>@{comment.user.username}</b> {comment.body}</p>)}{brief.status !== 'matched' && <div className="mt-3 flex gap-2"><input value={reply} onChange={(e) => setReply(e.target.value)} placeholder="도움이 되는 답변을 남겨주세요" className="min-w-0 flex-1 rounded border px-2 py-1.5 text-xs" /><Button size="sm" disabled={sending || !reply.trim()} onClick={() => void send()}>답변</Button>{session?.id === brief.author.id && <Button size="sm" variant="outline" onClick={() => void resolve()}>해결</Button>}</div>}</article>;
+}
 
 // event type → visual + label key (labels resolved via t() below)
 const EVENT_META: Record<string, { icon: LucideIcon; className: string; labelKey: string }> = {
@@ -99,6 +110,9 @@ export default function CommunityView() {
   const tc = useTranslations('core');
   const locale = useAppStore((s) => s.locale);
   const navigate = useAppStore((s) => s.navigate);
+  const requireLogin = useAppStore((s) => s.requireLogin);
+  const [request, setRequest] = useState('');
+  const [requesting, setRequesting] = useState(false);
 
   const ranking = useQuery({
     queryKey: ['ranking'],
@@ -109,6 +123,13 @@ export default function CommunityView() {
     queryKey: ['events', 15],
     queryFn: () => api.get<EventDTO[]>('/api/events?limit=15'),
   });
+  const helpRequests = useQuery({ queryKey: ['community-help'], queryFn: () => api.get<BriefDTO[]>('/api/briefs?scope=community') });
+  const createHelp = async () => {
+    if (!requireLogin() || request.trim().length < 10) return;
+    setRequesting(true);
+    try { await api.post('/api/briefs', { rawText: request, community: true }); setRequest(''); await helpRequests.refetch(); }
+    finally { setRequesting(false); }
+  };
 
   const eventLabel = (type: string) => {
     const meta = EVENT_META[type] ?? EVENT_DEFAULT_META;
@@ -230,6 +251,10 @@ export default function CommunityView() {
             </div>
           )}
         </Card>
+      </div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
+        <Card className="p-6"><h2 className="font-semibold">도와주세요</h2><p className="mt-1 text-sm text-muted-foreground">프롬프트, 기획, 결과물 개선이 필요한 내용을 올리면 커뮤니티가 답변합니다.</p><Textarea value={request} onChange={(e) => setRequest(e.target.value)} className="mt-4" placeholder="예: 제주 여행 숏폼 프롬프트를 더 클릭하게 개선하고 싶어요. 타깃은 20대 여행객입니다." /><Button className="mt-3" disabled={requesting || request.trim().length < 10} onClick={() => void createHelp()}>{requesting ? '등록 중…' : '도움 요청 올리기'}</Button></Card>
+        <Card className="p-6"><div className="flex items-center justify-between"><h2 className="font-semibold">최근 도움 요청</h2><Button variant="ghost" size="sm" onClick={() => void helpRequests.refetch()}>새로고침</Button></div><div className="mt-3 space-y-3">{(helpRequests.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">아직 도움 요청이 없습니다. 첫 질문을 올려보세요.</p> : helpRequests.data!.map((brief) => <HelpCard key={brief.id} brief={brief} onChanged={() => void helpRequests.refetch()} />)}</div></Card>
       </div>
     </div>
   );

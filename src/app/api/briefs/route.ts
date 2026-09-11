@@ -55,7 +55,9 @@ export async function GET(req: NextRequest) {
     const scope = searchParams.get('scope') ?? 'open';
 
     const where: Prisma.ProblemBriefWhereInput =
-      scope === 'open'
+      scope === 'community'
+        ? { status: 'approved', category: 'community' }
+        : scope === 'open'
         ? { status: 'approved' }
         : scope === 'mine'
           ? { authorId: (await requireUser()).id }
@@ -76,7 +78,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await requireUser();
-    const body = await readJson<{ rawText?: string }>(req);
+    const body = await readJson<{ rawText?: string; community?: boolean }>(req);
     const rawText = (body.rawText ?? '').trim();
     if (rawText.length < 10) {
       throw new HttpError('문제 설명을 10자 이상 입력해주세요', 400);
@@ -100,7 +102,10 @@ export async function POST(req: NextRequest) {
         rawText,
         structuredSpec: JSON.stringify(spec),
         budget: spec.suggestedBudgetKrw,
-        status: 'draft',
+        category: body.community ? 'community' : null,
+        // Community help requests are intentionally public on creation. Marketplace
+        // briefs retain the moderation workflow.
+        status: body.community ? 'approved' : 'draft',
       },
       include: briefInclude,
     });

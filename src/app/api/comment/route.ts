@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     const body = await readJson<{ targetType?: string; targetId?: string; body?: string }>(req);
     const { targetType, targetId } = body;
     const text = (body.body ?? '').trim();
-    if ((targetType !== 'prompt' && targetType !== 'artifact') || !targetId) {
+    if ((targetType !== 'prompt' && targetType !== 'artifact' && targetType !== 'brief') || !targetId) {
       throw new HttpError('잘못된 요청입니다', 400);
     }
     if (!text) throw new HttpError('댓글 내용을 입력해주세요', 400);
@@ -19,7 +19,9 @@ export async function POST(req: NextRequest) {
     const target =
       targetType === 'prompt'
         ? await db.prompt.findUnique({ where: { id: targetId }, select: { id: true } })
-        : await db.artifact.findUnique({ where: { id: targetId }, select: { id: true } });
+        : targetType === 'artifact'
+          ? await db.artifact.findUnique({ where: { id: targetId }, select: { id: true } })
+          : await db.problemBrief.findUnique({ where: { id: targetId }, select: { id: true } });
     if (!target) throw new HttpError('대상을 찾을 수 없습니다', 404);
 
     const comment = await db.comment.create({
@@ -30,7 +32,7 @@ export async function POST(req: NextRequest) {
     // Update denormalized count
     if (targetType === 'prompt') {
       await db.prompt.update({ where: { id: targetId }, data: { commentCount: { increment: 1 } } });
-    } else {
+    } else if (targetType === 'artifact') {
       await db.artifact.update({ where: { id: targetId }, data: { commentCount: { increment: 1 } } });
     }
 
