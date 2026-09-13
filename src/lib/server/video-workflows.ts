@@ -6,6 +6,7 @@ export interface VideoRenderInput {
   prompt: string;
   durationSec: number;
   aspectRatio: VideoAspectRatio;
+  firstFrameName?: string;
 }
 
 function ltxFrameCount(durationSec: number) {
@@ -90,7 +91,7 @@ export function buildH3TextToVideoWorkflow(input: VideoRenderInput): Record<stri
     '150': { inputs: { clip_name: 'qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', type: 'minimax', device: 'default' }, class_type: 'CLIPLoader', _meta: { title: 'CLIPLoader' } },
     '151': { inputs: { noise_seed: Math.floor(Math.random() * 2_147_483_647) }, class_type: 'RandomNoise', _meta: { title: 'RandomNoise' } },
     '152': { inputs: { images: ['144', 0], audio: ['143', 0], fps: 24, bit_depth: 8, color_space: 'sRGB' }, class_type: 'CreateVideo', _meta: { title: 'CreateVideo' } },
-    '153': { inputs: { clip: ['150', 0], vae: ['141', 0], width: ['162', 0], height: ['163', 0], length: ['154', 1], prompt }, class_type: 'MiniMaxH3ImageToVideo', _meta: { title: 'MiniMaxH3ImageToVideo' } },
+    '153': { inputs: { clip: ['150', 0], vae: ['141', 0], width: ['162', 0], height: ['163', 0], length: ['154', 1], prompt, ...(input.firstFrameName ? { first_frame: ['164', 0] } : {}) }, class_type: 'MiniMaxH3ImageToVideo', _meta: { title: 'MiniMaxH3ImageToVideo' } },
     '154': { inputs: { 'values.a': ['155', 0], expression: 'max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17' }, class_type: 'ComfyMathExpression', _meta: { title: 'Frame Count' } },
     '155': { inputs: { value: Math.max(4, Math.min(15, Math.round(input.durationSec))) }, class_type: 'PrimitiveFloat', _meta: { title: 'Duration' } },
     '156': { inputs: { model: ['149', 0], lora_name: 'minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors', strength_model: 1 }, class_type: 'LoraLoaderModelOnly', _meta: { title: 'LoraLoaderModelOnly' } },
@@ -101,12 +102,14 @@ export function buildH3TextToVideoWorkflow(input: VideoRenderInput): Record<stri
     '161': { inputs: { value: false }, class_type: 'PrimitiveBoolean', _meta: { title: 'Enable Lightning LoRA' } },
     '162': { inputs: { value: width }, class_type: 'PrimitiveInt', _meta: { title: 'Width' } },
     '163': { inputs: { value: height }, class_type: 'PrimitiveInt', _meta: { title: 'Height' } },
+    ...(input.firstFrameName ? { '164': { inputs: { image: input.firstFrameName }, class_type: 'LoadImage', _meta: { title: 'First frame' } } } : {}),
   };
 }
 
 export function getEngineForFirstShot(inputMode: string, quality?: string): RunpodVideoEngine | null {
   // The active LTX deployment is text-to-video. Image and frame modes remain
   // explicitly unavailable until their H3/Wan API workflows are captured.
+  if (inputMode === 'image') return 'h3';
   if (inputMode !== 'text') return null;
   return quality === 'standard' || quality === 'hero' ? 'h3' : 'ltx';
 }

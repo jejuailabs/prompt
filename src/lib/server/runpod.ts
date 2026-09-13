@@ -15,6 +15,11 @@ export interface RunpodJobStatus extends RunpodQueuedJob {
   error?: string;
 }
 
+export interface RunpodInputImage {
+  name: string;
+  image: string;
+}
+
 const endpointEnv: Record<RunpodVideoEngine, string> = {
   h3: 'RUNPOD_H3_ENDPOINT_ID',
   wan: 'RUNPOD_WAN_ENDPOINT_ID',
@@ -53,13 +58,14 @@ async function runpodFetch<T>(path: string, init?: RequestInit): Promise<T> {
 export async function queueRunpodWorkflow(
   engine: RunpodVideoEngine,
   workflow: Record<string, unknown>,
+  images?: RunpodInputImage[],
 ): Promise<RunpodQueuedJob> {
   const endpointId = getRunpodEndpointId(engine);
   if (!endpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
 
   return runpodFetch<RunpodQueuedJob>(`/v2/${endpointId}/run`, {
     method: 'POST',
-    body: JSON.stringify({ input: { workflow } }),
+    body: JSON.stringify({ input: { workflow, ...(images?.length ? { images } : {}) } }),
   });
 }
 
