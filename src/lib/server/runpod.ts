@@ -1,7 +1,7 @@
 // Server-side Runpod Serverless client for ComfyUI video workflows.
 // API keys stay in RUNPOD_API_KEY and must never be exposed to the browser.
 
-export type RunpodVideoEngine = 'h3' | 'wan' | 'ltx' | 'flux';
+export type RunpodVideoEngine = 'h3' | 'wan' | 'ltx' | 'flux' | 'blender';
 
 export interface RunpodQueuedJob {
   id: string;
@@ -25,6 +25,7 @@ const endpointEnv: Record<RunpodVideoEngine, string> = {
   wan: 'RUNPOD_WAN_ENDPOINT_ID',
   ltx: 'RUNPOD_LTX_ENDPOINT_ID',
   flux: 'RUNPOD_FLUX_ENDPOINT_ID',
+  blender: 'RUNPOD_BLENDER_ENDPOINT_ID',
 };
 
 function getApiKey(): string {
@@ -67,6 +68,19 @@ export async function queueRunpodWorkflow(
   return runpodFetch<RunpodQueuedJob>(`/v2/${endpointId}/run`, {
     method: 'POST',
     body: JSON.stringify({ input: { workflow, ...(images?.length ? { images } : {}) } }),
+  });
+}
+
+/** Queue a custom Serverless handler such as the PLAYLAB Blender renderer. */
+export async function queueRunpodJob(
+  engine: RunpodVideoEngine,
+  input: Record<string, unknown>,
+): Promise<RunpodQueuedJob> {
+  const endpointId = getRunpodEndpointId(engine);
+  if (!endpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
+  return runpodFetch<RunpodQueuedJob>(`/v2/${endpointId}/run`, {
+    method: 'POST',
+    body: JSON.stringify({ input }),
   });
 }
 
