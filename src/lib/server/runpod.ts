@@ -1,7 +1,7 @@
 // Server-side Runpod Serverless client for ComfyUI video workflows.
 // API keys stay in RUNPOD_API_KEY and must never be exposed to the browser.
 
-export type RunpodVideoEngine = 'h3' | 'wan' | 'ltx';
+export type RunpodVideoEngine = 'h3' | 'wan' | 'ltx' | 'flux';
 
 export interface RunpodQueuedJob {
   id: string;
@@ -24,6 +24,7 @@ const endpointEnv: Record<RunpodVideoEngine, string> = {
   h3: 'RUNPOD_H3_ENDPOINT_ID',
   wan: 'RUNPOD_WAN_ENDPOINT_ID',
   ltx: 'RUNPOD_LTX_ENDPOINT_ID',
+  flux: 'RUNPOD_FLUX_ENDPOINT_ID',
 };
 
 function getApiKey(): string {
