@@ -60,7 +60,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // This is a single-page app, but its screens still need normal browser
       // history. Using replaceState here made Back jump outside PLAYLAB.
       if (window.location.hash !== destination) {
-        history.pushState(null, '', destination);
+        history.pushState({ playlab: true }, '', destination);
       }
     }
   },

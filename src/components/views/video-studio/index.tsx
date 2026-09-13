@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft, ArrowRight, Box, CheckCircle2, ChevronDown, Clapperboard, Clock3,
@@ -8,7 +8,7 @@ import {
   Play, Plus, Sparkles, Upload, UsersRound, Wand2,
 } from 'lucide-react';
 import { api, ApiError, uploadFile } from '@/lib/api-client';
-import { useAppStore } from '@/lib/store';
+import { encodeHash, useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import type { ArtifactDTO } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -76,12 +76,30 @@ export default function VideoStudioView() {
   const selectedProjectId = mode === 'workspace' ? params.project ?? null : null;
   const remix = params.remix ? [...featuredVideos, ...featuredAssets].find((card) => card.id === params.remix) ?? null : null;
 
+  // A direct link or a pre-fix tab may not have an in-app history entry behind
+  // it. Add Gallery as that entry so the browser Back button and the visible
+  // "갤러리로 돌아가기" action always land on the same screen.
+  useEffect(() => {
+    if (mode === 'gallery' || typeof window === 'undefined' || history.state?.playlab) return;
+    const current = window.location.hash;
+    history.replaceState({ playlab: true }, '', encodeHash('video-studio'));
+    history.pushState({ playlab: true }, '', current);
+  }, [mode]);
+
+  const returnToGallery = () => {
+    if (typeof window !== 'undefined' && mode !== 'gallery') {
+      window.history.back();
+      return;
+    }
+    navigate('video-studio');
+  };
+
   const openQuick = (card?: FeaturedCard) => {
     navigate('video-studio', { studio: 'quick', ...(card ? { remix: card.id } : {}) });
   };
 
-  if (mode === 'quick') return <QuickStart onBack={() => navigate('video-studio')} onCreated={(id) => navigate('video-studio', { studio: 'workspace', project: id })} remix={remix} />;
-  if (mode === 'workspace' && selectedProjectId) return <ProjectWorkspace projectId={selectedProjectId} onBack={() => navigate('video-studio')} />;
+  if (mode === 'quick') return <QuickStart onBack={returnToGallery} onCreated={(id) => navigate('video-studio', { studio: 'workspace', project: id })} remix={remix} />;
+  if (mode === 'workspace' && selectedProjectId) return <ProjectWorkspace projectId={selectedProjectId} onBack={returnToGallery} />;
   return <StudioGallery session={Boolean(session)} onNewProject={() => openQuick()} onRemix={openQuick} onOpenProject={(id) => navigate('video-studio', { studio: 'workspace', project: id })} />;
 }
 
