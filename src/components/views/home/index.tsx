@@ -4,6 +4,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
@@ -14,7 +15,6 @@ import { Icon } from '@/components/layout/icon';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { MetaPromptBar } from './meta-prompt-bar';
 function FeedSkeleton() {
   return null;
 }
@@ -70,7 +70,10 @@ export default function HomeView() {
             </h1>
             <p className="mt-4 text-muted-foreground">{tc('tagline')}</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button size="lg" onClick={() => navigate('gallery')}>
+              <Button size="lg" onClick={() => navigate('tool', { slug: 'metaprompt' })}>
+                <Sparkles className="mr-2 h-5 w-5" /> AI 프롬프트 만들기
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => navigate('gallery')}>
                 {t('makeProject')}
               </Button>
               <Button size="lg" variant="outline" onClick={() => navigate('lab')}>
@@ -96,11 +99,6 @@ export default function HomeView() {
             </motion.div>
           </div>
         </div>
-      </section>
-
-      {/* ── meta prompt bar ─────────────────────────────────── */}
-      <section className="mb-8">
-        <MetaPromptBar />
       </section>
 
       {/* ── quick actions ────────────────────────────────────── */}
