@@ -38,6 +38,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const quality = typeof meta.quality === 'string' ? meta.quality : 'draft';
     const validEngines = ['h3', 'wan', 'ltx'] as const;
     const engineOverride = typeof body.engine === 'string' && validEngines.includes(body.engine as typeof validEngines[number]) ? body.engine as typeof validEngines[number] : null;
+    // The Studio selector is visible ahead of the separate Wan/LTX endpoint
+    // verification. Do not silently submit either choice to a mismatched
+    // workflow: only H3 has a verified first-shot contract right now.
+    if (engineOverride && engineOverride !== 'h3') {
+      throw new HttpError(`${engineOverride.toUpperCase()} 렌더 워커는 현재 점검 중입니다. H3로 첫 샷을 생성해주세요.`, 409);
+    }
     const engine = engineOverride ?? getEngineForFirstShot(inputMode, quality);
     if (!engine) throw new HttpError('첫·끝 프레임과 이어 만들기는 다음 워크플로우 단계에서 사용할 수 있습니다', 409);
 
