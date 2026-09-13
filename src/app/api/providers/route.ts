@@ -4,7 +4,10 @@ import { fail, ok } from '@/lib/server/handler';
 
 export async function GET() {
   try {
-    const providers = await db.modelProvider.findMany({ where: { active: true } });
+    // The model laboratory is image-only. Runpod video/3D providers are kept
+    // in the same ledger for admin accounting but must not be selectable by
+    // the image adapter runner.
+    const providers = await db.modelProvider.findMany({ where: { active: true, category: 'image' } });
     return ok(
       providers.map((p) => ({
         id: p.id,

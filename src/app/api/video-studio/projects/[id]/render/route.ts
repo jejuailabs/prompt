@@ -4,6 +4,7 @@ import { HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { queueRunpodWorkflow, type RunpodInputImage } from '@/lib/server/runpod';
 import { buildH3TextToVideoWorkflow, buildLtxTextToVideoWorkflow, getEngineForFirstShot, type VideoAspectRatio } from '@/lib/server/video-workflows';
+import { beginMeteredOperation, failMeteredOperation } from '@/lib/server/operation-ledger';
 
 function metadata(raw: string): Record<string, unknown> {
   try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
@@ -47,16 +48,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const firstFrame = inputImageUrl ? await getRunpodFirstFrame(inputImageUrl) : undefined;
     const renderInput = { prompt, durationSec: duration, aspectRatio: aspect as VideoAspectRatio, ...(firstFrame ? { firstFrameName: firstFrame.name } : {}) };
     const workflow = engine === 'h3' ? buildH3TextToVideoWorkflow(renderInput) : buildLtxTextToVideoWorkflow(renderInput);
-    const job = await queueRunpodWorkflow(engine, workflow, firstFrame ? [firstFrame] : undefined);
+    const ledger = await beginMeteredOperation({ userId: user.id, engine, prompt, aspect, style: typeof meta.style === 'string' ? meta.style : null });
+    let job;
+    try {
+      job = await queueRunpodWorkflow(engine, workflow, firstFrame ? [firstFrame] : undefined);
+    } catch (error) {
+      await failMeteredOperation(ledger.operationId, error instanceof Error ? error.message : 'Runpod 렌더 요청 실패');
+      throw error;
+    }
 
     const nextMeta = {
       ...meta,
       projectStatus: 'rendering',
       activeShotId: body.shotId ?? 'shot-1',
-      render: { engine, runpodJobId: job.id, status: job.status, queuedAt: new Date().toISOString() },
+      render: { engine, runpodJobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString() },
     };
     await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(nextMeta), status: 'processing' } });
-    return ok({ projectId: project.id, engine, jobId: job.id, status: job.status });
+    return ok({ projectId: project.id, engine, jobId: job.id, status: job.status, creditCharged: ledger.creditCharged });
   } catch (error) {
     return fail(error);
   }

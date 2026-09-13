@@ -10,14 +10,15 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const limit = Math.min(100, Math.max(10, Number(url.searchParams.get('limit')) || 50));
     const status = url.searchParams.get('status') || undefined;
+    const category = url.searchParams.get('category') || undefined;
 
-    const where = status ? { status } : {};
+    const where = { ...(status ? { status } : {}), ...(category ? { provider: { category } } : {}) };
 
     const [jobs, total] = await Promise.all([
       db.generationJob.findMany({
         where,
         include: {
-          provider: { select: { id: true, displayName: true, adapterType: true } },
+          provider: { select: { id: true, displayName: true, adapterType: true, category: true } },
           user: { select: { username: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
     const summary = await db.generationJob.groupBy({
       by: ['status'],
       _count: true,
-      _sum: { creditCharged: true },
+      _sum: { creditCharged: true, costActual: true },
     });
 
     return ok({
@@ -39,10 +40,12 @@ export async function GET(req: NextRequest) {
         username: (j.user as { username: string }).username,
         provider: (j.provider as { displayName: string }).displayName,
         adapterType: (j.provider as { adapterType: string }).adapterType,
+        category: (j.provider as { category: string }).category,
         promptText: j.promptText.slice(0, 80),
         aspect: j.aspect,
         status: j.status,
         creditCharged: j.creditCharged,
+        costActual: j.costActual,
         error: j.error,
         createdAt: j.createdAt.toISOString(),
         completedAt: j.completedAt?.toISOString() ?? null,
@@ -57,6 +60,7 @@ export async function GET(req: NextRequest) {
         status: s.status,
         count: s._count,
         totalCredits: s._sum.creditCharged ?? 0,
+        totalCost: s._sum.costActual ?? 0,
       })),
     });
   } catch (e) {

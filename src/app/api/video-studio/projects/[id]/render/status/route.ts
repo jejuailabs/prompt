@@ -3,6 +3,7 @@ import { HttpError, requireUser } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 import { getRunpodJobStatus, type RunpodVideoEngine } from '@/lib/server/runpod';
 import { uploadBuffer } from '@/lib/server/storage';
+import { finishMeteredOperation } from '@/lib/server/operation-ledger';
 
 function metadata(raw: string): Record<string, unknown> {
   try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
@@ -50,9 +51,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!project) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
 
     const meta = metadata(project.metadata);
-    const render = meta.render as { engine?: RunpodVideoEngine; runpodJobId?: string } | undefined;
+    const render = meta.render as { engine?: RunpodVideoEngine; runpodJobId?: string; accountingJobId?: string } | undefined;
     if (!render?.engine || !render.runpodJobId) throw new HttpError('진행 중인 렌더 작업이 없습니다', 404);
     const job = await getRunpodJobStatus(render.engine, render.runpodJobId);
+    await finishMeteredOperation({ operationId: render.accountingJobId, engine: render.engine, status: job.status, executionTimeMs: job.executionTime, error: job.error });
     const terminal = job.status === 'COMPLETED' || job.status === 'FAILED' || job.status === 'CANCELLED';
     let videoUrl: string | null = null;
     if (terminal) {

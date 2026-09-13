@@ -72,7 +72,7 @@ export async function processOneGenerationJob(jobId: string): Promise<void> {
 
     await db.generationJob.update({
       where: { id: job.id },
-      data: { status: 'done', resultArtifactId: artifact.id, completedAt: new Date() },
+      data: { status: 'done', resultArtifactId: artifact.id, costActual: job.provider.costPerUnit, completedAt: new Date() },
     });
     await logEvent('artifact.created', {
       artifactId: artifact.id,

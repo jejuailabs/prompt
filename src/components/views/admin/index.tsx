@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle, Circle, Clock, Film, Info, Loader2, Radar, RotateCcw, Shield, Trash2, Wrench, Zap } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, BarChart3, CheckCircle, Circle, Clock, Coins, Film, Info, Loader2, Radar, ReceiptText, RotateCcw, Shield, Trash2, Users, Wallet, Wrench, Zap } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
 import { useAppStore } from '@/lib/store';
@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -41,6 +42,17 @@ interface AdminOverview {
   pendingSmokeTests: SmokeTestDTO[];
   pendingBriefs: BriefDTO[];
   users: AdminUserDTO[];
+}
+
+interface AdminFinance {
+  members: number;
+  outstandingCredits: number;
+  jobs: number;
+  chargedCredits: number;
+  estimatedCostKrw: number;
+  estimatedMarginKrw: number;
+  monthlyNetCreditFlow: number;
+  engines: { providerId: string; label: string; category: string; total: number; completed: number; failed: number; credits: number; estimatedCostKrw: number }[];
 }
 
 // ─── formatting helpers ─────────────────────────────────────────────────────
@@ -127,8 +139,9 @@ export default function AdminView() {
           }
         />
       ) : (
-        <Tabs defaultValue="modules">
+        <Tabs defaultValue="dashboard">
           <TabsList className="flex-wrap">
+            <TabsTrigger value="dashboard"><BarChart3 className="mr-1 size-3.5" />운영 대시보드</TabsTrigger>
             <TabsTrigger value="modules">{t('tabModules')}</TabsTrigger>
             <TabsTrigger value="moderation">
               {t('tabModeration')}
@@ -158,6 +171,10 @@ export default function AdminView() {
             <TabsTrigger value="logs">{t('tabLogs')}</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="dashboard" className="mt-4">
+            <DashboardTab />
+          </TabsContent>
+
           <TabsContent value="modules" className="mt-4">
             <ModulesTab />
           </TabsContent>
@@ -186,6 +203,24 @@ export default function AdminView() {
       )}
     </motion.div>
   );
+}
+
+function DashboardTab() {
+  const financeQ = useQuery({ queryKey: ['admin', 'finance'], queryFn: () => api.get<AdminFinance>('/api/admin/finance') });
+  if (financeQ.isLoading) return <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-28 rounded-xl" />)}</div>;
+  if (financeQ.isError || !financeQ.data) return <EmptyState icon={<BarChart3 className="size-5" />} title="운영 지표를 불러오지 못했습니다" action={<Button variant="outline" onClick={() => void financeQ.refetch()}>다시 시도</Button>} />;
+  const data = financeQ.data;
+  const cards = [
+    { label: '전체 회원', value: data.members.toLocaleString(), icon: <Users className="size-4" /> },
+    { label: '보유 크레딧 부채', value: `${data.outstandingCredits.toLocaleString()} 크`, icon: <Coins className="size-4" /> },
+    { label: 'AI 실행 건수', value: data.jobs.toLocaleString(), icon: <ReceiptText className="size-4" /> },
+    { label: '추정 운영 마진', value: `₩${Math.round(data.estimatedMarginKrw).toLocaleString()}`, icon: <Wallet className="size-4" /> },
+  ];
+  return <div className="space-y-5">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{cards.map((card) => <Card key={card.label} className="gap-2 p-4"><div className="flex items-center gap-2 text-xs text-muted-foreground">{card.icon}{card.label}</div><p className="text-xl font-bold tabular-nums">{card.value}</p></Card>)}</div>
+    <Card className="p-4"><div className="flex flex-wrap gap-x-8 gap-y-2 text-sm"><span>누적 차감 <strong className="ml-1 tabular-nums">{data.chargedCredits.toLocaleString()} 크</strong></span><span>추정 GPU 원가 <strong className="ml-1 tabular-nums">₩{Math.round(data.estimatedCostKrw).toLocaleString()}</strong></span><span>이번 달 순 크레딧 흐름 <strong className="ml-1 tabular-nums">{data.monthlyNetCreditFlow > 0 ? '+' : ''}{data.monthlyNetCreditFlow.toLocaleString()} 크</strong></span></div></Card>
+    <div className="overflow-x-auto rounded-xl border"><Table><TableHeader><TableRow><TableHead>엔진 / 도구</TableHead><TableHead>유형</TableHead><TableHead className="text-right">실행</TableHead><TableHead className="text-right">성공률</TableHead><TableHead className="text-right">차감</TableHead><TableHead className="text-right">추정 원가</TableHead></TableRow></TableHeader><TableBody>{data.engines.length ? data.engines.map((engine) => <TableRow key={engine.providerId}><TableCell className="font-medium">{engine.label}</TableCell><TableCell><Badge variant="secondary">{engine.category}</Badge></TableCell><TableCell className="text-right tabular-nums">{engine.total}</TableCell><TableCell className="text-right tabular-nums">{engine.total ? `${Math.round((engine.completed / engine.total) * 100)}%` : '—'}</TableCell><TableCell className="text-right tabular-nums">{engine.credits.toLocaleString()} 크</TableCell><TableCell className="text-right tabular-nums">₩{Math.round(engine.estimatedCostKrw).toLocaleString()}</TableCell></TableRow>) : <TableRow><TableCell colSpan={6} className="h-20 text-center text-sm text-muted-foreground">아직 집계된 AI 실행이 없습니다.</TableCell></TableRow>}</TableBody></Table></div>
+  </div>;
 }
 
 // ─── module switches ────────────────────────────────────────────────────────
@@ -495,6 +530,7 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
   const locale = useAppStore((s) => s.locale);
   const qc = useQueryClient();
   const { toast } = useToast();
+  const [adjustments, setAdjustments] = useState<Record<string, string>>({});
 
   const patchM = useMutation({
     mutationFn: (body: { id: string; role?: 'user' | 'admin'; banned?: boolean }) =>
@@ -510,6 +546,17 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
     onError: (e: Error) => toast({ title: e.message, variant: 'destructive' }),
   });
 
+  const creditM = useMutation({
+    mutationFn: ({ userId, amount }: { userId: string; amount: number }) => api.post<{ balance: number }>('/api/admin/finance', { userId, amount, memo: '관리자 수동 조정' }),
+    onSuccess: (data, variables) => {
+      toast({ title: `크레딧 조정 완료 · 잔액 ${data.balance.toLocaleString()}크` });
+      setAdjustments((current) => ({ ...current, [variables.userId]: '' }));
+      void qc.invalidateQueries({ queryKey: ['admin', 'overview'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'finance'] });
+    },
+    onError: (error: Error) => toast({ title: error.message, variant: 'destructive' }),
+  });
+
   return (
     <div className="max-h-96 overflow-y-auto rounded-md border scrollbar-thin">
       <Table>
@@ -521,6 +568,7 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
             <TableHead className="text-right">{t('thCredits')}</TableHead>
             <TableHead>{t('thRole')}</TableHead>
             <TableHead>{t('thBanned')}</TableHead>
+            <TableHead>크레딧 조정</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -554,6 +602,24 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
                     <SelectItem value="admin">admin</SelectItem>
                   </SelectContent>
                 </Select>
+              </TableCell>
+              <TableCell>
+                <div className="flex min-w-44 gap-1.5">
+                  <Input
+                    aria-label={`${u.username} 크레딧 조정`}
+                    className="h-8 w-24 text-xs"
+                    placeholder="+/- 금액"
+                    inputMode="numeric"
+                    value={adjustments[u.id] ?? ''}
+                    onChange={(event) => setAdjustments((current) => ({ ...current, [u.id]: event.target.value }))}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8 px-2 text-xs"
+                    disabled={creditM.isPending || !Number.isFinite(Number(adjustments[u.id])) || Number(adjustments[u.id]) === 0}
+                    onClick={() => creditM.mutate({ userId: u.id, amount: Number(adjustments[u.id]) })}
+                  >적용</Button>
+                </div>
               </TableCell>
               <TableCell>
                 <Switch
@@ -1030,13 +1096,15 @@ interface LogJob {
   aspect: string;
   status: string;
   creditCharged: number;
+  costActual: number;
+  category: string;
   error: string | null;
   createdAt: string;
   completedAt: string | null;
   durationMs: number | null;
 }
 
-interface LogSummary { status: string; count: number; totalCredits: number; }
+interface LogSummary { status: string; count: number; totalCredits: number; totalCost: number; }
 interface LogsResponse { jobs: LogJob[]; total: number; page: number; limit: number; summary: LogSummary[]; }
 
 const statusIcon = (s: string) => {
@@ -1056,12 +1124,14 @@ function ApiLogsTab() {
 
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const logsQ = useQuery({
-    queryKey: ['admin', 'logs', page, statusFilter],
+    queryKey: ['admin', 'logs', page, statusFilter, categoryFilter],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: '50' });
       if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (categoryFilter !== 'all') params.set('category', categoryFilter);
       return api.get<LogsResponse>(`/api/admin/logs?${params}`);
     },
   });
@@ -1090,7 +1160,7 @@ function ApiLogsTab() {
             {statusIcon(s.status)}
             <span className="text-sm font-medium capitalize">{s.status}</span>
             <Badge variant="secondary">{s.count}</Badge>
-            <span className="text-xs text-muted-foreground">{s.totalCredits.toLocaleString()}크</span>
+            <span className="text-xs text-muted-foreground">{s.totalCredits.toLocaleString()}크 · ₩{Math.round(s.totalCost).toLocaleString()}</span>
           </Card>
         ))}
       </div>
@@ -1107,6 +1177,15 @@ function ApiLogsTab() {
             <SelectItem value="failed">failed</SelectItem>
             <SelectItem value="running">running</SelectItem>
             <SelectItem value="queued">queued</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPage(1); }}>
+          <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 도구</SelectItem>
+            <SelectItem value="image">이미지</SelectItem>
+            <SelectItem value="video">영상</SelectItem>
+            <SelectItem value="3d">3D</SelectItem>
           </SelectContent>
         </Select>
 
@@ -1146,8 +1225,10 @@ function ApiLogsTab() {
                 <TableHead className="w-10" />
                 <TableHead>유저</TableHead>
                 <TableHead>모델</TableHead>
+                <TableHead>도구</TableHead>
                 <TableHead>프롬프트</TableHead>
                 <TableHead className="text-right">크레딧</TableHead>
+                <TableHead className="text-right">추정 원가</TableHead>
                 <TableHead>소요</TableHead>
                 <TableHead>에러</TableHead>
                 <TableHead>시간</TableHead>
@@ -1162,10 +1243,12 @@ function ApiLogsTab() {
                     <span className="text-xs font-medium">{j.provider}</span>
                     <span className="ml-1 text-[10px] text-muted-foreground">{j.adapterType}</span>
                   </TableCell>
+                  <TableCell><Badge variant="secondary" className="text-[10px]">{j.category}</Badge></TableCell>
                   <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground" title={j.promptText}>
                     {j.promptText}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-xs">{j.creditCharged}</TableCell>
+                  <TableCell className="text-right tabular-nums text-xs">₩{Math.round(j.costActual).toLocaleString()}</TableCell>
                   <TableCell className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
                     {j.durationMs != null ? `${(j.durationMs / 1000).toFixed(1)}s` : '—'}
                   </TableCell>

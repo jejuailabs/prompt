@@ -3,6 +3,7 @@ import { HttpError, requireUser } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 import { getRunpodJobStatus } from '@/lib/server/runpod';
 import { parseMeta, toProject } from '../route';
+import { finishMeteredOperation } from '@/lib/server/operation-ledger';
 
 function findUrl(value: unknown, pattern: RegExp): string | null {
   if (typeof value === 'string') return pattern.test(value) ? value : null;
@@ -21,6 +22,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const jobId = meta.blender?.jobId;
     if (jobId && !['COMPLETED', 'FAILED', 'CANCELLED'].includes(meta.blender?.status ?? '')) {
       const job = await getRunpodJobStatus('blender', jobId);
+      await finishMeteredOperation({ operationId: meta.blender?.accountingJobId, engine: 'blender', status: job.status, executionTimeMs: job.executionTime, error: job.error });
       const terminal = ['COMPLETED', 'FAILED', 'CANCELLED'].includes(job.status);
       const glbUrl = terminal && job.status === 'COMPLETED' ? findUrl(job.output, /\.glb(?:\?|$)/i) : null;
       const thumbnailUrl = terminal && job.status === 'COMPLETED' ? findUrl(job.output, /\.(png|jpe?g|webp)(?:\?|$)/i) : null;

@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getSessionUserFast, HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { queueRunpodJob } from '@/lib/server/runpod';
+import { beginMeteredOperation, failMeteredOperation } from '@/lib/server/operation-ledger';
 import type { Asset3dProjectDTO, Asset3dSubtrack } from '@/lib/types';
 
 interface ProjectMeta {
@@ -10,7 +11,7 @@ interface ProjectMeta {
   subtrack?: Asset3dSubtrack;
   inputImageUrls?: string[];
   styleOptions?: Record<string, unknown>;
-  blender?: { jobId?: string; status?: string; error?: string; queuedAt?: string };
+  blender?: { jobId?: string; accountingJobId?: string; creditCharged?: number; status?: string; error?: string; queuedAt?: string };
   outputs?: Asset3dProjectDTO['outputs'];
 }
 
@@ -77,12 +78,21 @@ export async function POST(req: NextRequest) {
       data: { ownerId: user.id, type: '3d_asset', title, description: `${subtrack} Blender asset`, sourceModule: '3d-studio', fileUrl: imageUrls[0], metadata: JSON.stringify(baseMeta), visibility: 'private', status: 'generating' },
     });
 
+    let ledger: Awaited<ReturnType<typeof beginMeteredOperation>>;
+    try {
+      ledger = await beginMeteredOperation({ userId: user.id, engine: 'blender', prompt: buildBlenderPrompt(title, subtrack, quality, imageUrls), aspect: '3d', style: quality });
+    } catch (error) {
+      const meta = { ...baseMeta, blender: { status: 'FAILED', error: error instanceof Error ? error.message : '크레딧 차감에 실패했습니다' } };
+      const failed = await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(meta), status: 'failed' } });
+      return ok(toProject(failed));
+    }
     try {
       const job = await queueRunpodJob('blender', { prompt: buildBlenderPrompt(title, subtrack, quality, imageUrls), image_urls: imageUrls, quality, subtrack });
-      const meta = { ...baseMeta, blender: { jobId: job.id, status: job.status, queuedAt: new Date().toISOString() } };
+      const meta = { ...baseMeta, blender: { jobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString() } };
       const queued = await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(meta), status: 'generating' } });
       return ok(toProject(queued));
     } catch (error) {
+      await failMeteredOperation(ledger.operationId, error instanceof Error ? error.message : 'Blender 렌더 요청 실패');
       const meta = { ...baseMeta, blender: { status: 'FAILED', error: error instanceof Error ? error.message : 'Blender 작업을 시작하지 못했습니다' } };
       const failed = await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(meta), status: 'failed' } });
       return ok(toProject(failed));

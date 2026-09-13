@@ -5,6 +5,7 @@ import { HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { chargeCredits } from '@/lib/server/credits';
 import { startPipelineRun } from '@/lib/server/runners';
+import { logEvent } from '@/lib/events';
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         creditCharged: pipeline.creditCost,
       },
     });
+    await logEvent('ai.pipeline.queued', { runId: run.id, userId: user.id, pipelineId: pipeline.id, creditCharged: run.creditCharged });
 
     // Fire-and-forget async execution
     startPipelineRun(run.id);
