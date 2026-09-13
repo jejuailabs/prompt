@@ -30,7 +30,7 @@ interface StudioMetadata {
   aspectRatio?: string;
   quality?: string;
   projectStatus?: string;
-  render?: { engine?: string; runpodJobId?: string; status?: string; videoUrl?: string | null };
+  render?: { engine?: string; runpodJobId?: string; status?: string; videoUrl?: string | null; queuedAt?: string };
   shots?: Array<{ id: string; index: number; title: string; prompt: string; duration: number; inputMode: string; status: string }>;
 }
 
@@ -209,6 +209,10 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
       ? '작업이 완료되지 않았습니다. 다시 렌더해보세요.'
       : 'Runpod 워커가 첫 샷을 처리하고 있습니다. 이 화면에서 상태가 자동으로 갱신됩니다.');
 
+  if (rendering) {
+    return <FirstShotGenerationScreen project={project} meta={meta} renderStatus={renderStatus} onBack={onBack} />;
+  }
+
   if (project.id) {
     return (
       <div className="mx-auto w-full max-w-[1500px] pb-8">
@@ -259,6 +263,44 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
     );
   }
   return <div className="mx-auto w-full max-w-[1500px] pb-8"><div className="mb-4 flex flex-wrap items-center gap-3"><button type="button" onClick={onBack} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> 갤러리</button><span className="h-4 w-px bg-border" /><span className="text-sm text-muted-foreground">Video Studio</span><h1 className="min-w-0 flex-1 truncate text-lg font-bold">{project.title}</h1><Badge variant="secondary">{shots.length} shot</Badge><Button variant="outline" size="sm">저장</Button><Button size="sm" onClick={() => toast({ title: '렌더 큐 준비 중', description: '첫 샷의 Runpod 렌더 요청 연결을 다음 단계로 진행합니다.' })}><Clapperboard className="size-4" /> 렌더하기</Button></div><div className="grid gap-4 xl:grid-cols-[250px_minmax(0,1fr)_300px]"><aside className="rounded-2xl border bg-card p-4 xl:min-h-[720px]"><div className="flex items-center justify-between"><div><p className="font-semibold">에셋 · 바이블</p><p className="mt-1 text-xs text-muted-foreground">이 프로젝트의 기준점</p></div><Button variant="ghost" size="icon" className="size-8"><Plus className="size-4" /></Button></div><BibleGroup icon={<UsersRound className="size-4" />} title="캐릭터" items={['아직 등록한 캐릭터가 없습니다']} /><BibleGroup icon={<MapPinned className="size-4" />} title="장소" items={['씬 1 · 첫 장면']} /><BibleGroup icon={<PackageOpen className="size-4" />} title="소품 · 제품" items={['에셋을 추가해 일관성을 유지하세요']} /><BibleGroup icon={<Sparkles className="size-4" />} title="스타일" items={[meta.style ?? 'cinematic']} /><BibleGroup icon={<Music2 className="size-4" />} title="오디오" items={['BGM · 나레이션 · 효과음']} /></aside><main className="min-w-0 rounded-2xl border bg-card p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><Badge variant="secondary">씬 1</Badge><h2 className="mt-2 text-lg font-semibold">첫 장면</h2><p className="mt-1 text-sm text-muted-foreground">첫 샷을 확정한 다음, 장면을 이어가세요.</p></div><div className="flex gap-2"><Button variant="outline" size="sm"><Layers3 className="size-4" /> 타임라인</Button><Button variant="outline" size="sm"><Plus className="size-4" /> 샷 추가</Button></div></div><div className="mt-6 grid gap-4 md:grid-cols-2"><ShotCanvasCard title="샷 1" prompt={meta.prompt ?? project.description} duration={meta.targetDurationSec ?? 6} imageUrl={meta.inputImageUrl ?? null} selected /><button type="button" className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed text-muted-foreground transition-colors hover:border-primary hover:bg-primary/[.03]"><Plus className="size-7" /><span className="mt-3 font-medium">다음 샷 추가</span><span className="mt-1 text-xs">앞 샷의 마지막 프레임을 이어갈 수 있어요</span></button></div><div className="mt-6 rounded-2xl border bg-muted/[.25] p-4"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><Clock3 className="size-4 text-primary" /><p className="text-sm font-medium">타임라인</p></div><span className="text-xs text-muted-foreground">00:00 · 00:{String(meta.targetDurationSec ?? 6).padStart(2, '0')}</span></div><div className="mt-4 flex gap-2"><div className="w-16 pt-2 text-xs text-muted-foreground">Video</div><div className="h-12 flex-1 rounded-lg bg-gradient-to-r from-primary/70 via-violet-500/70 to-sky-500/70 p-2 text-xs text-white">첫 샷 · {meta.targetDurationSec ?? 6}초</div></div><div className="mt-2 flex gap-2"><div className="w-16 pt-2 text-xs text-muted-foreground">Subtitle</div><div className="h-8 flex-1 rounded-lg border border-dashed bg-background" /></div></div></main><aside className="rounded-2xl border bg-card p-4 xl:min-h-[720px]"><p className="font-semibold">샷 인스펙터</p><div className="mt-4 overflow-hidden rounded-xl bg-slate-900"><div className="relative aspect-video">{hasStartImage ? <img src={meta.inputImageUrl ?? ''} alt="첫 프레임" className="size-full object-cover" /> : <div className="size-full bg-[radial-gradient(circle_at_65%_30%,rgba(250,204,21,.35),transparent_24%),linear-gradient(135deg,#172554,#0f172a_55%,#7c2d12)]" />}<span className="absolute left-2 top-2 rounded bg-black/50 px-1.5 py-1 text-[10px] text-white">{meta.aspectRatio ?? '9:16'}</span><Play className="absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 text-white" /></div></div><InspectorRow label="생성 방식" value={meta.inputMode === 'image' ? '이미지 → 영상' : '프롬프트 → 영상'} /><InspectorRow label="길이" value={`${meta.targetDurationSec ?? 6}초`} /><InspectorRow label="비율" value={meta.aspectRatio ?? '9:16'} /><div className="mt-5"><p className="text-xs font-medium text-muted-foreground">장면 프롬프트</p><p className="mt-2 rounded-xl border bg-muted/[.25] p-3 text-sm leading-6">{meta.prompt ?? project.description}</p></div><div className="mt-5 rounded-xl border bg-emerald-500/[.12] p-3"><div className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="size-4" /> 다음 단계</div><p className="mt-1 text-xs leading-5 text-muted-foreground">첫 샷을 렌더한 뒤, 결과를 다음 장면의 첫 프레임 또는 참조 에셋으로 사용하세요.</p></div></aside></div></div>;
+}
+
+function FirstShotGenerationScreen({ project, meta, renderStatus, onBack }: { project: ArtifactDTO; meta: StudioMetadata; renderStatus: string; onBack: () => void }) {
+  const waiting = renderStatus === 'QUEUED' || renderStatus === 'IN_QUEUE';
+  const source = meta.inputImageUrl;
+  const stages = [
+    { label: '시작 이미지 · 프롬프트 접수', detail: '프로젝트에 저장됨', done: true },
+    { label: waiting ? 'H3 렌더 워커 대기' : 'H3에서 움직임 생성 중', detail: waiting ? 'GPU가 작업을 시작하면 자동으로 다음 단계로 넘어갑니다.' : '첫 프레임을 바탕으로 6초 영상을 만들고 있습니다.', done: false },
+    { label: '영상 패키징 · 작업실 반영', detail: '완료되면 바로 재생 가능한 첫 샷이 됩니다.', done: false },
+  ];
+
+  return (
+    <div className="mx-auto flex min-h-[calc(100vh-11rem)] w-full max-w-5xl items-center justify-center pb-10">
+      <section className="w-full overflow-hidden rounded-3xl border bg-card shadow-sm">
+        <div className="border-b bg-gradient-to-r from-primary/[.1] via-violet-500/[.07] to-sky-500/[.1] px-6 py-5 sm:px-8">
+          <button type="button" onClick={onBack} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> 갤러리로 돌아가기</button>
+        </div>
+        <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-center">
+          <div>
+            <Badge className="border-0 bg-primary/10 text-primary hover:bg-primary/10"><Loader2 className="mr-1 size-3 animate-spin" /> {waiting ? '렌더 큐 대기 중' : 'H3 렌더 중'}</Badge>
+            <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">첫 샷을 영상으로 만들고 있습니다.</h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">이 화면은 자동으로 갱신됩니다. 결과가 준비되면 별도 버튼 없이 첫 샷이 영상 플레이어로 바뀝니다.</p>
+            <div className="mt-7 overflow-hidden rounded-full bg-muted p-1"><div className="h-2 w-2/3 animate-pulse rounded-full bg-gradient-to-r from-primary via-violet-500 to-sky-400" /></div>
+            <div className="mt-6 space-y-3">
+              {stages.map((stage, index) => <div key={stage.label} className={cn('flex gap-3 rounded-xl border p-3', stage.done ? 'border-emerald-500/20 bg-emerald-500/[.06]' : index === 1 ? 'border-primary/30 bg-primary/[.05]' : 'bg-muted/[.2]')}>
+                <span className={cn('mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px]', stage.done ? 'bg-emerald-500 text-white' : index === 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>{stage.done ? '✓' : index + 1}</span>
+                <div><p className="text-sm font-medium">{stage.label}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{stage.detail}</p></div>
+              </div>)}
+            </div>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl bg-slate-950 shadow-xl">
+            <div className="aspect-[9/16] max-h-[440px] bg-[radial-gradient(circle_at_65%_30%,rgba(124,58,237,.45),transparent_24%),linear-gradient(150deg,#0f172a,#1e1b4b_55%,#172554)]">{source && <img src={source} alt="영상으로 변환 중인 시작 이미지" className="size-full object-cover opacity-75" />}<div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent" /></div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white"><span className="flex size-16 items-center justify-center rounded-full bg-white/15 backdrop-blur"><Loader2 className="size-8 animate-spin" /></span><strong className="mt-4">H3가 첫 샷을 생성 중입니다</strong><span className="mt-1 px-6 text-xs text-white/70">{meta.targetDurationSec ?? 6}초 · {meta.aspectRatio ?? '9:16'} · {project.title}</span></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function BibleGroup({ icon, title, items }: { icon: React.ReactNode; title: string; items: string[] }) {
