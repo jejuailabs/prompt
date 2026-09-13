@@ -14,6 +14,7 @@ import { Icon } from '@/components/layout/icon';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { MetaPromptBar } from './meta-prompt-bar';
 function FeedSkeleton() {
   return null;
 }
@@ -95,6 +96,11 @@ export default function HomeView() {
             </motion.div>
           </div>
         </div>
+      </section>
+
+      {/* ── meta prompt bar ─────────────────────────────────── */}
+      <section className="mb-8">
+        <MetaPromptBar />
       </section>
 
       {/* ── quick actions ────────────────────────────────────── */}

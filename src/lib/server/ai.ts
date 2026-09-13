@@ -18,7 +18,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export async function chatText(system: string, user: string): Promise<string> {
   const genAI = getGenAI();
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3.6-flash',
     systemInstruction: system,
   });
   const result = await model.generateContent(user);
