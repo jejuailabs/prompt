@@ -31,6 +31,7 @@ interface GameDTO {
 export default function GameRoomView() {
   const locale = useAppStore((s) => s.locale);
   const t = messages[locale] ?? messages.ko;
+  const navigate = useAppStore((s) => s.navigate);
   const session = useAppStore((s) => s.session);
   const setLoginOpen = useAppStore((s) => s.setLoginOpen);
   const qc = useQueryClient();
@@ -99,7 +100,7 @@ export default function GameRoomView() {
             <Card
               key={game.id}
               className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all group"
-              onClick={() => window.open(`${window.location.origin}/#game-play?id=${encodeURIComponent(game.id)}`, '_blank', 'noopener,noreferrer')}
+              onClick={() => navigate('game-play', { id: game.id })}
             >
               {/* Thumbnail */}
               <div className="relative aspect-[4/3] bg-gradient-to-br from-violet-600/20 to-indigo-600/20 overflow-hidden">

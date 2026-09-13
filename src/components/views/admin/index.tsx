@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle, Circle, Clock, Film, Info, Loader2, Radar, RotateCcw, Shield, Trash2, Zap } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, CheckCircle, Circle, Clock, Film, Info, Loader2, Radar, RotateCcw, Shield, Trash2, Wrench, Zap } from 'lucide-react';
 import { api } from '@/lib/api-client';
+import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
 import { useAppStore } from '@/lib/store';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
@@ -145,6 +146,10 @@ export default function AdminView() {
                 <Badge className="ml-1.5 px-1.5">{pendingBriefs.length}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="quick-tools">
+              <Wrench className="mr-1 size-3.5" />
+              {t('tabQuickTools')}
+            </TabsTrigger>
             <TabsTrigger value="video-engine">
               <Film className="mr-1 size-3.5" />
               {t('tabVideoEngine')}
@@ -155,6 +160,9 @@ export default function AdminView() {
 
           <TabsContent value="modules" className="mt-4">
             <ModulesTab />
+          </TabsContent>
+          <TabsContent value="quick-tools" className="mt-4">
+            <QuickToolsTab />
           </TabsContent>
           <TabsContent value="video-engine" className="mt-4">
             <VideoEngineTab />
@@ -558,6 +566,167 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
           ))}
         </TableBody>
       </Table>
+    </div>
+  );
+}
+
+// ─── quick start tools config ──────────────────────────────────────────────
+
+interface QuickToolConfig {
+  id: string;
+  enabled: boolean;
+  order: number;
+}
+
+function QuickToolsTab() {
+  const t = useTranslations('admin');
+  const locale = useAppStore((s) => s.locale);
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const configQ = useQuery({
+    queryKey: ['admin', 'quick-tools'],
+    queryFn: () => api.get<QuickToolConfig[]>('/api/admin/quick-tools').catch(() => [] as QuickToolConfig[]),
+  });
+
+  // Build merged list: saved config + any new tools not yet in config
+  const savedConfig = configQ.data ?? [];
+  const allTools = AI_STUDIO_TOOLS.map((tool, defaultIdx) => {
+    const saved = savedConfig.find((c) => c.id === tool.id);
+    return {
+      ...tool,
+      enabled: saved ? saved.enabled : true,
+      order: saved ? saved.order : defaultIdx,
+    };
+  }).sort((a, b) => a.order - b.order);
+
+  const [items, setItems] = useState(allTools);
+  const [dirty, setDirty] = useState(false);
+
+  const configKey = JSON.stringify(allTools.map((t) => ({ id: t.id, enabled: t.enabled, order: t.order })));
+  useEffect(() => {
+    if (!dirty) setItems(allTools);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configKey]);
+
+  const toggleItem = (id: string) => {
+    setItems((prev) => prev.map((item) => item.id === id ? { ...item, enabled: !item.enabled } : item));
+    setDirty(true);
+  };
+
+  const moveItem = (id: string, direction: 'up' | 'down') => {
+    setItems((prev) => {
+      const idx = prev.findIndex((item) => item.id === id);
+      if (idx === -1) return prev;
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+      return next.map((item, i) => ({ ...item, order: i }));
+    });
+    setDirty(true);
+  };
+
+  const saveM = useMutation({
+    mutationFn: (configs: QuickToolConfig[]) =>
+      api.put<QuickToolConfig[]>('/api/admin/quick-tools', configs),
+    onSuccess: () => {
+      toast({ title: t('qtSaveToast') });
+      setDirty(false);
+      void qc.invalidateQueries({ queryKey: ['admin', 'quick-tools'] });
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: 'destructive' }),
+  });
+
+  const handleSave = () => {
+    const configs: QuickToolConfig[] = items.map((item, i) => ({
+      id: item.id,
+      enabled: item.enabled,
+      order: i,
+    }));
+    saveM.mutate(configs);
+  };
+
+  const handleReset = () => {
+    const resetItems = AI_STUDIO_TOOLS.map((tool, i) => ({
+      ...tool,
+      enabled: true,
+      order: i,
+    }));
+    setItems(resetItems);
+    const configs: QuickToolConfig[] = [];
+    saveM.mutate(configs);
+    toast({ title: t('qtResetToast') });
+  };
+
+  const activeCount = items.filter((i) => i.enabled).length;
+
+  return (
+    <div className="space-y-4">
+      <p className="flex items-center gap-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+        <Wrench className="size-3.5 shrink-0" />
+        {t('qtHint')}
+      </p>
+
+      <div className="flex items-center gap-3">
+        <Badge variant="outline" className="text-xs">
+          {t('qtActiveCount')}: {activeCount}/{items.length}
+        </Badge>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleReset} disabled={saveM.isPending}>
+            <RotateCcw className="mr-1 size-3" />
+            {t('qtReset')}
+          </Button>
+          <Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={!dirty || saveM.isPending}>
+            {saveM.isPending && <Loader2 className="mr-1 size-3 animate-spin" />}
+            {t('qtSave')}
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        {items.map((item, idx) => (
+          <Card key={item.id} className={`flex-row items-center gap-3 p-3 transition-all ${item.enabled ? '' : 'opacity-50'}`}>
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Icon name={item.icon} className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{item.titleKo}</p>
+              <p className="truncate text-[11px] text-muted-foreground">{item.descKo}</p>
+            </div>
+            <Badge variant={item.enabled ? 'default' : 'secondary'} className="shrink-0 px-1.5 py-0 text-[10px]">
+              {item.enabled ? t('qtEnabled') : t('qtHidden')}
+            </Badge>
+            <div className="flex shrink-0 items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-7 p-0"
+                disabled={idx === 0}
+                onClick={() => moveItem(item.id, 'up')}
+                aria-label={t('qtMoveUp')}
+              >
+                <ArrowUp className="size-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-7 p-0"
+                disabled={idx === items.length - 1}
+                onClick={() => moveItem(item.id, 'down')}
+                aria-label={t('qtMoveDown')}
+              >
+                <ArrowDown className="size-3.5" />
+              </Button>
+            </div>
+            <Switch
+              checked={item.enabled}
+              onCheckedChange={() => toggleItem(item.id)}
+              aria-label={`${item.titleKo} ${item.enabled ? '숨기기' : '노출하기'}`}
+            />
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

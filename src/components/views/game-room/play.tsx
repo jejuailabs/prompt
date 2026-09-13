@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Expand, Heart, Loader2, Maximize2, Minimize2, Share2,
@@ -40,6 +40,7 @@ export default function GamePlayView() {
   const gameId = params.id;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [gameSrcdoc, setGameSrcdoc] = useState<string | null>(null);
   const startTime = useRef(Date.now());
 
   const { data: game, isLoading } = useQuery({
@@ -47,6 +48,15 @@ export default function GamePlayView() {
     queryFn: () => api.get<GameDetailDTO>(`/api/game-room/${gameId}`),
     enabled: !!gameId,
   });
+
+  // Fetch game HTML for srcdoc rendering
+  useEffect(() => {
+    if (!game?.contentUrl) return;
+    fetch(`/api/game-room/proxy?url=${encodeURIComponent(game.contentUrl)}`)
+      .then((r) => r.ok ? r.text() : null)
+      .then((html) => { if (html) setGameSrcdoc(html); })
+      .catch(() => undefined);
+  }, [game?.contentUrl]);
 
   // Record play session on mount
   useEffect(() => {
@@ -112,14 +122,20 @@ export default function GamePlayView() {
         <div className="flex-1">
           <div className="relative bg-black rounded-xl overflow-hidden aspect-[4/3]">
             {game.contentUrl ? (
-              <iframe
-                ref={iframeRef}
-                src={game.contentUrl}
-                sandbox="allow-scripts allow-same-origin"
-                className="w-full h-full border-0"
-                title={game.title}
-                allow="autoplay"
-              />
+              gameSrcdoc ? (
+                <iframe
+                  ref={iframeRef}
+                  srcDoc={gameSrcdoc}
+                  sandbox="allow-scripts"
+                  className="w-full h-full border-0"
+                  title={game.title}
+                  allow="autoplay"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-white/50" />
+                </div>
+              )
             ) : (
               <div className="w-full h-full flex items-center justify-center text-white/50">
                 게임 콘텐츠를 불러올 수 없습니다

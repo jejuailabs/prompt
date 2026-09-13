@@ -33,6 +33,20 @@ export default function HomeView() {
     enabled: !!session,
   });
 
+  const quickToolsConfig = useQuery({
+    queryKey: ['quick-tools-config'],
+    queryFn: () => api.get<{ toolIds: string[]; mode: 'default' | 'custom' }>('/api/quick-tools'),
+  });
+
+  const visibleTools = (() => {
+    const cfg = quickToolsConfig.data;
+    if (!cfg || cfg.mode === 'default') return AI_STUDIO_TOOLS.slice(0, 12);
+    const ordered = cfg.toolIds
+      .map((id) => AI_STUDIO_TOOLS.find((t) => t.id === id))
+      .filter(Boolean) as typeof AI_STUDIO_TOOLS[number][];
+    return ordered.slice(0, 12);
+  })();
+
   const feed = useQuery({
     queryKey: ['feed', 'popular'],
     queryFn: () => api.get<ArtifactDTO[]>('/api/artifacts?scope=feed&sort=popular&limit=12'),
@@ -87,7 +101,7 @@ export default function HomeView() {
       <section className="mb-8">
         <h2 className="text-lg font-semibold">{tc('quickActionsTitle')}</h2>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {AI_STUDIO_TOOLS.slice(0, 12).map((action) => (
+          {visibleTools.map((action) => (
             <Card
               key={action.id}
               role="button"
