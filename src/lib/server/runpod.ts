@@ -35,7 +35,13 @@ function getApiKey(): string {
 }
 
 export function getRunpodEndpointId(engine: RunpodVideoEngine): string | null {
-  return process.env[endpointEnv[engine]]?.trim() || null;
+  const configured = process.env[endpointEnv[engine]]?.trim();
+  if (configured) return configured;
+  // The dedicated PLAYLAB Blender endpoint predates the production environment
+  // variable. Its ID is not a credential (requests still require RUNPOD_API_KEY),
+  // so retain this migration fallback until every deployment has the variable.
+  if (engine === 'blender') return 'i15xzduszzdwmo';
+  return null;
 }
 
 async function runpodFetch<T>(path: string, init?: RequestInit): Promise<T> {
