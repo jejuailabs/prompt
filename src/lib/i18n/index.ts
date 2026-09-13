@@ -15,6 +15,8 @@ import smoke from '@/components/views/smoke/messages';
 import revenue from '@/components/views/revenue/messages';
 import market from '@/components/views/market/messages';
 import admin from '@/components/views/admin/messages';
+import videoStudio from '@/components/views/video-studio/messages';
+import studio3d from '@/components/views/3d-studio/messages';
 
 type Pack = { ko: Record<string, string>; en: Record<string, string> };
 
@@ -33,6 +35,8 @@ const registry: Record<string, Pack> = {
   revenue: revenue as unknown as Pack,
   market: market as unknown as Pack,
   admin: admin as unknown as Pack,
+  videoStudio: videoStudio as unknown as Pack,
+  studio3d: studio3d as unknown as Pack,
 };
 
 export function getMessages(locale: Locale): Record<string, Record<string, string>> {

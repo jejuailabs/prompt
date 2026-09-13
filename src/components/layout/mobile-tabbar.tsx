@@ -38,8 +38,9 @@ export default function MobileTabbar() {
     return m ? moduleTitle(m, locale) : locale === 'en' ? tab.en : tab.ko;
   };
 
-  const moreModules = modules.filter((m) => !m.adminOnly && !m.group && !['revenue-dashboard', 'marketplace'].includes(m.id) && !TAB_VIEWS.includes(m.entryView));
-  const moreActive = moreModules.some((m) => m.entryView === view);
+  const studioModules = modules.filter((m) => !m.adminOnly && m.group === 'studio');
+  const moreModules = modules.filter((m) => !m.adminOnly && !m.group && !TAB_VIEWS.includes(m.entryView));
+  const moreActive = [...studioModules, ...moreModules].some((m) => m.entryView === view);
 
   return (
     <nav
@@ -85,6 +86,37 @@ export default function MobileTabbar() {
             <SheetTitle>{t('more')}</SheetTitle>
           </SheetHeader>
           <div className="grid gap-1 pb-2">
+            {studioModules.length > 0 && (
+              <>
+                <p className="px-1 pt-1 pb-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Studio</p>
+                {studioModules.map((m) => {
+                  const active = m.entryView === view;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => { navigate(m.entryView as ViewKey); setMoreOpen(false); }}
+                      className={cn(
+                        'flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors',
+                        active ? 'border-primary/40 bg-primary/5' : 'hover:bg-accent',
+                      )}
+                    >
+                      <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-md', active ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary')}>
+                        <Icon name={m.icon} className="size-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1.5">
+                          <span className="truncate text-sm font-medium">{moduleTitle(m, locale)}</span>
+                          <ModuleStatusBadge status={m.status} newUntil={m.newUntil} />
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{locale === 'en' ? m.descEn : m.descKo}</span>
+                      </span>
+                      <Icon name="chevron-right" className="size-4 shrink-0 text-muted-foreground" />
+                    </button>
+                  );
+                })}
+              </>
+            )}
             <button
               type="button"
               onClick={() => { navigate('ai-tools'); setMoreOpen(false); }}

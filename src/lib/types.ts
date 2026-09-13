@@ -35,6 +35,8 @@ export type ViewKey =
   | 'my-projects'
   | 'game-room'
   | 'game-play'
+  | 'video-studio'
+  | '3d-studio'
   | 'admin';
 
 // ─── Users / Modules ───
@@ -395,6 +397,170 @@ export interface BriefDTO {
   bidCount: number;
   bids?: BidDTO[];
   match?: { id: string; contract?: ContractDTO | null; bid?: BidDTO } | null;
+}
+
+// ─── Video Studio ───
+
+export type VideoProjectStatus = 'draft' | 'storyboard' | 'generating' | 'editing' | 'rendering' | 'done' | 'failed';
+export type ShotStatus = 'pending' | 'preview' | 'generating' | 'qc' | 'passed' | 'failed' | 'done';
+export type RenderProfile = 'preview' | 'standard' | 'hero';
+export type VideoModel =
+  | 'h3'          // MiniMax H3 (Aug 2026) — FL2VA + Ref2VA unified
+  | 'h3-fl2va'    // H3 FL2VA (text/image → video)
+  | 'h3-ref2va'   // H3 Ref2VA (reference-guided)
+  | 'wan26'       // Wan 2.6 (identity-consistent, RunPod managed serverless)
+  | 'wan25'       // Wan 2.5 (audio+video single pass)
+  | 'wan22'       // Wan 2.2 (self-hosted, downloadable weights)
+  | 'ltx25'       // LTX-2.5 (Aug 2026) — 22B world model, multishot + audio
+  | 'ltx23'       // LTX-2.3 (older stable)
+  | 'ltx2';       // LTX-2.0 (legacy)
+
+export type VideoEngineId = 'h3' | 'wan' | 'ltx';
+
+export interface VideoEngineModelInfo {
+  id: VideoModel;
+  label: string;
+  version: string;
+  params: string;
+  license: string;
+  runpodType: 'self-hosted' | 'managed' | 'api-only';
+  minGpu: string;
+  features: string[];
+}
+
+export interface VideoEngineConfig {
+  engineId: VideoEngineId;
+  label: string;
+  description: string;
+  enabled: boolean;
+  adminOnly: boolean;
+  defaultModel: VideoModel;
+  models: VideoEngineModelInfo[];
+  runpodEndpointId?: string | null;
+  runpodNetworkVolumeId?: string | null;
+  storageCostMonthly: string;
+  status: 'offline' | 'ready' | 'provisioning' | 'error';
+  lastCheckedAt?: string | null;
+}
+
+export interface QcResult {
+  identity: { pass: boolean; score: number };
+  costume: { pass: boolean; score: number };
+  flicker: { pass: boolean; score: number };
+  motion: { pass: boolean; score: number };
+  lipSync: { pass: boolean; score: number };
+}
+
+export interface VideoShotDTO {
+  id: string;
+  projectId: string;
+  shotIndex: number;
+  narration: string;
+  prompt: string;
+  startSec: number;
+  endSec: number;
+  model: VideoModel;
+  renderProfile: RenderProfile;
+  importance: number;
+  referencePackIds: string[];
+  continuityFrameUrl?: string | null;
+  status: ShotStatus;
+  resultUrl?: string | null;
+  thumbnailUrl?: string | null;
+  qcResult?: QcResult | null;
+  qcAttempts: number;
+  seed?: number | null;
+  generationParams?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VideoProjectDTO {
+  id: string;
+  ownerId: string;
+  owner?: UserBrief;
+  title: string;
+  script: string;
+  style: string;
+  targetDurationSec: number;
+  status: VideoProjectStatus;
+  directorBible?: Record<string, unknown> | null;
+  masterAudioUrl?: string | null;
+  resultArtifactId?: string | null;
+  creditCharged: number;
+  shots?: VideoShotDTO[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReferenceImageDTO {
+  id: string;
+  packId: string;
+  role: string;
+  fileUrl: string;
+  sortOrder: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ReferencePackDTO {
+  id: string;
+  ownerId: string;
+  name: string;
+  category: 'character' | 'prop' | 'location';
+  metadata?: Record<string, unknown>;
+  images: ReferenceImageDTO[];
+  createdAt: string;
+}
+
+// ─── 3D Asset Studio ───
+
+export type Asset3dSubtrack = 'character' | 'product' | 'floorplan';
+export type Asset3dProjectStatus = 'draft' | 'generating' | 'processing' | 'done' | 'failed';
+
+export interface Asset3dOutputDTO {
+  id: string;
+  projectId: string;
+  glbUrl: string;
+  fbxUrl?: string | null;
+  textureUrls?: Record<string, string>;
+  thumbnailUrl?: string | null;
+  polyCount?: number;
+  dimensions?: { width: number; height: number; depth: number } | null;
+  qcResult?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface Asset3dProjectDTO {
+  id: string;
+  ownerId: string;
+  owner?: UserBrief;
+  title: string;
+  subtrack: Asset3dSubtrack;
+  status: Asset3dProjectStatus;
+  inputImageUrls: string[];
+  styleOptions?: Record<string, unknown>;
+  resultArtifactId?: string | null;
+  creditCharged: number;
+  outputs?: Asset3dOutputDTO[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Compute Jobs (shared) ───
+
+export interface ComputeJobDTO {
+  id: string;
+  ownerId: string;
+  track: 'video' | '3d';
+  provider: string;
+  externalJobId?: string | null;
+  gpuType: string;
+  status: 'queued' | 'running' | 'done' | 'failed';
+  costUsd: number;
+  durationSec: number;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  completedAt?: string | null;
 }
 
 // ─── Admin / Events ───

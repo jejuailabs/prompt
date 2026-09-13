@@ -20,6 +20,8 @@ import AiToolsView from '@/components/views/ai-tools';
 import MyProjectsView from '@/components/views/my-projects';
 import GameRoomView from '@/components/views/game-room';
 import GamePlayView from '@/components/views/game-room/play';
+import VideoStudioView from '@/components/views/video-studio';
+import Studio3dView from '@/components/views/3d-studio';
 import AdminView from '@/components/views/admin';
 import ToolView from '@/components/views/tool';
 
@@ -65,6 +67,10 @@ export default function ViewRouter() {
       return <GameRoomView />;
     case 'game-play':
       return <GamePlayView key={params.id ?? 'none'} />;
+    case 'video-studio':
+      return <VideoStudioView />;
+    case '3d-studio':
+      return <Studio3dView />;
     case 'admin':
       return <AdminView />;
     default:

@@ -63,18 +63,33 @@ export const MODULE_CONFIGS: ModuleConfigSeed[] = [
     icon: 'graduation-cap', navOrder: 9, enabled: true, status: 'coming-soon',
     mainScreenSlot: 'none', entryView: 'academy', requiresAuth: false, adminOnly: false,
   },
+  // ─── Studio group (Track A / Track B) ───
+  {
+    id: 'video-studio', phase: 3, titleKo: 'AI 영상 스튜디오', titleEn: 'AI Video Studio',
+    descKo: '원고 하나로 AI 영상을 만드세요', descEn: 'Create AI videos from a script',
+    icon: 'film', navOrder: 50, enabled: true, status: 'new',
+    mainScreenSlot: 'none', entryView: 'video-studio', requiresAuth: true, adminOnly: false,
+    group: 'studio', newUntilDays: 30,
+  },
+  {
+    id: '3d-studio', phase: 3, titleKo: '3D 에셋 스튜디오', titleEn: '3D Asset Studio',
+    descKo: '이미지에서 3D 에셋을 생성하세요', descEn: 'Generate 3D assets from images',
+    icon: 'box', navOrder: 51, enabled: true, status: 'new',
+    mainScreenSlot: 'none', entryView: '3d-studio', requiresAuth: true, adminOnly: false,
+    group: 'studio', newUntilDays: 30,
+  },
   // ─── Tools group ───
   {
     id: 'tool-3d', phase: 3, titleKo: '3D 에셋 생성', titleEn: '3D Asset',
     descKo: '3D 에셋을 생성하세요', descEn: 'Generate 3D assets',
-    icon: 'box', navOrder: 52, enabled: true, status: 'preparing',
+    icon: 'box', navOrder: 52, enabled: false, status: 'preparing',
     mainScreenSlot: 'none', entryView: 'pipeline-run', requiresAuth: false, adminOnly: false,
     group: 'tools',
   },
   {
     id: 'tool-shortform', phase: 3, titleKo: '숏폼 영상', titleEn: 'Shortform',
     descKo: '숏폼 영상을 생성하세요', descEn: 'Generate short videos',
-    icon: 'clapperboard', navOrder: 53, enabled: true, status: 'active',
+    icon: 'clapperboard', navOrder: 53, enabled: false, status: 'preparing',
     mainScreenSlot: 'none', entryView: 'pipeline-run', requiresAuth: false, adminOnly: false,
     group: 'tools',
   },

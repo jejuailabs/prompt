@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle, Clock, Info, Loader2, Radar, RotateCcw, Shield, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Circle, Clock, Film, Info, Loader2, Radar, RotateCcw, Shield, Trash2, Zap } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useSession } from '@/hooks/use-session';
@@ -28,6 +28,9 @@ import type {
   ModuleDTO,
   ModerationItemDTO,
   SmokeTestDTO,
+  VideoEngineConfig,
+  VideoEngineId,
+  VideoModel,
 } from '@/lib/types';
 
 // ─── overview response ──────────────────────────────────────────────────────
@@ -142,12 +145,19 @@ export default function AdminView() {
                 <Badge className="ml-1.5 px-1.5">{pendingBriefs.length}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="video-engine">
+              <Film className="mr-1 size-3.5" />
+              {t('tabVideoEngine')}
+            </TabsTrigger>
             <TabsTrigger value="users">{t('tabUsers')}</TabsTrigger>
             <TabsTrigger value="logs">{t('tabLogs')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="modules" className="mt-4">
             <ModulesTab />
+          </TabsContent>
+          <TabsContent value="video-engine" className="mt-4">
+            <VideoEngineTab />
           </TabsContent>
           <TabsContent value="moderation" className="mt-4">
             <ModerationTab items={reported} />
@@ -208,70 +218,53 @@ function ModulesTab() {
       </p>
 
       {modulesQ.isLoading ? (
-        <div className="space-y-3">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12 rounded-xl" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-md border scrollbar-thin">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10" />
-                <TableHead>{t('thModule') ?? '모듈'}</TableHead>
-                <TableHead className="w-16">Phase</TableHead>
-                <TableHead className="w-32">{t('thStatus') ?? '상태'}</TableHead>
-                <TableHead className="w-24">노출</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {modules.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell>
-                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
-                      <Icon name={m.icon} className="size-4" />
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-sm font-medium">{locale === 'ko' ? m.titleKo : m.titleEn}</p>
-                    <p className="text-xs text-muted-foreground">{m.entryView}</p>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="px-1.5 py-0 text-[10px]">P{m.phase}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={m.status}
-                      onValueChange={(v) => patchM.mutate({ id: m.id, status: v as ModuleDTO['status'] })}
-                    >
-                      <SelectTrigger className="h-8 w-28">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">{t('modActive')}</SelectItem>
-                        <SelectItem value="new">{t('modNew')}</SelectItem>
-                        <SelectItem value="beta">{t('modBeta')}</SelectItem>
-                        <SelectItem value="coming-soon">{t('modComingSoon')}</SelectItem>
-                        <SelectItem value="preparing">{t('modPreparing') ?? '준비 중'}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={m.enabled}
-                        onCheckedChange={(enabled) => patchM.mutate({ id: m.id, enabled })}
-                        disabled={patchM.isPending}
-                        aria-label={`${m.titleKo} ${m.enabled ? '숨기기' : '노출하기'}`}
-                      />
-                      <span className="text-xs text-muted-foreground">{m.enabled ? '노출' : '숨김'}</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {modules.map((m) => (
+            <Card key={m.id} className="gap-3 p-3 shadow-sm">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Icon name={m.icon} className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{locale === 'ko' ? m.titleKo : m.titleEn}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">{m.entryView}</p>
+                </div>
+                <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">P{m.phase}</Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={m.status}
+                  onValueChange={(v) => patchM.mutate({ id: m.id, status: v as ModuleDTO['status'] })}
+                >
+                  <SelectTrigger className="h-8 min-w-0 flex-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">{t('modActive')}</SelectItem>
+                    <SelectItem value="new">{t('modNew')}</SelectItem>
+                    <SelectItem value="beta">{t('modBeta')}</SelectItem>
+                    <SelectItem value="coming-soon">{t('modComingSoon')}</SelectItem>
+                    <SelectItem value="preparing">{t('modPreparing') ?? '준비 중'}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+                  <Switch
+                    checked={m.enabled}
+                    onCheckedChange={(enabled) => patchM.mutate({ id: m.id, enabled })}
+                    disabled={patchM.isPending}
+                    aria-label={`${m.titleKo} ${m.enabled ? '숨기기' : '노출하기'}`}
+                  />
+                  <span>{m.enabled ? '노출' : '숨김'}</span>
+                </label>
+              </div>
+            </Card>
+          ))}
         </div>
       )}
     </div>
@@ -565,6 +558,294 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
           ))}
         </TableBody>
       </Table>
+    </div>
+  );
+}
+
+// ─── video engine config ───────────────────────────────────────────────────
+
+const VIDEO_ENGINES: VideoEngineConfig[] = [
+  {
+    engineId: 'h3',
+    label: 'MiniMax H3',
+    description: 'Omni-modal video model — FL2VA + Ref2VA (Aug 2026)',
+    enabled: true,
+    adminOnly: false,
+    defaultModel: 'h3',
+    models: [
+      {
+        id: 'h3',
+        label: 'H3 Unified',
+        version: '1.0 (Aug 2026)',
+        params: '~30B',
+        license: 'MiniMax H3 Community License (승인 완료)',
+        runpodType: 'self-hosted',
+        minGpu: 'RTX 5090 / 80GB+ VRAM',
+        features: ['Text→Video', 'Image→Video', 'Ref-guided', 'Audio+Video single pass', 'Character consistency'],
+      },
+      {
+        id: 'h3-fl2va',
+        label: 'H3 FL2VA',
+        version: '1.0',
+        params: '~30B',
+        license: 'MiniMax H3 Community License (승인 완료)',
+        runpodType: 'self-hosted',
+        minGpu: 'RTX 5090 / 80GB+ VRAM',
+        features: ['Text→Video', 'Image→Video'],
+      },
+      {
+        id: 'h3-ref2va',
+        label: 'H3 Ref2VA',
+        version: '1.0',
+        params: '~30B',
+        license: 'MiniMax H3 Community License (승인 완료)',
+        runpodType: 'self-hosted',
+        minGpu: 'RTX 5090 / 80GB+ VRAM',
+        features: ['Reference-guided video', 'Character consistency'],
+      },
+    ],
+    storageCostMonthly: '~$2.10/mo (30GB weights)',
+    status: 'ready',
+  },
+  {
+    engineId: 'wan',
+    label: 'Wan (Alibaba)',
+    description: 'Wan 2.6 managed + Wan 2.5/2.2 self-hosted',
+    enabled: true,
+    adminOnly: false,
+    defaultModel: 'wan26',
+    models: [
+      {
+        id: 'wan26',
+        label: 'Wan 2.6',
+        version: '2.6 (2026)',
+        params: '14B',
+        license: 'Apache 2.0 (API managed by RunPod)',
+        runpodType: 'managed',
+        minGpu: 'N/A (managed)',
+        features: ['Ref→Video identity consistency', 'Text→Video', 'Image→Video', 'Multi-scene storytelling'],
+      },
+      {
+        id: 'wan25',
+        label: 'Wan 2.5',
+        version: '2.5 (2026)',
+        params: '14B',
+        license: 'Apache 2.0',
+        runpodType: 'self-hosted',
+        minGpu: 'H100 / RTX 5090',
+        features: ['Audio+Video single pass', 'Voice + ambient + BGM aligned'],
+      },
+      {
+        id: 'wan22',
+        label: 'Wan 2.2',
+        version: '2.2 (2025)',
+        params: '14B',
+        license: 'Apache 2.0',
+        runpodType: 'self-hosted',
+        minGpu: 'A100 / RTX 4090+',
+        features: ['Text→Video', 'Image→Video', 'Stable fallback'],
+      },
+    ],
+    storageCostMonthly: '~$1.00/mo (14GB weights)',
+    status: 'ready',
+  },
+  {
+    engineId: 'ltx',
+    label: 'LTX (Lightricks)',
+    description: 'LTX-2.5 world model — multishot + audio (Aug 2026)',
+    enabled: true,
+    adminOnly: false,
+    defaultModel: 'ltx25',
+    models: [
+      {
+        id: 'ltx25',
+        label: 'LTX-2.5',
+        version: '2.5 (Aug 2026)',
+        params: '22B',
+        license: 'Open weights (license TBD)',
+        runpodType: 'self-hosted',
+        minGpu: 'H100 / RTX 5090',
+        features: ['Native multishot', 'Audio+Video', 'Diffusion Fidelity Rendering', 'World model'],
+      },
+      {
+        id: 'ltx23',
+        label: 'LTX-2.3',
+        version: '2.3 (2026)',
+        params: '13B',
+        license: 'Open weights',
+        runpodType: 'self-hosted',
+        minGpu: 'A100 / RTX 4090+',
+        features: ['Text→Video', 'Image→Video', 'Fast inference'],
+      },
+      {
+        id: 'ltx2',
+        label: 'LTX-2.0',
+        version: '2.0 (2025)',
+        params: '8B',
+        license: 'Open weights',
+        runpodType: 'self-hosted',
+        minGpu: 'RTX 4090',
+        features: ['Text→Video', 'Fastest generation'],
+      },
+    ],
+    storageCostMonthly: '~$1.50/mo (22GB weights)',
+    status: 'ready',
+  },
+];
+
+const engineStatusBadge = (status: VideoEngineConfig['status'], t: (k: string) => string) => {
+  switch (status) {
+    case 'ready':
+      return <Badge className="border-green-500/40 bg-green-500/10 text-green-600"><Circle className="mr-1 size-2 fill-green-500" />{t('veStatusReady')}</Badge>;
+    case 'provisioning':
+      return <Badge className="border-blue-500/40 bg-blue-500/10 text-blue-600"><Loader2 className="mr-1 size-2 animate-spin" />{t('veStatusProvisioning')}</Badge>;
+    case 'error':
+      return <Badge className="border-red-500/40 bg-red-500/10 text-red-600"><AlertTriangle className="mr-1 size-2" />{t('veStatusError')}</Badge>;
+    default:
+      return <Badge variant="outline"><Circle className="mr-1 size-2 fill-muted-foreground" />{t('veStatusOffline')}</Badge>;
+  }
+};
+
+function VideoEngineTab() {
+  const t = useTranslations('admin');
+  const locale = useAppStore((s) => s.locale);
+  const { toast } = useToast();
+
+  const engineQ = useQuery({
+    queryKey: ['admin', 'video-engines'],
+    queryFn: () => api.get<VideoEngineConfig[]>('/api/admin/video-engine').catch(() => VIDEO_ENGINES),
+    placeholderData: VIDEO_ENGINES,
+  });
+
+  const patchM = useMutation({
+    mutationFn: (body: { engineId: VideoEngineId; enabled?: boolean; adminOnly?: boolean; defaultModel?: VideoModel }) =>
+      api.patch<VideoEngineConfig>('/api/admin/video-engine', body).catch(() => {
+        const e = VIDEO_ENGINES.find((x) => x.engineId === body.engineId)!;
+        return { ...e, ...body } as VideoEngineConfig;
+      }),
+    onSuccess: (_data, variables) => {
+      if (typeof variables.enabled === 'boolean') {
+        toast({ title: variables.enabled ? t('veToggleOnToast') : t('veToggleOffToast') });
+      } else if (typeof variables.adminOnly === 'boolean') {
+        toast({ title: variables.adminOnly ? t('veAdminOnlyOnToast') : t('veAdminOnlyOffToast') });
+      } else if (variables.defaultModel) {
+        toast({ title: t('veDefaultToast') });
+      }
+    },
+    onError: (e: Error) => toast({ title: e.message, variant: 'destructive' }),
+  });
+
+  const engines = engineQ.data ?? VIDEO_ENGINES;
+  const activeCount = engines.filter((e) => e.enabled).length;
+
+  return (
+    <div className="space-y-4">
+      <p className="flex items-center gap-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+        <Zap className="size-3.5 shrink-0" />
+        {t('veHint')}
+      </p>
+
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="text-xs">
+          {t('veActiveEngine')}: {activeCount}/3
+        </Badge>
+        {activeCount === 0 && (
+          <span className="text-xs text-muted-foreground">{t('veNoEngine')}</span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {engines.map((engine) => (
+          <Card key={engine.engineId} className={`gap-0 overflow-hidden p-0 shadow-sm transition-all ${engine.enabled ? 'ring-2 ring-primary/30' : ''}`}>
+            {/* Header */}
+            <div className="flex items-center gap-3 border-b p-4">
+              <span className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${engine.enabled ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                <Film className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold">{engine.label}</p>
+                <p className="text-[11px] text-muted-foreground">{engine.description}</p>
+              </div>
+              <Switch
+                checked={engine.enabled}
+                onCheckedChange={(enabled) => patchM.mutate({ engineId: engine.engineId, enabled })}
+                disabled={patchM.isPending}
+                aria-label={`${engine.label} toggle`}
+              />
+            </div>
+
+            {/* Status + cost */}
+            <div className="flex items-center justify-between border-b px-4 py-2">
+              {engineStatusBadge(engine.status, t)}
+              <span className="text-[11px] text-muted-foreground">{t('veStorage')}: {engine.storageCostMonthly}</span>
+            </div>
+
+            {/* Admin only toggle */}
+            <div className="flex items-center justify-between border-b px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <Shield className="size-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium">{t('veAdminOnly')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {engine.adminOnly && (
+                  <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 px-1.5 py-0 text-[10px] text-amber-600">
+                    Admin Only
+                  </Badge>
+                )}
+                <Switch
+                  checked={engine.adminOnly}
+                  onCheckedChange={(adminOnly) => patchM.mutate({ engineId: engine.engineId, adminOnly })}
+                  disabled={patchM.isPending}
+                  aria-label={`${engine.label} admin only`}
+                />
+              </div>
+            </div>
+
+            {/* Default model selector */}
+            <div className="border-b px-4 py-3">
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t('veDefault')}</label>
+              <Select
+                value={engine.defaultModel}
+                onValueChange={(v) => patchM.mutate({ engineId: engine.engineId, defaultModel: v as VideoModel })}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {engine.models.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>{m.label} ({m.version})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Models list */}
+            <div className="space-y-0 divide-y px-0">
+              {engine.models.map((m) => (
+                <div key={m.id} className="space-y-1.5 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold">{m.label}</p>
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">{m.version}</Badge>
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                      {m.runpodType === 'self-hosted' ? t('veRunpodSelfHosted') : m.runpodType === 'managed' ? t('veRunpodManaged') : t('veRunpodApiOnly')}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-3 text-[11px] text-muted-foreground">
+                    <span>{t('veParams')}: {m.params}</span>
+                    <span>{t('veGpu')}: {m.minGpu}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">{t('veLicense')}: {m.license}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {m.features.map((f) => (
+                      <Badge key={f} variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">{f}</Badge>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

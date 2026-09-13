@@ -278,6 +278,120 @@ created_at    timestamptz
 
 ---
 
+## Phase 3+ — AI Video Studio / 3D Asset Studio (공유 인프라)
+
+### `reference_packs` (Identity Pack — 캐릭터/소품/장소 참조 세트)
+```
+id            uuid (PK)
+owner_id      uuid (FK profiles)
+name          text                    -- '주인공', '악당', '마을 배경' 등
+category      text                    -- 'character' | 'prop' | 'location'
+metadata      jsonb                   -- 스타일 노트, 체형, 의상 설명 등
+created_at    timestamptz
+```
+
+### `reference_images` (Pack 내 개별 이미지)
+```
+id            uuid (PK)
+pack_id       uuid (FK reference_packs)
+role          text                    -- 'front' | 'three_quarter' | 'profile' | 'full_body' | 'expression' | 'costume' | 'prop'
+file_url      text
+sort_order    int default 0
+metadata      jsonb                   -- 표정명, 의상명 등
+```
+
+### `compute_jobs` (RunPod GPU 작업 추적 — 영상/3D 공용)
+```
+id            uuid (PK)
+owner_id      uuid (FK profiles)
+track         text                    -- 'video' | '3d'
+provider      text default 'runpod'   -- 'runpod' | 'local' 등 확장 가능
+external_job_id text                  -- RunPod job ID
+gpu_type      text                    -- 'rtx-5090' 등
+status        text                    -- 'queued' | 'running' | 'done' | 'failed'
+cost_usd      numeric                 -- 실제 GPU 비용
+duration_sec   int                    -- 실행 시간(초)
+metadata      jsonb                   -- 엔진, 모델명, 파라미터 등
+created_at    timestamptz
+completed_at  timestamptz
+```
+
+### `video_projects` (AI 영상 프로젝트)
+```
+id            uuid (PK)
+owner_id      uuid (FK profiles)
+title         text
+script        text                    -- 원고 전문
+style         text                    -- 'informative' | 'cinematic' | 'humor' 등
+target_duration_sec int default 60
+status        text                    -- 'draft' | 'storyboard' | 'generating' | 'editing' | 'rendering' | 'done' | 'failed'
+director_bible jsonb                  -- Story/Character/Location/Cinematography/Audio Bible
+master_audio_url text                 -- TTS 마스터 오디오 파일
+timeline      jsonb                   -- Forced Alignment 타임스탬프
+result_artifact_id uuid (FK artifacts, nullable)
+credit_charged numeric default 0
+created_at    timestamptz
+updated_at    timestamptz
+```
+
+### `video_shots` (개별 샷)
+```
+id            uuid (PK)
+project_id    uuid (FK video_projects)
+shot_index    int                     -- 순서
+narration     text                    -- 이 샷의 나레이션 텍스트
+prompt        text                    -- 생성 프롬프트
+start_sec     numeric                 -- 타임라인 시작 (초)
+end_sec       numeric                 -- 타임라인 끝 (초)
+model         text default 'h3'       -- 'h3-fl2va' | 'h3-ref2va' | 'wan22' | 'ltx2'
+render_profile text default 'standard' -- 'preview' | 'standard' | 'hero'
+importance    numeric default 0.5     -- 0~1, Director가 평가한 중요도
+reference_pack_ids uuid[]             -- 사용할 Identity Pack IDs
+continuity_frame_url text             -- 이전 샷 Last Frame URL
+status        text                    -- 'pending' | 'preview' | 'generating' | 'qc' | 'passed' | 'failed' | 'done'
+result_url    text                    -- 생성된 영상 클립 URL
+thumbnail_url text
+qc_result     jsonb                   -- { identity, costume, flicker, motion, lipSync } 각 pass/fail + score
+qc_attempts   int default 0           -- 재생성 시도 횟수
+compute_job_id uuid (FK compute_jobs, nullable)
+seed          bigint
+generation_params jsonb               -- step, strength, 기타 파라미터
+created_at    timestamptz
+updated_at    timestamptz
+```
+
+### `asset3d_projects` (3D 에셋 프로젝트)
+```
+id            uuid (PK)
+owner_id      uuid (FK profiles)
+title         text
+subtrack      text                    -- 'character' | 'product' | 'floorplan'
+status        text                    -- 'draft' | 'generating' | 'processing' | 'done' | 'failed'
+input_image_urls text[]               -- 입력 이미지/도면 URL 배열
+style_options jsonb                   -- 스타일 설정
+result_artifact_id uuid (FK artifacts, nullable)
+credit_charged numeric default 0
+created_at    timestamptz
+updated_at    timestamptz
+```
+
+### `asset3d_outputs` (생성된 3D 에셋)
+```
+id            uuid (PK)
+project_id    uuid (FK asset3d_projects)
+glb_url       text                    -- GLB 파일 URL
+fbx_url       text                    -- FBX 파일 URL (선택)
+texture_urls  jsonb                   -- PBR 텍스처 맵 URLs
+thumbnail_url text                    -- 미리보기 이미지
+poly_count    int                     -- 폴리곤 수
+dimensions    jsonb                   -- { width, height, depth } (실측 치수, 도면용)
+qc_result     jsonb                   -- mesh quality, texture, scale 검사
+compute_job_id uuid (FK compute_jobs, nullable)
+created_at    timestamptz
+```
+
+---
+
 ## RLS 설계 방향 (요약)
 
 - `profiles`: 본인만 수정, 전체 조회 가능

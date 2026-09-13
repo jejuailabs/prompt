@@ -100,6 +100,7 @@ async function main() {
         newUntil: c.newUntilDays ? new Date(Date.now() + c.newUntilDays * DAY) : null,
         mainScreenSlot: c.mainScreenSlot, entryView: c.entryView,
         requiresAuth: c.requiresAuth, adminOnly: c.adminOnly,
+        navGroup: (c as any).group ?? null,
       },
     });
   }

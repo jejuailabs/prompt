@@ -472,3 +472,9 @@ model AdImpression {
   revenue    Int      @default(0) // estimated microcents
   createdAt  DateTime @default(now())
 }
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt
+}

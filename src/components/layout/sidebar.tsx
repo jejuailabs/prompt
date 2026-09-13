@@ -217,8 +217,9 @@ export default function Sidebar() {
   const view = useAppStore((s) => s.view);
   const navigate = useAppStore((s) => s.navigate);
   const { data: modules = [] } = useModules();
-  const navItems = modules.filter((m) => !['revenue-dashboard', 'marketplace'].includes(m.id) && (m.adminOnly ? session?.role === 'admin' : true));
+  const navItems = modules.filter((m) => (m.adminOnly ? session?.role === 'admin' : true));
   const mainItems = navItems.filter((m) => !m.group);
+  const studioItems = navItems.filter((m) => m.group === 'studio');
   const toolItems = navItems.filter((m) => m.group === 'tools');
 
   return (
@@ -234,6 +235,21 @@ export default function Sidebar() {
             <NavItem key={m.id} m={m} active={active} locale={locale} onClick={() => navigate(m.entryView as ViewKey)} />
           );
         })}
+
+        {studioItems.length > 0 && (
+          <div className="pt-2">
+            <p className="px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Icon name="clapperboard" className="mr-1.5 inline size-3.5" />
+              Studio
+            </p>
+            {studioItems.map((m) => {
+              const active = m.entryView === view;
+              return (
+                <NavItem key={m.id} m={m} active={active} locale={locale} onClick={() => navigate(m.entryView as ViewKey)} />
+              );
+            })}
+          </div>
+        )}
 
         {toolItems.length > 0 && (
           <div className="pt-2">
