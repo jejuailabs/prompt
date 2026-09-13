@@ -1,486 +1,176 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
 import {
-  ArrowLeft,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  Film,
-  Loader2,
-  Play,
-  RefreshCw,
-  Sparkles,
-  Wand2,
-  Zap,
+  ArrowLeft, ArrowRight, Box, CheckCircle2, ChevronDown, Clapperboard, Clock3,
+  Film, FolderOpen, ImagePlus, Layers3, Loader2, MapPinned, Music2, PackageOpen,
+  Play, Plus, Sparkles, Upload, UsersRound, Wand2,
 } from 'lucide-react';
-import { api, ApiError } from '@/lib/api-client';
+import { api, ApiError, uploadFile } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
-import { useRefreshSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
-import type { VideoProjectDTO, VideoShotDTO, RenderProfile, VideoModel } from '@/lib/types';
+import type { ArtifactDTO } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { ViewHeader } from '@/components/shared/view-header';
-import { EmptyState } from '@/components/shared/empty-state';
-import { StepForm } from '@/components/shared/step-form';
+import { cn } from '@/lib/utils';
 
-function errMsg(e: unknown): string {
-  if (e instanceof ApiError) return e.message;
-  return String(e);
+type StudioMode = 'gallery' | 'quick' | 'workspace';
+type GalleryTab = 'video' | 'asset' | 'projects';
+type InputMode = 'text' | 'image';
+
+interface StudioMetadata {
+  prompt?: string;
+  style?: string;
+  targetDurationSec?: number;
+  inputMode?: string;
+  inputImageUrl?: string | null;
+  aspectRatio?: string;
+  quality?: string;
+  shots?: Array<{ id: string; index: number; title: string; prompt: string; duration: number; inputMode: string; status: string }>;
 }
 
-// ─── Main View ────────────────────────────────────────────────────────────────
+interface FeaturedCard {
+  id: string;
+  title: string;
+  creator: string;
+  subtitle: string;
+  kind: 'video' | 'asset';
+  duration?: string;
+  model?: string;
+  gradient: string;
+  tags: string[];
+}
+
+const featuredVideos: FeaturedCard[] = [
+  { id: 'sunrise', title: '새벽의 섬을 지나', creator: 'JIN', subtitle: '여행 필름 · 9:16', kind: 'video', duration: '00:08', model: 'H3', gradient: 'from-slate-950 via-sky-900 to-amber-300', tags: ['여행', '시네마틱'] },
+  { id: 'cafe', title: '비 오는 날의 카페', creator: 'minseo', subtitle: '브랜드 무드 필름', kind: 'video', duration: '00:06', model: 'Wan', gradient: 'from-stone-900 via-amber-800 to-orange-300', tags: ['카페', '무드'] },
+  { id: 'product', title: '한 방울의 이야기', creator: 'NOVA', subtitle: '제품 광고 · 16:9', kind: 'video', duration: '00:07', model: 'LTX', gradient: 'from-zinc-950 via-fuchsia-900 to-pink-300', tags: ['제품', '광고'] },
+  { id: 'night', title: '도시가 잠들기 전', creator: 'yoons', subtitle: '나레이션 숏폼', kind: 'video', duration: '00:10', model: 'H3', gradient: 'from-slate-950 via-indigo-900 to-cyan-300', tags: ['도시', '내레이션'] },
+];
+
+const featuredAssets: FeaturedCard[] = [
+  { id: 'character', title: '수현 · 캐릭터 바이블', creator: 'JIN', subtitle: '캐릭터 · 8개 참조 프레임', kind: 'asset', gradient: 'from-rose-950 via-rose-700 to-orange-200', tags: ['캐릭터', '리믹스 가능'] },
+  { id: 'place', title: '제주 해안의 아침', creator: 'seogwipo', subtitle: '장소 · 스타일 레퍼런스', kind: 'asset', gradient: 'from-cyan-950 via-teal-700 to-emerald-200', tags: ['장소', '제주'] },
+  { id: 'prop', title: '프리미엄 티 세트', creator: 'bloom', subtitle: '제품 · 3D 렌더 베이스', kind: 'asset', gradient: 'from-yellow-950 via-amber-700 to-yellow-100', tags: ['제품', 'Blender'] },
+  { id: 'style', title: '90s 필름 그레인', creator: 'filmclub', subtitle: '스타일 · 컬러 바이블', kind: 'asset', gradient: 'from-violet-950 via-purple-700 to-fuchsia-200', tags: ['스타일', '필름'] },
+];
+
+function errorMessage(error: unknown) {
+  return error instanceof ApiError ? error.message : '요청을 완료하지 못했습니다.';
+}
+
+function asStudioMetadata(artifact: ArtifactDTO): StudioMetadata {
+  return artifact.metadata as unknown as StudioMetadata;
+}
 
 export default function VideoStudioView() {
-  const t = useTranslations('videoStudio');
-  const tc = useTranslations('core');
-  const navigate = useAppStore((s) => s.navigate);
   const session = useAppStore((s) => s.session);
-
-  const [mode, setMode] = useState<'list' | 'create' | 'detail'>('list');
+  const [mode, setMode] = useState<StudioMode>('gallery');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [remix, setRemix] = useState<FeaturedCard | null>(null);
 
-  if (mode === 'create') {
-    return <CreateProjectForm onBack={() => setMode('list')} onCreated={(id) => { setSelectedProjectId(id); setMode('detail'); }} />;
-  }
+  const openQuick = (card?: FeaturedCard) => {
+    setRemix(card ?? null);
+    setMode('quick');
+  };
 
-  if (mode === 'detail' && selectedProjectId) {
-    return <ProjectDetail projectId={selectedProjectId} onBack={() => { setSelectedProjectId(null); setMode('list'); }} />;
-  }
+  if (mode === 'quick') return <QuickStart onBack={() => setMode('gallery')} onCreated={(id) => { setSelectedProjectId(id); setMode('workspace'); }} remix={remix} />;
+  if (mode === 'workspace' && selectedProjectId) return <ProjectWorkspace projectId={selectedProjectId} onBack={() => setMode('gallery')} />;
+  return <StudioGallery session={Boolean(session)} onNewProject={() => openQuick()} onRemix={openQuick} onOpenProject={(id) => { setSelectedProjectId(id); setMode('workspace'); }} />;
+}
+
+function StudioGallery({ session, onNewProject, onRemix, onOpenProject }: {
+  session: boolean; onNewProject: () => void; onRemix: (card: FeaturedCard) => void; onOpenProject: (id: string) => void;
+}) {
+  const [tab, setTab] = useState<GalleryTab>('video');
+  const [search, setSearch] = useState('');
+  const publicVideos = useQuery({
+    queryKey: ['video-studio-gallery'],
+    queryFn: () => api.get<ArtifactDTO[]>('/api/artifacts?scope=feed&type=video&moduleId=video-studio&limit=12'),
+  });
+  const projects = useQuery({
+    queryKey: ['video-studio-projects'], queryFn: () => api.get<ArtifactDTO[]>('/api/video-studio/projects'), enabled: session,
+  });
+  const activeCards = tab === 'asset' ? featuredAssets : featuredVideos;
+  const filtered = activeCards.filter((card) => `${card.title} ${card.tags.join(' ')}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
-      <ViewHeader
-        title={t('title')}
-        subtitle={t('subtitle')}
-        actions={
-          <Button onClick={() => session ? setMode('create') : useAppStore.getState().setLoginOpen(true)}>
-            <Sparkles className="size-4" /> {t('newProject')}
-          </Button>
-        }
-      />
-      <ProjectList onSelect={(id) => { setSelectedProjectId(id); setMode('detail'); }} />
+    <div className="mx-auto w-full max-w-7xl space-y-7 pb-10">
+      <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-slate-950 via-slate-900 to-violet-950 px-6 py-9 text-white shadow-xl sm:px-10">
+        <div className="absolute -right-20 -top-24 size-80 rounded-full bg-primary/25 blur-3xl" /><div className="absolute -bottom-36 left-1/3 size-72 rounded-full bg-sky-400/15 blur-3xl" />
+        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl"><div className="mb-3 flex items-center gap-2 text-sm font-medium text-sky-200"><Sparkles className="size-4" /> PLAYLAB VIDEO STUDIO</div><h1 className="text-3xl font-bold tracking-tight sm:text-5xl">보고, 바로 만들고,<br />이야기로 완성하세요.</h1><p className="mt-4 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">크리에이터의 영상과 에셋에서 시작해, 프롬프트 한 줄 또는 이미지 한 장으로 첫 샷을 만드세요.</p></div>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row"><Button className="bg-white text-slate-950 hover:bg-slate-100" onClick={onNewProject}><Plus className="size-4" /> 새 프로젝트</Button><Button variant="outline" className="border-white/25 bg-white/10 text-white hover:bg-white/20 hover:text-white" onClick={() => setTab('asset')}><PackageOpen className="size-4" /> 에셋 둘러보기</Button></div>
+        </div>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-3">{[['01', '가장 빠른 시작', '이미지 한 장 또는 프롬프트 한 줄'], ['02', '샷을 이어 만들기', '첫·끝 프레임과 바이블로 연속성 유지'], ['03', '타임라인으로 완성', '자막·나레이션·BGM까지 한 프로젝트에서']].map(([number, title, description]) => <div key={number} className="rounded-2xl border bg-card p-4"><span className="text-xs font-bold text-primary">{number}</span><h2 className="mt-1 font-semibold">{title}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p></div>)}</section>
+
+      <section className="rounded-3xl border bg-card p-4 sm:p-6">
+        <div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-1 rounded-xl bg-muted p-1">{([['video', 'Video Studio'], ['asset', 'Asset Studio'], ['projects', '내 프로젝트']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setTab(value)} className={cn('rounded-lg px-3 py-2 text-sm font-medium transition-colors', tab === value ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>{label}</button>)}</div>{tab !== 'projects' && <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="스타일, 장면, 에셋 검색" className="w-full sm:w-56" />}{tab === 'projects' && <Button size="sm" onClick={onNewProject}><Plus className="size-4" /> 새 프로젝트</Button>}</div>
+        {tab === 'projects' ? <ProjectShelf session={session} projects={projects.data ?? []} loading={projects.isLoading} onNewProject={onNewProject} onOpenProject={onOpenProject} /> : <><div className="mt-5 flex items-center justify-between"><div><h2 className="font-semibold">{tab === 'video' ? '지금 영감을 주는 영상' : '영상의 기준이 되는 에셋'}</h2><p className="mt-1 text-sm text-muted-foreground">좋아하는 결과를 선택해 그 스타일과 문맥으로 새 프로젝트를 시작하세요.</p></div><Badge variant="secondary">공개 갤러리</Badge></div><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{filtered.map((card) => <FeaturedTile key={card.id} card={card} onRemix={() => onRemix(card)} />)}{tab === 'video' && publicVideos.data?.slice(0, 4).map((video) => <ArtifactTile key={video.id} artifact={video} onRemix={onNewProject} />)}</div></>}
+      </section>
     </div>
   );
 }
 
-// ─── Project List ─────────────────────────────────────────────────────────────
+function FeaturedTile({ card, onRemix }: { card: FeaturedCard; onRemix: () => void }) {
+  return <article className="group overflow-hidden rounded-2xl border bg-background"><div className={cn('relative aspect-[4/5] overflow-hidden bg-gradient-to-br', card.gradient)}><div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_25%,rgba(255,255,255,.35),transparent_24%),linear-gradient(145deg,transparent_30%,rgba(0,0,0,.55))]" /><div className="absolute inset-x-3 top-3 flex items-center justify-between"><Badge className="border-0 bg-black/40 text-white hover:bg-black/40">{card.kind === 'video' ? <Film className="mr-1 size-3" /> : <Box className="mr-1 size-3" />}{card.kind === 'video' ? '영상' : '에셋'}</Badge>{card.duration && <span className="rounded-md bg-black/40 px-2 py-1 text-xs text-white">{card.duration}</span>}</div><div className="absolute inset-x-3 bottom-3"><p className="font-semibold text-white">{card.title}</p><p className="mt-1 text-xs text-white/75">by {card.creator}</p></div></div><div className="space-y-3 p-3"><p className="text-xs text-muted-foreground">{card.subtitle}</p><div className="flex flex-wrap gap-1">{card.tags.map((tag) => <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>)}</div><Button variant="outline" size="sm" className="w-full" onClick={onRemix}><Wand2 className="size-3.5" /> 이 문맥으로 만들기</Button></div></article>;
+}
 
-function ProjectList({ onSelect }: { onSelect: (id: string) => void }) {
-  const t = useTranslations('videoStudio');
-  const locale = useAppStore((s) => s.locale);
+function ArtifactTile({ artifact, onRemix }: { artifact: ArtifactDTO; onRemix: () => void }) {
+  return <article className="overflow-hidden rounded-2xl border bg-background"><div className="relative aspect-[4/5] bg-gradient-to-br from-primary/30 via-violet-500/30 to-slate-900">{artifact.fileUrl ? <img src={artifact.fileUrl} alt="" className="size-full object-cover" /> : <Film className="absolute left-1/2 top-1/2 size-10 -translate-x-1/2 -translate-y-1/2 text-white/80" />}<Badge className="absolute left-3 top-3 border-0 bg-black/40 text-white hover:bg-black/40">커뮤니티</Badge></div><div className="space-y-2 p-3"><p className="truncate font-medium">{artifact.title}</p><p className="text-xs text-muted-foreground">by {artifact.owner.username}</p><Button variant="outline" size="sm" className="w-full" onClick={onRemix}>이 영상에서 시작</Button></div></article>;
+}
+
+function ProjectShelf({ session, projects, loading, onNewProject, onOpenProject }: { session: boolean; projects: ArtifactDTO[]; loading: boolean; onNewProject: () => void; onOpenProject: (id: string) => void }) {
+  if (!session) return <EmptyShelf title="내 프로젝트를 이어서 작업하세요" description="로그인하면 생성한 영상, 에셋, 바이블을 프로젝트 단위로 안전하게 보관합니다." action="로그인하고 시작" />;
+  if (loading) return <div className="grid grid-cols-3 gap-4 py-6">{[1, 2, 3].map((key) => <div key={key} className="h-48 animate-pulse rounded-2xl bg-muted" />)}</div>;
+  if (!projects.length) return <EmptyShelf title="아직 영상 프로젝트가 없습니다" description="프롬프트 한 줄이나 이미지 한 장으로 첫 샷을 바로 시작해보세요." action="첫 영상 만들기" onAction={onNewProject} />;
+  return <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{projects.map((project) => { const meta = asStudioMetadata(project); return <button key={project.id} type="button" onClick={() => onOpenProject(project.id)} className="group rounded-2xl border p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/[.03]"><div className="flex items-start justify-between"><span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Clapperboard className="size-5" /></span><Badge variant="outline">편집 중</Badge></div><h3 className="mt-5 line-clamp-2 font-semibold">{project.title}</h3><p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{meta.prompt ?? project.description}</p><div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground"><span>{meta.targetDurationSec ?? 6}초</span><span>{meta.aspectRatio ?? '9:16'}</span><span>{meta.shots?.length ?? 1} 샷</span></div></button>; })}</div>;
+}
+
+function EmptyShelf({ title, description, action, onAction }: { title: string; description: string; action: string; onAction?: () => void }) {
+  return <div className="my-6 flex flex-col items-center rounded-2xl border border-dashed px-6 py-14 text-center"><FolderOpen className="size-8 text-muted-foreground" /><h3 className="mt-3 font-semibold">{title}</h3><p className="mt-1 max-w-sm text-sm leading-6 text-muted-foreground">{description}</p><Button className="mt-5" onClick={onAction ?? (() => useAppStore.getState().setLoginOpen(true))}>{action}</Button></div>;
+}
+
+function QuickStart({ onBack, onCreated, remix }: { onBack: () => void; onCreated: (id: string) => void; remix: FeaturedCard | null }) {
   const session = useAppStore((s) => s.session);
-
-  const q = useQuery({
-    queryKey: ['video-projects'],
-    queryFn: () => api.get<VideoProjectDTO[]>('/api/video-studio/projects'),
-    enabled: !!session,
-  });
-
-  if (!session) {
-    return <EmptyState title={t('noProjects')} description={t('noProjectsDesc')} />;
-  }
-
-  if (q.isLoading) {
-    return (
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
-      </div>
-    );
-  }
-
-  const projects = q.data ?? [];
-  if (projects.length === 0) {
-    return <EmptyState title={t('noProjects')} description={t('noProjectsDesc')} />;
-  }
-
-  return (
-    <div className="space-y-3">
-      {projects.map((p) => (
-        <Card
-          key={p.id}
-          className="flex cursor-pointer items-center gap-4 p-4 transition-colors hover:bg-muted/50"
-          onClick={() => onSelect(p.id)}
-        >
-          <span className="flex size-10 items-center justify-center rounded-xl bg-primary/15">
-            <Film className="size-5 text-primary" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-medium">{p.title || t('statusDraft')}</p>
-            <p className="text-xs text-muted-foreground">
-              {p.targetDurationSec}s · {p.shots?.length ?? 0} {t('shot')}
-            </p>
-          </div>
-          <ProjectStatusBadge status={p.status} />
-          <ChevronRight className="size-4 text-muted-foreground" />
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-// ─── Create Project Form ──────────────────────────────────────────────────────
-
-function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreated: (id: string) => void }) {
-  const t = useTranslations('videoStudio');
-  const tc = useTranslations('core');
   const { toast } = useToast();
-  const refreshSession = useRefreshSession();
+  const [inputMode, setInputMode] = useState<InputMode>(remix?.kind === 'asset' ? 'image' : 'text');
+  const [prompt, setPrompt] = useState(remix ? `${remix.title}의 분위기와 ${remix.tags.join(', ')} 스타일을 참고해 새로운 장면을 만듭니다.` : '');
+  const [aspect, setAspect] = useState('9:16'); const [duration, setDuration] = useState('6'); const [quality, setQuality] = useState('draft');
+  const [showAdvanced, setShowAdvanced] = useState(false); const [imageUrl, setImageUrl] = useState<string | null>(null); const [uploading, setUploading] = useState(false); const [submitting, setSubmitting] = useState(false); const inputRef = useRef<HTMLInputElement>(null);
 
-  const [script, setScript] = useState('');
-  const [style, setStyle] = useState('cinematic');
-  const [duration, setDuration] = useState('60');
-  const [submitting, setSubmitting] = useState(false);
+  const pickImage = async (file?: File) => { if (!file) return; if (!session) { useAppStore.getState().setLoginOpen(true); return; } setUploading(true); try { const result = await uploadFile(file); setImageUrl(result.url); setInputMode('image'); } catch (error) { toast({ title: '이미지 업로드 실패', description: errorMessage(error), variant: 'destructive' }); } finally { setUploading(false); } };
+  const create = async () => { if (!session) { useAppStore.getState().setLoginOpen(true); return; } if (prompt.trim().length < 3) { toast({ title: '장면 설명을 입력해주세요', description: '3자 이상 입력하면 첫 샷을 만들 수 있습니다.', variant: 'destructive' }); return; } if (inputMode === 'image' && !imageUrl) { toast({ title: '시작 이미지를 업로드해주세요', description: '이미지 한 장을 올리면 해당 장면을 움직이는 영상으로 만들 수 있습니다.', variant: 'destructive' }); return; } setSubmitting(true); try { const project = await api.post<ArtifactDTO>('/api/video-studio/projects', { prompt, inputMode, inputImageUrl: imageUrl, targetDurationSec: Number(duration), aspectRatio: aspect, quality, style: remix?.tags.join(', ') ?? 'cinematic' }); onCreated(project.id); } catch (error) { toast({ title: '프로젝트를 만들지 못했습니다', description: errorMessage(error), variant: 'destructive' }); } finally { setSubmitting(false); } };
 
-  const ready = script.trim().length > 10;
-
-  const submit = async () => {
-    setSubmitting(true);
-    try {
-      const res = await api.post<VideoProjectDTO>('/api/video-studio/projects', {
-        script: script.trim(),
-        style,
-        targetDurationSec: Number(duration),
-      });
-      refreshSession();
-      onCreated(res.id);
-    } catch (e) {
-      toast({ title: tc('error'), description: errMsg(e), variant: 'destructive' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="mx-auto w-full max-w-3xl">
-      <Button variant="ghost" size="sm" className="-ml-2 mb-4 h-7 text-muted-foreground" onClick={onBack}>
-        <ArrowLeft className="size-4" /> {t('back')}
-      </Button>
-
-      <h2 className="mb-6 text-2xl font-bold tracking-tight">{t('newProject')}</h2>
-
-      <Card className="p-6">
-        <StepForm
-          steps={[
-            {
-              title: t('stepScript'),
-              content: (
-                <Textarea
-                  rows={6}
-                  value={script}
-                  onChange={(e) => setScript(e.target.value)}
-                  placeholder={t('scriptPh')}
-                  className="whitespace-pre-line"
-                />
-              ),
-            },
-            {
-              title: t('stepStyle'),
-              content: (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>{t('styleLabel')}</Label>
-                    <Select value={style} onValueChange={setStyle}>
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cinematic">{t('styleCinematic')}</SelectItem>
-                        <SelectItem value="informative">{t('styleInformative')}</SelectItem>
-                        <SelectItem value="humor">{t('styleHumor')}</SelectItem>
-                        <SelectItem value="emotional">{t('styleEmotional')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>{t('durationLabel')}</Label>
-                    <Select value={duration} onValueChange={setDuration}>
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="15">{t('sec15')}</SelectItem>
-                        <SelectItem value="30">{t('sec30')}</SelectItem>
-                        <SelectItem value="60">{t('sec60')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              ),
-            },
-          ]}
-          footer={
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">{t('creditNote')}</p>
-              <Button disabled={!ready || submitting} onClick={() => void submit()}>
-                {submitting ? <Loader2 className="animate-spin" /> : <Wand2 />} {t('createProject')}
-              </Button>
-            </div>
-          }
-        />
-      </Card>
-    </div>
-  );
+  return <div className="mx-auto w-full max-w-5xl pb-10"><button type="button" onClick={onBack} className="mb-5 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> 갤러리로 돌아가기</button><div className="overflow-hidden rounded-3xl border bg-card shadow-sm"><div className="border-b bg-gradient-to-r from-primary/[.08] via-transparent to-violet-500/[.08] px-6 py-7 sm:px-9"><Badge className="bg-primary/10 text-primary hover:bg-primary/10">새 프로젝트</Badge><h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">첫 샷부터 바로 만들어보세요.</h1><p className="mt-2 text-sm text-muted-foreground">프로젝트 이름과 긴 스토리보드는 나중에 정리하면 됩니다. 지금은 장면 하나면 충분합니다.</p></div><div className="p-5 sm:p-9"><div className="grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => setInputMode('text')} className={cn('flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors', inputMode === 'text' ? 'border-primary bg-primary/[.05]' : 'hover:bg-muted/50')}><Wand2 className="mt-0.5 size-5 text-primary" /><span><strong className="block text-sm">프롬프트로 영상 만들기</strong><span className="mt-1 block text-xs leading-5 text-muted-foreground">상상한 장면을 설명하면 첫 영상을 만듭니다.</span></span></button><button type="button" onClick={() => setInputMode('image')} className={cn('flex items-start gap-3 rounded-2xl border p-4 text-left transition-colors', inputMode === 'image' ? 'border-primary bg-primary/[.05]' : 'hover:bg-muted/50')}><ImagePlus className="mt-0.5 size-5 text-primary" /><span><strong className="block text-sm">이미지로 영상 만들기</strong><span className="mt-1 block text-xs leading-5 text-muted-foreground">한 장의 이미지를 장면의 첫 프레임으로 씁니다.</span></span></button></div><div className="mt-6 grid gap-5 lg:grid-cols-[1fr_280px]"><div className="space-y-4">{inputMode === 'image' && <div className="relative overflow-hidden rounded-2xl border border-dashed bg-muted/30"><input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => void pickImage(event.target.files?.[0])} />{imageUrl ? <div className="relative aspect-video"><img src={imageUrl} alt="업로드한 시작 이미지" className="size-full object-cover" /><Button type="button" size="sm" variant="secondary" className="absolute bottom-3 right-3" onClick={() => inputRef.current?.click()}><Upload className="size-3.5" /> 이미지 바꾸기</Button></div> : <button type="button" className="flex min-h-52 w-full flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-muted/60" onClick={() => inputRef.current?.click()} disabled={uploading}>{uploading ? <Loader2 className="size-7 animate-spin" /> : <Upload className="size-7" />}<span className="font-medium">이미지 한 장을 올려주세요</span><span className="text-xs">PNG, JPG, WebP · 최대 5MB</span></button>}</div>}<Textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} rows={inputMode === 'image' ? 4 : 8} placeholder={inputMode === 'image' ? '이 이미지에서 어떤 움직임과 장면이 이어지나요?' : '예: 비가 막 그친 제주의 해안도로. 카메라는 천천히 뒤로 이동하고, 창문에 비친 노을이 흔들린다.'} className="resize-none rounded-2xl border-muted bg-muted/[.25] p-4 leading-6" /><div className="flex flex-wrap gap-2">{['시네마틱', '광고 필름', '감성 숏폼', '카메라 무빙 강조'].map((preset) => <button key={preset} type="button" className="rounded-full border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary" onClick={() => setPrompt((current) => current ? `${current}\n${preset}` : preset)}>{preset}</button>)}</div></div><aside className="rounded-2xl border bg-muted/[.2] p-4"><p className="text-sm font-semibold">첫 샷 설정</p><div className="mt-4 space-y-4"><QuickSelect label="길이" value={duration} values={['6', '8', '15']} suffix="초" onChange={setDuration} /><QuickSelect label="비율" value={aspect} values={['9:16', '16:9', '1:1']} onChange={setAspect} /><QuickSelect label="품질" value={quality} values={['draft', 'standard']} labels={{ draft: '빠른 초안', standard: '고품질' }} onChange={setQuality} /></div><button type="button" className="mt-5 flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowAdvanced(!showAdvanced)}>고급 설정 <ChevronDown className={cn('size-4 transition-transform', showAdvanced && 'rotate-180')} /></button>{showAdvanced && <div className="mt-3 space-y-2 rounded-xl border bg-background p-3 text-xs"><p className="font-medium">렌더 전략</p><p className="leading-5 text-muted-foreground">초안은 빠른 모델로 후보를 만들고, 선택한 샷만 고품질 렌더로 올립니다.</p><div className="flex gap-1"><Badge variant="secondary">H3</Badge><Badge variant="secondary">Wan</Badge><Badge variant="secondary">LTX</Badge></div></div>}</aside></div><div className="mt-7 flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-5 text-muted-foreground">생성 후에는 첫·끝 프레임, 레퍼런스, 자막, 타임라인을 프로젝트 작업실에서 이어서 편집할 수 있습니다.</p><Button size="lg" onClick={() => void create()} disabled={submitting || uploading}>{submitting ? <Loader2 className="animate-spin" /> : <Play className="size-4" />} 첫 샷 만들기 <ArrowRight className="size-4" /></Button></div></div></div></div>;
 }
 
-// ─── Project Detail (Storyboard) ──────────────────────────────────────────────
+function QuickSelect({ label, value, values, labels, suffix, onChange }: { label: string; value: string; values: string[]; labels?: Record<string, string>; suffix?: string; onChange: (value: string) => void }) {
+  return <div><p className="mb-2 text-xs text-muted-foreground">{label}</p><div className="flex flex-wrap gap-1">{values.map((option) => <button key={option} type="button" onClick={() => onChange(option)} className={cn('rounded-lg border px-2.5 py-1.5 text-xs transition-colors', value === option ? 'border-primary bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:border-primary/50')}>{labels?.[option] ?? `${option}${suffix ?? ''}`}</button>)}</div></div>;
+}
 
-function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () => void }) {
-  const t = useTranslations('videoStudio');
-  const tc = useTranslations('core');
+function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const { toast } = useToast();
-
-  const q = useQuery({
-    queryKey: ['video-project', projectId],
-    queryFn: () => api.get<VideoProjectDTO>(`/api/video-studio/projects/${projectId}`),
-    refetchInterval: (query) => {
-      const s = query.state.data?.status;
-      return s === 'generating' || s === 'rendering' || s === 'storyboard' ? 2000 : false;
-    },
-  });
-
-  if (q.isLoading) {
-    return (
-      <div className="mx-auto w-full max-w-5xl space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 rounded-xl" />
-      </div>
-    );
-  }
-
-  if (q.isError || !q.data) {
-    return (
-      <EmptyState
-        title={tc('error')}
-        description={errMsg(q.error)}
-        action={<Button variant="outline" size="sm" onClick={onBack}>{t('back')}</Button>}
-      />
-    );
-  }
-
-  const project = q.data;
-  const shots = project.shots ?? [];
-  const isWorking = project.status === 'generating' || project.status === 'rendering' || project.status === 'storyboard';
-
-  return (
-    <div className="mx-auto w-full max-w-5xl">
-      <Button variant="ghost" size="sm" className="-ml-2 mb-4 h-7 text-muted-foreground" onClick={onBack}>
-        <ArrowLeft className="size-4" /> {t('back')}
-      </Button>
-
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-primary/15">
-          <Film className="size-5 text-primary" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{project.title || t('statusDraft')}</h1>
-          <p className="text-sm text-muted-foreground">
-            {project.targetDurationSec}s · {shots.length} {t('shot')}
-          </p>
-        </div>
-        <ProjectStatusBadge status={project.status} />
-      </div>
-
-      {isWorking && (
-        <Card className="mb-6 flex items-center gap-3 p-4">
-          <Loader2 className="size-5 animate-spin text-primary" />
-          <span className="text-sm font-medium">{t('creating')}</span>
-        </Card>
-      )}
-
-      {/* Storyboard timeline */}
-      {shots.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{t('storyboard')}</h2>
-            {project.status === 'editing' && (
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <Play className="size-4" /> {t('generatePreview')}
-                </Button>
-                <Button size="sm">
-                  <Zap className="size-4" /> {t('generateAll')}
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {shots.map((shot) => (
-            <ShotCard key={shot.id} shot={shot} />
-          ))}
-        </div>
-      )}
-
-      {/* Final result */}
-      {project.status === 'done' && project.resultArtifactId && (
-        <Card className="mt-6 space-y-4 p-6">
-          <h3 className="font-semibold">{t('statusDone')}</h3>
-          <div className="flex gap-2">
-            <Button>
-              <Check className="size-4" /> {t('publish')}
-            </Button>
-            <Button variant="outline">{t('download')}</Button>
-          </div>
-        </Card>
-      )}
-    </div>
-  );
+  const projectQuery = useQuery({ queryKey: ['video-studio-project', projectId], queryFn: () => api.get<ArtifactDTO>(`/api/video-studio/projects/${projectId}`) });
+  if (projectQuery.isLoading) return <div className="mx-auto flex min-h-80 max-w-7xl items-center justify-center"><Loader2 className="size-7 animate-spin text-primary" /></div>;
+  if (projectQuery.isError || !projectQuery.data) return <div className="mx-auto max-w-xl rounded-2xl border p-8 text-center"><p className="font-semibold">프로젝트를 불러오지 못했습니다.</p><p className="mt-2 text-sm text-muted-foreground">{errorMessage(projectQuery.error)}</p><Button className="mt-5" variant="outline" onClick={onBack}>갤러리로 돌아가기</Button></div>;
+  const project = projectQuery.data; const meta = asStudioMetadata(project); const shots = meta.shots ?? []; const hasStartImage = Boolean(meta.inputImageUrl);
+  return <div className="mx-auto w-full max-w-[1500px] pb-8"><div className="mb-4 flex flex-wrap items-center gap-3"><button type="button" onClick={onBack} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> 갤러리</button><span className="h-4 w-px bg-border" /><span className="text-sm text-muted-foreground">Video Studio</span><h1 className="min-w-0 flex-1 truncate text-lg font-bold">{project.title}</h1><Badge variant="secondary">{shots.length} shot</Badge><Button variant="outline" size="sm">저장</Button><Button size="sm" onClick={() => toast({ title: '렌더 큐 준비 중', description: '첫 샷의 Runpod 렌더 요청 연결을 다음 단계로 진행합니다.' })}><Clapperboard className="size-4" /> 렌더하기</Button></div><div className="grid gap-4 xl:grid-cols-[250px_minmax(0,1fr)_300px]"><aside className="rounded-2xl border bg-card p-4 xl:min-h-[720px]"><div className="flex items-center justify-between"><div><p className="font-semibold">에셋 · 바이블</p><p className="mt-1 text-xs text-muted-foreground">이 프로젝트의 기준점</p></div><Button variant="ghost" size="icon" className="size-8"><Plus className="size-4" /></Button></div><BibleGroup icon={<UsersRound className="size-4" />} title="캐릭터" items={['아직 등록한 캐릭터가 없습니다']} /><BibleGroup icon={<MapPinned className="size-4" />} title="장소" items={['씬 1 · 첫 장면']} /><BibleGroup icon={<PackageOpen className="size-4" />} title="소품 · 제품" items={['에셋을 추가해 일관성을 유지하세요']} /><BibleGroup icon={<Sparkles className="size-4" />} title="스타일" items={[meta.style ?? 'cinematic']} /><BibleGroup icon={<Music2 className="size-4" />} title="오디오" items={['BGM · 나레이션 · 효과음']} /></aside><main className="min-w-0 rounded-2xl border bg-card p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><Badge variant="secondary">씬 1</Badge><h2 className="mt-2 text-lg font-semibold">첫 장면</h2><p className="mt-1 text-sm text-muted-foreground">첫 샷을 확정한 다음, 장면을 이어가세요.</p></div><div className="flex gap-2"><Button variant="outline" size="sm"><Layers3 className="size-4" /> 타임라인</Button><Button variant="outline" size="sm"><Plus className="size-4" /> 샷 추가</Button></div></div><div className="mt-6 grid gap-4 md:grid-cols-2"><ShotCanvasCard title="샷 1" prompt={meta.prompt ?? project.description} duration={meta.targetDurationSec ?? 6} imageUrl={meta.inputImageUrl ?? null} selected /><button type="button" className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed text-muted-foreground transition-colors hover:border-primary hover:bg-primary/[.03]"><Plus className="size-7" /><span className="mt-3 font-medium">다음 샷 추가</span><span className="mt-1 text-xs">앞 샷의 마지막 프레임을 이어갈 수 있어요</span></button></div><div className="mt-6 rounded-2xl border bg-muted/[.25] p-4"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><Clock3 className="size-4 text-primary" /><p className="text-sm font-medium">타임라인</p></div><span className="text-xs text-muted-foreground">00:00 · 00:{String(meta.targetDurationSec ?? 6).padStart(2, '0')}</span></div><div className="mt-4 flex gap-2"><div className="w-16 pt-2 text-xs text-muted-foreground">Video</div><div className="h-12 flex-1 rounded-lg bg-gradient-to-r from-primary/70 via-violet-500/70 to-sky-500/70 p-2 text-xs text-white">첫 샷 · {meta.targetDurationSec ?? 6}초</div></div><div className="mt-2 flex gap-2"><div className="w-16 pt-2 text-xs text-muted-foreground">Subtitle</div><div className="h-8 flex-1 rounded-lg border border-dashed bg-background" /></div></div></main><aside className="rounded-2xl border bg-card p-4 xl:min-h-[720px]"><p className="font-semibold">샷 인스펙터</p><div className="mt-4 overflow-hidden rounded-xl bg-slate-900"><div className="relative aspect-video">{hasStartImage ? <img src={meta.inputImageUrl ?? ''} alt="첫 프레임" className="size-full object-cover" /> : <div className="size-full bg-[radial-gradient(circle_at_65%_30%,rgba(250,204,21,.35),transparent_24%),linear-gradient(135deg,#172554,#0f172a_55%,#7c2d12)]" />}<span className="absolute left-2 top-2 rounded bg-black/50 px-1.5 py-1 text-[10px] text-white">{meta.aspectRatio ?? '9:16'}</span><Play className="absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-1/2 text-white" /></div></div><InspectorRow label="생성 방식" value={meta.inputMode === 'image' ? '이미지 → 영상' : '프롬프트 → 영상'} /><InspectorRow label="길이" value={`${meta.targetDurationSec ?? 6}초`} /><InspectorRow label="비율" value={meta.aspectRatio ?? '9:16'} /><div className="mt-5"><p className="text-xs font-medium text-muted-foreground">장면 프롬프트</p><p className="mt-2 rounded-xl border bg-muted/[.25] p-3 text-sm leading-6">{meta.prompt ?? project.description}</p></div><div className="mt-5 rounded-xl border bg-emerald-500/[.12] p-3"><div className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="size-4" /> 다음 단계</div><p className="mt-1 text-xs leading-5 text-muted-foreground">첫 샷을 렌더한 뒤, 결과를 다음 장면의 첫 프레임 또는 참조 에셋으로 사용하세요.</p></div></aside></div></div>;
 }
 
-// ─── Shot Card ────────────────────────────────────────────────────────────────
-
-function ShotCard({ shot }: { shot: VideoShotDTO }) {
-  const t = useTranslations('videoStudio');
-  const [expanded, setExpanded] = useState(false);
-
-  const modelLabel: Partial<Record<VideoModel, string>> = {
-    'h3': 'H3 Unified',
-    'h3-fl2va': 'H3 FL2VA',
-    'h3-ref2va': 'H3 Ref2VA',
-    'wan26': 'Wan 2.6',
-    'wan25': 'Wan 2.5',
-    'wan22': 'Wan 2.2',
-    'ltx25': 'LTX 2.5',
-    'ltx23': 'LTX 2.3',
-    'ltx2': 'LTX 2.0',
-  };
-
-  const profileLabel: Record<RenderProfile, string> = {
-    preview: t('profilePreview'),
-    standard: t('profileStandard'),
-    hero: t('profileHero'),
-  };
-
-  return (
-    <Card className="overflow-hidden">
-      <div
-        className="flex cursor-pointer items-center gap-3 p-4 transition-colors hover:bg-muted/30"
-        onClick={() => setExpanded(!expanded)}
-      >
-        {/* thumbnail */}
-        <div className="flex size-16 shrink-0 items-center justify-center rounded-lg bg-muted">
-          {shot.thumbnailUrl ? (
-            <img src={shot.thumbnailUrl} alt="" className="size-full rounded-lg object-cover" />
-          ) : (
-            <Film className="size-6 text-muted-foreground" />
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold">
-              {t('shot')} {shot.shotIndex + 1}
-            </span>
-            <Badge variant="secondary" className="text-xs">
-              {shot.startSec.toFixed(1)}s – {shot.endSec.toFixed(1)}s
-            </Badge>
-            <ShotStatusBadge status={shot.status} />
-          </div>
-          <p className="mt-0.5 truncate text-sm text-muted-foreground">{shot.narration}</p>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2">
-          <Badge variant="outline" className="text-xs">{modelLabel[shot.model] ?? shot.model}</Badge>
-          <Badge variant="outline" className="text-xs">{shot.renderProfile}</Badge>
-          {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-        </div>
-      </div>
-
-      {expanded && (
-        <div className="space-y-3 border-t bg-muted/10 p-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('narration')}</Label>
-              <p className="mt-1 text-sm">{shot.narration}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('prompt')}</Label>
-              <p className="mt-1 text-sm">{shot.prompt}</p>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('model')}</Label>
-              <p className="mt-1 text-sm">{modelLabel[shot.model] ?? shot.model}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('profile')}</Label>
-              <p className="mt-1 text-sm">{profileLabel[shot.renderProfile]}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">{t('importance')}</Label>
-              <Progress value={shot.importance * 100} className="mt-2" />
-            </div>
-          </div>
-
-          {/* QC result */}
-          {shot.qcResult && (
-            <div className="rounded-lg border p-3">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">QC ({shot.qcAttempts} attempts)</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(shot.qcResult).map(([key, val]) => {
-                  const label = t(`qc${key.charAt(0).toUpperCase() + key.slice(1)}` as any);
-                  return (
-                    <Badge key={key} variant={val.pass ? 'default' : 'destructive'} className="text-xs">
-                      {label}: {(val.score * 100).toFixed(0)}%
-                    </Badge>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <RefreshCw className="size-3" /> {t('regenerate')}
-            </Button>
-            {shot.renderProfile !== 'hero' && (
-              <Button variant="outline" size="sm">
-                <Zap className="size-3" /> {t('upgradeHero')}
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-    </Card>
-  );
+function BibleGroup({ icon, title, items }: { icon: React.ReactNode; title: string; items: string[] }) {
+  return <section className="mt-6"><div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">{icon}{title}</div><div className="mt-2 space-y-2">{items.map((item) => <div key={item} className="rounded-lg bg-muted/60 px-2.5 py-2 text-xs">{item}</div>)}</div></section>;
 }
 
-// ─── Status Badges ────────────────────────────────────────────────────────────
-
-function ProjectStatusBadge({ status }: { status: string }) {
-  const t = useTranslations('videoStudio');
-  const map: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    draft: { label: t('statusDraft'), variant: 'outline' },
-    storyboard: { label: t('statusStoryboard'), variant: 'secondary' },
-    generating: { label: t('statusGenerating'), variant: 'secondary' },
-    editing: { label: t('statusEditing'), variant: 'default' },
-    rendering: { label: t('statusRendering'), variant: 'secondary' },
-    done: { label: t('statusDone'), variant: 'default' },
-    failed: { label: t('statusFailed'), variant: 'destructive' },
-  };
-  const entry = map[status] ?? { label: status, variant: 'outline' as const };
-  return <Badge variant={entry.variant}>{entry.label}</Badge>;
+function ShotCanvasCard({ title, prompt, duration, imageUrl, selected }: { title: string; prompt: string; duration: number; imageUrl?: string | null; selected?: boolean }) {
+  return <article className={cn('overflow-hidden rounded-2xl border bg-background transition-colors', selected && 'border-primary ring-2 ring-primary/15')}><div className="relative aspect-video bg-slate-900">{imageUrl ? <img src={imageUrl} alt="샷 기준 이미지" className="size-full object-cover" /> : <div className="size-full bg-[radial-gradient(circle_at_68%_22%,rgba(253,230,138,.38),transparent_18%),linear-gradient(145deg,#1e293b,#0f172a_55%,#7c2d12)]" />}<Badge className="absolute left-3 top-3 border-0 bg-black/45 text-white hover:bg-black/45">{title}</Badge><span className="absolute bottom-3 right-3 rounded-md bg-black/45 px-2 py-1 text-xs text-white">00:0{duration}</span></div><div className="p-3"><p className="line-clamp-2 text-sm font-medium">{prompt}</p><div className="mt-3 flex items-center gap-2"><Badge variant="secondary">초안</Badge><span className="text-xs text-muted-foreground">생성 준비됨</span></div></div></article>;
 }
 
-function ShotStatusBadge({ status }: { status: string }) {
-  const t = useTranslations('videoStudio');
-  const map: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    pending: { label: t('shotPending'), variant: 'outline' },
-    preview: { label: t('shotPreview'), variant: 'outline' },
-    generating: { label: t('shotGenerating'), variant: 'secondary' },
-    qc: { label: t('shotQc'), variant: 'secondary' },
-    passed: { label: t('shotPassed'), variant: 'default' },
-    failed: { label: t('shotFailed'), variant: 'destructive' },
-    done: { label: t('shotDone'), variant: 'default' },
-  };
-  const entry = map[status] ?? { label: status, variant: 'outline' as const };
-  return <Badge variant={entry.variant} className="text-xs">{entry.label}</Badge>;
+function InspectorRow({ label, value }: { label: string; value: string }) {
+  return <div className="mt-4 flex items-center justify-between border-b pb-3 text-sm"><span className="text-muted-foreground">{label}</span><span className="font-medium">{value}</span></div>;
 }
