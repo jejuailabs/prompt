@@ -928,6 +928,31 @@ const VIDEO_ENGINES: VideoEngineConfig[] = [
   },
 ];
 
+// The API persists only the operational settings (enabled, default model,
+// endpoint and status). Presentation metadata and the model catalogue live in
+// this view, so never render the persisted record directly as a full engine.
+// Doing so made `engine.models` undefined and crashed the entire admin page.
+type VideoEngineRuntimeConfig = Pick<
+  VideoEngineConfig,
+  'engineId' | 'enabled' | 'adminOnly' | 'defaultModel' | 'runpodEndpointId' | 'status'
+>;
+
+function hydrateVideoEngines(remote?: VideoEngineRuntimeConfig[]): VideoEngineConfig[] {
+  const runtimeById = new Map(remote?.map((engine) => [engine.engineId, engine]));
+
+  return VIDEO_ENGINES.map((engine) => {
+    const runtime = runtimeById.get(engine.engineId);
+    if (!runtime) return engine;
+
+    // A stale database setting must not leave the select with an invalid value.
+    const defaultModel = engine.models.some((model) => model.id === runtime.defaultModel)
+      ? runtime.defaultModel
+      : engine.defaultModel;
+
+    return { ...engine, ...runtime, defaultModel, models: engine.models };
+  });
+}
+
 const engineStatusBadge = (status: VideoEngineConfig['status'], t: (k: string) => string) => {
   switch (status) {
     case 'ready':
@@ -945,10 +970,11 @@ function VideoEngineTab() {
   const t = useTranslations('admin');
   const locale = useAppStore((s) => s.locale);
   const { toast } = useToast();
+  const qc = useQueryClient();
 
   const engineQ = useQuery({
     queryKey: ['admin', 'video-engines'],
-    queryFn: () => api.get<VideoEngineConfig[]>('/api/admin/video-engine').catch(() => VIDEO_ENGINES),
+    queryFn: () => api.get<VideoEngineRuntimeConfig[]>('/api/admin/video-engine').catch(() => []),
     placeholderData: VIDEO_ENGINES,
   });
 
@@ -959,6 +985,7 @@ function VideoEngineTab() {
         return { ...e, ...body } as VideoEngineConfig;
       }),
     onSuccess: (_data, variables) => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'video-engines'] });
       if (typeof variables.enabled === 'boolean') {
         toast({ title: variables.enabled ? t('veToggleOnToast') : t('veToggleOffToast') });
       } else if (typeof variables.adminOnly === 'boolean') {
@@ -970,7 +997,7 @@ function VideoEngineTab() {
     onError: (e: Error) => toast({ title: e.message, variant: 'destructive' }),
   });
 
-  const engines = engineQ.data ?? VIDEO_ENGINES;
+  const engines = hydrateVideoEngines(engineQ.data);
   const activeCount = engines.filter((e) => e.enabled).length;
 
   return (
@@ -1047,7 +1074,7 @@ function VideoEngineTab() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {engine.models.map((m) => (
+                  {(engine.models ?? []).map((m) => (
                     <SelectItem key={m.id} value={m.id}>{m.label} ({m.version})</SelectItem>
                   ))}
                 </SelectContent>
@@ -1056,7 +1083,7 @@ function VideoEngineTab() {
 
             {/* Models list */}
             <div className="space-y-0 divide-y px-0">
-              {engine.models.map((m) => (
+              {(engine.models ?? []).map((m) => (
                 <div key={m.id} className="space-y-1.5 px-4 py-3">
                   <div className="flex items-center gap-2">
                     <p className="text-xs font-semibold">{m.label}</p>
