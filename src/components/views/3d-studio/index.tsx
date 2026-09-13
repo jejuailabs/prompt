@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import {
@@ -15,7 +15,7 @@ import {
   Sparkles,
   Wand2,
 } from 'lucide-react';
-import { api, ApiError } from '@/lib/api-client';
+import { api, ApiError, uploadFile } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useRefreshSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
@@ -159,7 +159,25 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
   const [subtrack, setSubtrack] = useState<Asset3dSubtrack>('character');
   const [quality, setQuality] = useState('standard');
   const [title, setTitle] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadImages = async (files: FileList | null) => {
+    const selected = Array.from(files ?? []).slice(0, 5 - imageUrls.length);
+    if (!selected.length) return;
+    setUploading(true);
+    try {
+      const uploads = await Promise.all(selected.map((file) => uploadFile(file)));
+      setImageUrls((current) => [...current, ...uploads.map((item) => item.url)].slice(0, 5));
+    } catch (error) {
+      toast({ title: tc('error'), description: errMsg(error), variant: 'destructive' });
+    } finally {
+      setUploading(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
 
   const submit = async () => {
     setSubmitting(true);
@@ -167,6 +185,7 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
       const res = await api.post<Asset3dProjectDTO>('/api/3d-studio/projects', {
         title: title.trim() || `3D ${subtrack}`,
         subtrack,
+        inputImageUrls: imageUrls,
         styleOptions: { quality },
       });
       refreshSession();
@@ -216,11 +235,14 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
               content: (
                 <div className="space-y-3">
                   <Label>{t('uploadHint')}</Label>
-                  <div className="flex h-32 items-center justify-center rounded-xl border-2 border-dashed">
-                    <Button variant="ghost" className="text-muted-foreground">
-                      <ImagePlus className="size-5" /> {t('uploadBtn')}
+                  <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" onChange={(event) => void uploadImages(event.target.files)} />
+                  <div className="flex min-h-32 flex-col items-center justify-center rounded-xl border-2 border-dashed p-4">
+                    {imageUrls.length ? <div className="flex w-full flex-wrap justify-center gap-2">{imageUrls.map((url) => <div key={url} className="relative size-20 overflow-hidden rounded-lg border bg-muted"><img src={url} alt="업로드한 참조 이미지" className="size-full object-cover" /><button type="button" onClick={() => setImageUrls((current) => current.filter((item) => item !== url))} className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white">×</button></div>)}{imageUrls.length < 5 && <Button type="button" variant="outline" size="sm" onClick={() => imageInputRef.current?.click()} disabled={uploading}>{uploading ? <Loader2 className="animate-spin" /> : <ImagePlus />} {t('uploadBtn')}</Button>}</div> : <Button type="button" variant="ghost" className="text-muted-foreground" onClick={() => imageInputRef.current?.click()} disabled={uploading}>
+                      {uploading ? <Loader2 className="animate-spin" /> : <ImagePlus className="size-5" />} {uploading ? '업로드 중…' : t('uploadBtn')}
                     </Button>
+                    }
                   </div>
+                  <p className="text-xs text-muted-foreground">{imageUrls.length ? `${imageUrls.length}/5 이미지 선택됨` : 'PNG, JPG, WebP · 이미지 선택 후 미리보기가 표시됩니다.'}</p>
                 </div>
               ),
             },
