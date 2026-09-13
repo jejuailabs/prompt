@@ -93,12 +93,13 @@
     // bullets
     bullets.forEach(b => b.y += b.vy * dt * 60);
     bullets = bullets.filter(b => b.y > -10);
-    // enemies
-    const dir = Math.sin(wave) >= 0 ? 1 : -1;
+    // enemies — oscillate left-right and drift down, bounce off walls
     enemies.forEach(en => {
       en.t += dt * 2 * SPEED;
-      en.x += Math.sin(en.t) * 22 * dt + dir * 6 * dt * SPEED;
-      en.y += 7 * dt * SPEED;
+      en.x += Math.sin(en.t) * 28 * dt;
+      en.y += 8 * dt * SPEED;
+      if (en.x < 16) { en.x = 16; en.t = Math.PI - en.t; }
+      if (en.x > W - 16) { en.x = W - 16; en.t = Math.PI - en.t; }
     });
     // hit detection
     for (const b of bullets) for (const en of enemies) {
