@@ -56,7 +56,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   navigate: (view, params) => {
     set({ view, params: params ?? {} });
     if (typeof window !== 'undefined') {
-      history.replaceState(null, '', encodeHash(view, params));
+      const destination = encodeHash(view, params);
+      // This is a single-page app, but its screens still need normal browser
+      // history. Using replaceState here made Back jump outside PLAYLAB.
+      if (window.location.hash !== destination) {
+        history.pushState(null, '', destination);
+      }
     }
   },
 

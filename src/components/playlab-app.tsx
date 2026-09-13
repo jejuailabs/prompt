@@ -16,9 +16,13 @@ export default function PlaylabApp() {
     const saved = localStorage.getItem('pl_locale');
     if (saved === 'en' || saved === 'ko') setLocale(saved);
     hydrateFromHash();
-    const onHash = () => hydrateFromHash();
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    const onLocationChange = () => hydrateFromHash();
+    window.addEventListener('hashchange', onLocationChange);
+    window.addEventListener('popstate', onLocationChange);
+    return () => {
+      window.removeEventListener('hashchange', onLocationChange);
+      window.removeEventListener('popstate', onLocationChange);
+    };
   }, [hydrateFromHash, setLocale]);
 
   return (
