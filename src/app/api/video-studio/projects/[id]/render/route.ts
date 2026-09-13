@@ -29,14 +29,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const user = await requireUser();
     const { id } = await params;
-    const body = await readJson<{ shotId?: string }>(req);
+    const body = await readJson<{ shotId?: string; engine?: string }>(req);
     const project = await db.artifact.findFirst({ where: { id, ownerId: user.id, sourceModule: 'video-studio' } });
     if (!project) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
 
     const meta = metadata(project.metadata);
     const inputMode = typeof meta.inputMode === 'string' ? meta.inputMode : 'text';
     const quality = typeof meta.quality === 'string' ? meta.quality : 'draft';
-    const engine = getEngineForFirstShot(inputMode, quality);
+    const validEngines = ['h3', 'wan', 'ltx'] as const;
+    const engineOverride = typeof body.engine === 'string' && validEngines.includes(body.engine as typeof validEngines[number]) ? body.engine as typeof validEngines[number] : null;
+    const engine = engineOverride ?? getEngineForFirstShot(inputMode, quality);
     if (!engine) throw new HttpError('첫·끝 프레임과 이어 만들기는 다음 워크플로우 단계에서 사용할 수 있습니다', 409);
 
     const prompt = typeof meta.prompt === 'string' ? meta.prompt.trim() : '';

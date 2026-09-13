@@ -16,6 +16,7 @@ interface CreateVideoProjectBody {
   inputImageUrl?: string | null;
   aspectRatio?: string;
   quality?: 'draft' | 'standard' | 'hero';
+  engine?: 'h3' | 'wan' | 'ltx';
 }
 
 function parseMetadata(raw: string): Record<string, unknown> {
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
       inputImageUrl: body.inputImageUrl ?? null,
       aspectRatio: body.aspectRatio ?? '9:16',
       quality: body.quality ?? 'draft',
+      engine: body.engine ?? 'h3',
       projectStatus: 'editing',
       shots: [{
         id: 'shot-1',

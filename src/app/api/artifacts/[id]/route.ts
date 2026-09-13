@@ -28,6 +28,7 @@ interface PatchBody {
   description?: string;
   metadata?: Record<string, unknown>;
   status?: 'draft' | 'published' | 'archived' | 'hidden';
+  visibility?: 'public' | 'private' | 'unlisted';
   version?: string;
 }
 
@@ -40,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     if (artifact.ownerId !== user.id) throw new HttpError('권한이 없습니다', 403);
 
     const body = await readJson<PatchBody>(req);
-    const data: { title?: string; description?: string; metadata?: string; status?: string; version?: string } = {};
+    const data: { title?: string; description?: string; metadata?: string; status?: string; visibility?: string; version?: string } = {};
 
     if (body.title !== undefined) {
       if (!body.title.trim()) throw new HttpError('제목을 입력해주세요', 400);
@@ -56,6 +57,12 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         throw new HttpError('잘못된 상태값입니다', 400);
       }
       data.status = body.status;
+    }
+    if (body.visibility !== undefined) {
+      if (!['public', 'private', 'unlisted'].includes(body.visibility)) {
+        throw new HttpError('잘못된 공개 범위입니다', 400);
+      }
+      data.visibility = body.visibility;
     }
     if (body.version !== undefined) data.version = body.version.slice(0, 20);
 

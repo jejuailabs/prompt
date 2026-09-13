@@ -112,9 +112,9 @@ export function buildH3TextToVideoWorkflow(input: VideoRenderInput): Record<stri
 }
 
 export function getEngineForFirstShot(inputMode: string, quality?: string): RunpodVideoEngine | null {
-  // The active LTX deployment is text-to-video. Image and frame modes remain
-  // explicitly unavailable until their H3/Wan API workflows are captured.
   if (inputMode === 'image') return 'h3';
   if (inputMode !== 'text') return null;
-  return quality === 'standard' || quality === 'hero' ? 'h3' : 'ltx';
+  // LTX-2 19B requires 48GB+ VRAM; current 32GB endpoint cannot load it.
+  // Route all qualities to H3 until a working LTX endpoint is provisioned.
+  return 'h3';
 }
