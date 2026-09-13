@@ -30,7 +30,7 @@ interface StudioMetadata {
   aspectRatio?: string;
   quality?: string;
   projectStatus?: string;
-  render?: { engine?: string; runpodJobId?: string; status?: string };
+  render?: { engine?: string; runpodJobId?: string; status?: string; videoUrl?: string | null };
   shots?: Array<{ id: string; index: number; title: string; prompt: string; duration: number; inputMode: string; status: string }>;
 }
 
@@ -163,7 +163,7 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
   const renderJobId = projectQuery.data ? asStudioMetadata(projectQuery.data).render?.runpodJobId : undefined;
   const renderStatusQuery = useQuery({
     queryKey: ['video-studio-render-status', projectId, renderJobId],
-    queryFn: () => api.get<{ status: string; executionTime?: number; error?: string }>(`/api/video-studio/projects/${projectId}/render/status`),
+    queryFn: () => api.get<{ status: string; executionTime?: number; error?: string; videoUrl?: string | null }>(`/api/video-studio/projects/${projectId}/render/status`),
     enabled: Boolean(renderJobId),
     refetchInterval: (query) => ['COMPLETED', 'FAILED', 'CANCELLED'].includes(query.state.data?.status ?? '') ? false : 5000,
   });
@@ -172,6 +172,7 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
   const project = projectQuery.data; const meta = asStudioMetadata(project); const shots = meta.shots ?? []; const hasStartImage = Boolean(meta.inputImageUrl);
   const renderStatus = renderStatusQuery.data?.status ?? meta.render?.status ?? 'QUEUED';
   const renderError = renderStatusQuery.data?.error;
+  const renderVideoUrl = renderStatusQuery.data?.videoUrl ?? meta.render?.videoUrl ?? project.fileUrl ?? null;
   const rendering = ['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING'].includes(renderStatus);
   const rerender = async () => {
     try {
@@ -221,7 +222,7 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
           <main className="min-w-0 rounded-2xl border bg-card p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3"><div><Badge variant="secondary">씬 1</Badge><h2 className="mt-2 text-lg font-semibold">첫 장면</h2><p className="mt-1 text-sm text-muted-foreground">첫 샷을 확정한 다음, 장면을 이어가세요.</p></div><div className="flex gap-2"><Button variant="outline" size="sm"><Layers3 className="size-4" /> 타임라인</Button><Button variant="outline" size="sm"><Plus className="size-4" /> 샷 추가</Button></div></div>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <ShotCanvasCard title="샷 1" prompt={meta.prompt ?? project.description} duration={meta.targetDurationSec ?? 6} imageUrl={meta.inputImageUrl ?? null} status={renderLabel} selected />
+              <ShotCanvasCard title="샷 1" prompt={meta.prompt ?? project.description} duration={meta.targetDurationSec ?? 6} imageUrl={meta.inputImageUrl ?? null} videoUrl={renderVideoUrl} rendering={rendering} status={renderLabel} selected />
               <button type="button" className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed text-muted-foreground transition-colors hover:border-primary hover:bg-primary/[.03]"><Plus className="size-7" /><span className="mt-3 font-medium">다음 샷 추가</span><span className="mt-1 text-xs">앞 샷의 마지막 프레임을 이어갈 수 있어요</span></button>
             </div>
             <div className={cn('mt-4 rounded-2xl border p-4', renderStatus === 'FAILED' || renderStatus === 'CANCELLED' ? 'border-destructive/30 bg-destructive/[.06]' : renderStatus === 'COMPLETED' ? 'border-emerald-500/30 bg-emerald-500/[.08]' : 'border-primary/20 bg-primary/[.05]')}>
@@ -246,7 +247,10 @@ function BibleGroup({ icon, title, items }: { icon: React.ReactNode; title: stri
   return <section className="mt-6"><div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">{icon}{title}</div><div className="mt-2 space-y-2">{items.map((item) => <div key={item} className="rounded-lg bg-muted/60 px-2.5 py-2 text-xs">{item}</div>)}</div></section>;
 }
 
-function ShotCanvasCard({ title, prompt, duration, imageUrl, status = '생성 준비됨', selected }: { title: string; prompt: string; duration: number; imageUrl?: string | null; status?: string; selected?: boolean }) {
+function ShotCanvasCard({ title, prompt, duration, imageUrl, videoUrl, rendering, status = '생성 준비됨', selected }: { title: string; prompt: string; duration: number; imageUrl?: string | null; videoUrl?: string | null; rendering?: boolean; status?: string; selected?: boolean }) {
+  if (videoUrl || rendering) {
+    return <article className={cn('overflow-hidden rounded-2xl border bg-background transition-colors', selected && 'border-primary ring-2 ring-primary/15')}><div className="relative aspect-video bg-slate-900">{videoUrl ? <video src={videoUrl} controls playsInline className="size-full object-cover" /> : imageUrl ? <img src={imageUrl} alt="샷 기준 이미지" className="size-full object-cover" /> : <div className="size-full bg-[radial-gradient(circle_at_68%_22%,rgba(253,230,138,.38),transparent_18%),linear-gradient(145deg,#1e293b,#0f172a_55%,#7c2d12)]" />}{rendering && <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/65 text-center text-white"><Loader2 className="size-7 animate-spin" /><strong className="mt-3 text-sm">첫 샷을 영상으로 만드는 중</strong><span className="mt-1 px-5 text-xs text-white/75">완료되면 이 자리에서 바로 재생됩니다.</span></div>}<Badge className="absolute left-3 top-3 border-0 bg-black/45 text-white hover:bg-black/45">{title}</Badge><span className="absolute bottom-3 right-3 rounded-md bg-black/45 px-2 py-1 text-xs text-white">00:0{duration}</span></div><div className="p-3"><p className="line-clamp-2 text-sm font-medium">{prompt}</p><div className="mt-3 flex items-center gap-2"><Badge variant="secondary">초안</Badge><span className="text-xs text-muted-foreground">{status}</span></div></div></article>;
+  }
   return <article className={cn('overflow-hidden rounded-2xl border bg-background transition-colors', selected && 'border-primary ring-2 ring-primary/15')}><div className="relative aspect-video bg-slate-900">{imageUrl ? <img src={imageUrl} alt="샷 기준 이미지" className="size-full object-cover" /> : <div className="size-full bg-[radial-gradient(circle_at_68%_22%,rgba(253,230,138,.38),transparent_18%),linear-gradient(145deg,#1e293b,#0f172a_55%,#7c2d12)]" />}<Badge className="absolute left-3 top-3 border-0 bg-black/45 text-white hover:bg-black/45">{title}</Badge><span className="absolute bottom-3 right-3 rounded-md bg-black/45 px-2 py-1 text-xs text-white">00:0{duration}</span></div><div className="p-3"><p className="line-clamp-2 text-sm font-medium">{prompt}</p><div className="mt-3 flex items-center gap-2"><Badge variant="secondary">초안</Badge><span className="text-xs text-muted-foreground">{status}</span></div></div></article>;
 }
 

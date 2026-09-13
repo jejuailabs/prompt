@@ -54,12 +54,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!render?.engine || !render.runpodJobId) throw new HttpError('진행 중인 렌더 작업이 없습니다', 404);
     const job = await getRunpodJobStatus(render.engine, render.runpodJobId);
     const terminal = job.status === 'COMPLETED' || job.status === 'FAILED' || job.status === 'CANCELLED';
+    let videoUrl: string | null = null;
     if (terminal) {
-      const videoUrl = job.status === 'COMPLETED' ? await materializeVideo(job.output, job.id) : null;
+      videoUrl = job.status === 'COMPLETED' ? await materializeVideo(job.output, job.id) : null;
       const nextMeta = { ...meta, projectStatus: job.status === 'COMPLETED' ? 'completed' : 'failed', render: { ...render, status: job.status, completedAt: new Date().toISOString(), outputReceived: Boolean(job.output), error: job.error, videoUrl } };
       await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(nextMeta), status: job.status === 'COMPLETED' ? 'completed' : 'failed', ...(videoUrl ? { fileUrl: videoUrl } : {}) } });
     }
-    return ok({ id: job.id, status: job.status, delayTime: job.delayTime, executionTime: job.executionTime, error: job.error });
+    return ok({ id: job.id, status: job.status, delayTime: job.delayTime, executionTime: job.executionTime, error: job.error, videoUrl });
   } catch (error) {
     return fail(error);
   }
