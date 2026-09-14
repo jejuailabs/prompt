@@ -187,9 +187,9 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
   const renderJobId = projectQuery.data ? asStudioMetadata(projectQuery.data).render?.runpodJobId : undefined;
   const renderStatusQuery = useQuery({
     queryKey: ['video-studio-render-status', projectId, renderJobId],
-    queryFn: () => api.get<{ status: string; executionTime?: number; error?: string; videoUrl?: string | null }>(`/api/video-studio/projects/${projectId}/render/status`),
+    queryFn: () => api.get<{ status: string; delayTime?: number; executionTime?: number; error?: string; videoUrl?: string | null }>(`/api/video-studio/projects/${projectId}/render/status`),
     enabled: Boolean(renderJobId),
-    refetchInterval: (query) => ['COMPLETED', 'FAILED', 'CANCELLED'].includes(query.state.data?.status ?? '') ? false : 5000,
+    refetchInterval: (query) => ['COMPLETED', 'FAILED', 'CANCELLED'].includes(query.state.data?.status ?? '') ? false : 3000,
   });
   if (projectQuery.isLoading) return <div className="mx-auto flex min-h-80 max-w-7xl items-center justify-center"><Loader2 className="size-7 animate-spin text-primary" /></div>;
   if (projectQuery.isError || !projectQuery.data) return <div className="mx-auto max-w-xl rounded-2xl border p-8 text-center"><p className="font-semibold">프로젝트를 불러오지 못했습니다.</p><p className="mt-2 text-sm text-muted-foreground">{errorMessage(projectQuery.error)}</p><Button className="mt-5" variant="outline" onClick={onBack}>갤러리로 돌아가기</Button></div>;
@@ -251,7 +251,7 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
       : 'Runpod 워커가 첫 샷을 처리하고 있습니다. 이 화면에서 상태가 자동으로 갱신됩니다.');
 
   if (rendering) {
-    return <FirstShotGenerationScreen project={project} meta={meta} renderStatus={renderStatus} onBack={onBack} />;
+    return <FirstShotGenerationScreen project={project} meta={meta} renderStatus={renderStatus} delayTime={renderStatusQuery.data?.delayTime} executionTime={renderStatusQuery.data?.executionTime} onBack={onBack} />;
   }
 
   if (project.id) {
@@ -348,7 +348,7 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
   );
 }
 
-function FirstShotGenerationScreen({ project, meta, renderStatus, onBack }: { project: ArtifactDTO; meta: StudioMetadata; renderStatus: string; onBack: () => void }) {
+function FirstShotGenerationScreen({ project, meta, renderStatus, delayTime, executionTime, onBack }: { project: ArtifactDTO; meta: StudioMetadata; renderStatus: string; delayTime?: number; executionTime?: number; onBack: () => void }) {
   const waiting = renderStatus === 'QUEUED' || renderStatus === 'IN_QUEUE';
   const source = meta.inputImageUrl;
   const engineLabel = (meta.render?.engine ?? 'H3').toUpperCase();
@@ -357,10 +357,13 @@ function FirstShotGenerationScreen({ project, meta, renderStatus, onBack }: { pr
   const isSquare = aspect === '1:1';
   const aspectClass = isLandscape ? 'aspect-video' : isSquare ? 'aspect-square' : 'aspect-[9/16]';
   const running = renderStatus === 'IN_PROGRESS' || renderStatus === 'RUNNING';
-  const progressPercent = waiting ? 20 : running ? 65 : 10;
+  const progressPercent = waiting ? (delayTime ? Math.min(45, 10 + Math.floor((delayTime / 1000) * 0.15)) : 20) : running ? (executionTime ? Math.min(90, 50 + Math.floor((executionTime / 1000) * 0.3)) : 65) : 10;
+  const delaySec = delayTime ? Math.round(delayTime / 1000) : 0;
+  const execSec = executionTime ? Math.round(executionTime / 1000) : 0;
+  const formatTime = (sec: number) => sec >= 60 ? `${Math.floor(sec / 60)}분 ${sec % 60}초` : `${sec}초`;
   const stages = [
     { label: '시작 이미지 · 프롬프트 접수', detail: '프로젝트에 저장됨', done: true },
-    { label: waiting ? `${engineLabel} 렌더 워커 대기` : `${engineLabel}에서 움직임 생성 중`, detail: waiting ? 'GPU가 작업을 시작하면 자동으로 다음 단계로 넘어갑니다.' : '첫 프레임을 바탕으로 영상을 만들고 있습니다.', done: false, active: true },
+    { label: waiting ? `${engineLabel} 렌더 워커 대기` : `${engineLabel}에서 움직임 생성 중`, detail: waiting ? (delaySec > 0 ? `GPU 워커 배정 대기 ${formatTime(delaySec)} 경과 · 콜드스타트 시 2~4분 소요` : 'GPU 콜드스타트 시 첫 요청은 2~4분 걸릴 수 있습니다.') : (execSec > 0 ? `렌더 진행 ${formatTime(execSec)} 경과` : '첫 프레임을 바탕으로 영상을 만들고 있습니다.'), done: false, active: true },
     { label: '영상 패키징 · 작업실 반영', detail: '완료되면 바로 재생 가능한 첫 샷이 됩니다.', done: false },
   ];
 
@@ -376,7 +379,7 @@ function FirstShotGenerationScreen({ project, meta, renderStatus, onBack }: { pr
             <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">첫 샷을 영상으로 만들고 있습니다.</h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">이 화면은 자동으로 갱신됩니다. 결과가 준비되면 별도 버튼 없이 첫 샷이 영상 플레이어로 바뀝니다.</p>
             <div className="mt-7 overflow-hidden rounded-full bg-muted p-1"><div className={cn('h-2 rounded-full bg-gradient-to-r from-primary via-violet-500 to-sky-400 transition-all duration-1000', running && 'animate-pulse')} style={{ width: `${progressPercent}%` }} /></div>
-            <p className="mt-2 text-xs text-muted-foreground">{waiting ? 'GPU 워커 배정 대기 중...' : running ? '영상을 생성하고 있습니다...' : '준비 중...'}</p>
+            <p className="mt-2 text-xs text-muted-foreground">{waiting ? (delaySec > 0 ? `GPU 워커 배정 대기 중 · ${formatTime(delaySec)} 경과` : 'GPU 워커 배정 대기 중...') : running ? (execSec > 0 ? `영상 생성 중 · ${formatTime(execSec)} 경과` : '영상을 생성하고 있습니다...') : '준비 중...'}</p>
             <div className="mt-6 space-y-3">
               {stages.map((stage, index) => <div key={stage.label} className={cn('flex gap-3 rounded-xl border p-3', stage.done ? 'border-emerald-500/20 bg-emerald-500/[.06]' : index === 1 ? 'border-primary/30 bg-primary/[.05]' : 'bg-muted/[.2]')}>
                 <span className={cn('mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px]', stage.done ? 'bg-emerald-500 text-white' : index === 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>{stage.done ? '✓' : index + 1}</span>
@@ -386,7 +389,7 @@ function FirstShotGenerationScreen({ project, meta, renderStatus, onBack }: { pr
           </div>
           <div className={cn('relative overflow-hidden rounded-2xl bg-slate-950 shadow-xl', isLandscape && 'mx-auto w-full max-w-2xl')}>
             <div className={cn(aspectClass, isLandscape ? '' : 'max-h-[440px]', 'bg-[radial-gradient(circle_at_65%_30%,rgba(124,58,237,.45),transparent_24%),linear-gradient(150deg,#0f172a,#1e1b4b_55%,#172554)]')}>{source && <img src={source} alt="영상으로 변환 중인 시작 이미지" className="size-full object-cover opacity-75" />}<div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent" /></div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white"><span className="flex size-16 items-center justify-center rounded-full bg-white/15 backdrop-blur"><Loader2 className="size-8 animate-spin" /></span><strong className="mt-4">{engineLabel}가 첫 샷을 생성 중입니다</strong><span className="mt-1 px-6 text-xs text-white/70">{meta.targetDurationSec ?? 6}초 · {aspect} · {project.title}</span></div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white"><span className="flex size-16 items-center justify-center rounded-full bg-white/15 backdrop-blur"><Loader2 className="size-8 animate-spin" /></span><strong className="mt-4">{engineLabel}가 첫 샷을 생성 중입니다</strong><span className="mt-1 px-6 text-xs text-white/70">{meta.targetDurationSec ?? 6}초 · {aspect} · {project.title}</span>{(delaySec > 0 || execSec > 0) && <span className="mt-1 text-[10px] text-white/50">{waiting ? `대기 ${formatTime(delaySec)}` : `렌더 ${formatTime(execSec)}`}</span>}</div>
           </div>
         </div>
       </section>
