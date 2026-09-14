@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       inputImageUrl: body.inputImageUrl ?? null,
       aspectRatio: body.aspectRatio ?? '9:16',
       quality: body.quality ?? 'draft',
-      engine: body.engine ?? 'h3',
+      engine: body.engine ?? 'ltx',
       projectStatus: 'editing',
       shots: [{
         id: 'shot-1',

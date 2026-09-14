@@ -51,18 +51,27 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!project) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
 
     const meta = metadata(project.metadata);
-    const render = meta.render as { engine?: RunpodVideoEngine; runpodJobId?: string; accountingJobId?: string } | undefined;
+    const render = meta.render as { engine?: RunpodVideoEngine; runpodJobId?: string; accountingJobId?: string; status?: string; videoUrl?: string; error?: string; executionTime?: number; delayTime?: number } | undefined;
     if (!render?.engine || !render.runpodJobId) throw new HttpError('진행 중인 렌더 작업이 없습니다', 404);
+    // RunPod expires job results. Persisted terminal state must survive revisits.
+    if ((render.status === 'COMPLETED' && render.videoUrl) || ['FAILED', 'CANCELLED', 'TIMED_OUT'].includes(render.status ?? '')) {
+      await finishMeteredOperation({ operationId: render.accountingJobId, engine: render.engine, status: render.status!, executionTimeMs: render.executionTime, error: render.error });
+      return ok({ id: render.runpodJobId, status: render.status, videoUrl: render.videoUrl ?? null, error: render.error, executionTime: render.executionTime, delayTime: render.delayTime });
+    }
     const job = await getRunpodJobStatus(render.engine, render.runpodJobId);
     console.log(`[render-status] job=${render.runpodJobId} engine=${render.engine} status=${job.status} delay=${job.delayTime}ms exec=${job.executionTime}ms error=${job.error ?? 'none'}`);
-    await finishMeteredOperation({ operationId: render.accountingJobId, engine: render.engine, status: job.status, executionTimeMs: job.executionTime, error: job.error });
-    const terminal = job.status === 'COMPLETED' || job.status === 'FAILED' || job.status === 'CANCELLED';
+    const terminal = ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'].includes(job.status);
     let videoUrl: string | null = null;
     if (terminal) {
       videoUrl = job.status === 'COMPLETED' ? await materializeVideo(job.output, job.id) : null;
-      const nextMeta = { ...meta, projectStatus: job.status === 'COMPLETED' ? 'completed' : 'failed', render: { ...render, status: job.status, completedAt: new Date().toISOString(), outputReceived: Boolean(job.output), error: job.error, videoUrl } };
+      if (job.status === 'COMPLETED' && !videoUrl) {
+        job.status = 'FAILED';
+        job.error = '워커가 종료됐지만 재생 가능한 영상이 반환되지 않았습니다.';
+      }
+      const nextMeta = { ...meta, projectStatus: job.status === 'COMPLETED' ? 'completed' : 'failed', render: { ...render, status: job.status, completedAt: new Date().toISOString(), outputReceived: Boolean(job.output), error: job.error, videoUrl, executionTime: job.executionTime, delayTime: job.delayTime } };
       await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(nextMeta), status: job.status === 'COMPLETED' ? 'completed' : 'failed', ...(videoUrl ? { fileUrl: videoUrl } : {}) } });
     }
+    await finishMeteredOperation({ operationId: render.accountingJobId, engine: render.engine, status: job.status, executionTimeMs: job.executionTime, error: job.error });
     return ok({ id: job.id, status: job.status, delayTime: job.delayTime, executionTime: job.executionTime, error: job.error, videoUrl });
   } catch (error) {
     return fail(error);

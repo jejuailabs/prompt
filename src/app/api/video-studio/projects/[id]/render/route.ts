@@ -2,8 +2,10 @@ import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
-import { queueRunpodWorkflow, type RunpodInputImage } from '@/lib/server/runpod';
-import { buildH3TextToVideoWorkflow, buildLtxTextToVideoWorkflow, getEngineForFirstShot, type VideoAspectRatio } from '@/lib/server/video-workflows';
+import { getRunpodJobStatus, queueRunpodWorkflow, type RunpodInputImage, type RunpodVideoEngine } from '@/lib/server/runpod';
+import { buildH3TextToVideoWorkflow, getEngineForFirstShot, type VideoAspectRatio } from '@/lib/server/video-workflows';
+import { buildLtx2bWorkflow } from '@/lib/server/ltx-2b-workflow';
+import { buildWanWorkflow } from '@/lib/server/wan-workflow';
 import { beginMeteredOperation, failMeteredOperation } from '@/lib/server/operation-ledger';
 
 function metadata(raw: string): Record<string, unknown> {
@@ -12,7 +14,7 @@ function metadata(raw: string): Record<string, unknown> {
 
 async function getRunpodFirstFrame(url: string): Promise<RunpodInputImage> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!supabaseUrl || !url.startsWith(supabaseUrl)) {
+  if (!supabaseUrl || new URL(url).origin !== new URL(supabaseUrl).origin || !new URL(url).pathname.startsWith('/storage/v1/object/')) {
     throw new HttpError('업로드한 시작 이미지만 영상 생성에 사용할 수 있습니다', 400);
   }
   const response = await fetch(url, { cache: 'no-store' });
@@ -34,17 +36,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!project) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
 
     const meta = metadata(project.metadata);
+    const current = meta.render as { engine?: string; runpodJobId?: string; status?: string } | undefined;
+    if (current?.runpodJobId && ['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING'].includes(current.status ?? '')) {
+      try {
+        const previous = await getRunpodJobStatus(current.engine as RunpodVideoEngine, current.runpodJobId);
+        if (['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING'].includes(previous.status)) {
+          return ok({ projectId: project.id, engine: current.engine, jobId: current.runpodJobId, status: previous.status, creditCharged: 0 });
+        }
+        if (previous.status === 'COMPLETED') throw new HttpError('완료된 결과를 먼저 확인해주세요. 새로고침 후 다시 렌더할 수 있습니다.', 409);
+      } catch (error) {
+        // Expired RunPod results must not permanently prevent a user retry.
+        if (!(error instanceof Error && error.message.startsWith('Runpod API 404:'))) throw error;
+      }
+    }
     const inputMode = typeof meta.inputMode === 'string' ? meta.inputMode : 'text';
     const quality = typeof meta.quality === 'string' ? meta.quality : 'draft';
     const validEngines = ['h3', 'wan', 'ltx'] as const;
     const engineOverride = typeof body.engine === 'string' && validEngines.includes(body.engine as typeof validEngines[number]) ? body.engine as typeof validEngines[number] : null;
-    // The Studio selector is visible ahead of the separate Wan/LTX endpoint
-    // verification. Do not silently submit either choice to a mismatched
-    // workflow: only H3 has a verified first-shot contract right now.
-    if (engineOverride && engineOverride !== 'h3') {
-      throw new HttpError(`${engineOverride.toUpperCase()} 렌더 워커는 현재 점검 중입니다. H3로 첫 샷을 생성해주세요.`, 409);
-    }
-    const engine = engineOverride ?? getEngineForFirstShot(inputMode, quality);
+    const savedEngine = (meta.render as { engine?: string } | undefined)?.engine ?? meta.engine;
+    const engine = engineOverride ?? (validEngines.includes(savedEngine as typeof validEngines[number]) ? savedEngine as typeof validEngines[number] : getEngineForFirstShot(inputMode, quality));
     if (!engine) throw new HttpError('첫·끝 프레임과 이어 만들기는 다음 워크플로우 단계에서 사용할 수 있습니다', 409);
 
     const prompt = typeof meta.prompt === 'string' ? meta.prompt.trim() : '';
@@ -55,7 +65,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (inputMode === 'image' && !inputImageUrl) throw new HttpError('시작 이미지를 찾을 수 없습니다', 400);
     const firstFrame = inputImageUrl ? await getRunpodFirstFrame(inputImageUrl) : undefined;
     const renderInput = { prompt, durationSec: duration, aspectRatio: aspect as VideoAspectRatio, ...(firstFrame ? { firstFrameName: firstFrame.name } : {}) };
-    const workflow = engine === 'h3' ? buildH3TextToVideoWorkflow(renderInput) : buildLtxTextToVideoWorkflow(renderInput);
+    const workflow = engine === 'h3' ? buildH3TextToVideoWorkflow(renderInput)
+      : engine === 'wan' ? buildWanWorkflow(renderInput) : buildLtx2bWorkflow(renderInput);
     const ledger = await beginMeteredOperation({ userId: user.id, engine, prompt, aspect, style: typeof meta.style === 'string' ? meta.style : null });
     let job;
     try {

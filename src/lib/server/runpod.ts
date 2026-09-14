@@ -41,6 +41,7 @@ export function getRunpodEndpointId(engine: RunpodVideoEngine): string | null {
   // variable. Its ID is not a credential (requests still require RUNPOD_API_KEY),
   // so retain this migration fallback until every deployment has the variable.
   if (engine === 'blender') return 'i15xzduszzdwmo';
+  if (engine === 'flux') return '903tt7vd8o46yp';
   return null;
 }
 

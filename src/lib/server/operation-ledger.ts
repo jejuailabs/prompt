@@ -83,7 +83,7 @@ export async function finishMeteredOperation(input: {
   if (!input.operationId) return;
   const operation = await db.generationJob.findUnique({ where: { id: input.operationId } });
   if (!operation || operation.status === 'done' || operation.status === 'failed') return;
-  const failed = input.status === 'FAILED' || input.status === 'CANCELLED';
+  const failed = input.status === 'FAILED' || input.status === 'CANCELLED' || input.status === 'TIMED_OUT';
   if (failed) return failMeteredOperation(operation.id, input.error || `Runpod ${input.status}`);
   if (input.status !== 'COMPLETED') {
     if (operation.status === 'queued') await db.generationJob.update({ where: { id: operation.id }, data: { status: 'running' } });
@@ -97,4 +97,3 @@ export async function finishMeteredOperation(input: {
   });
   await logEvent('ai.operation.completed', { operationId: operation.id, engine: input.engine, estimatedCostKrw: costActual, executionTimeMs: input.executionTimeMs ?? 0 });
 }
-
