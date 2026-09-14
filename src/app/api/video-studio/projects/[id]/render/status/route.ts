@@ -54,6 +54,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const render = meta.render as { engine?: RunpodVideoEngine; runpodJobId?: string; accountingJobId?: string } | undefined;
     if (!render?.engine || !render.runpodJobId) throw new HttpError('진행 중인 렌더 작업이 없습니다', 404);
     const job = await getRunpodJobStatus(render.engine, render.runpodJobId);
+    console.log(`[render-status] job=${render.runpodJobId} engine=${render.engine} status=${job.status} delay=${job.delayTime}ms exec=${job.executionTime}ms error=${job.error ?? 'none'}`);
     await finishMeteredOperation({ operationId: render.accountingJobId, engine: render.engine, status: job.status, executionTimeMs: job.executionTime, error: job.error });
     const terminal = job.status === 'COMPLETED' || job.status === 'FAILED' || job.status === 'CANCELLED';
     let videoUrl: string | null = null;

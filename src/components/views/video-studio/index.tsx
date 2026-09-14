@@ -194,8 +194,9 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
   if (projectQuery.isLoading) return <div className="mx-auto flex min-h-80 max-w-7xl items-center justify-center"><Loader2 className="size-7 animate-spin text-primary" /></div>;
   if (projectQuery.isError || !projectQuery.data) return <div className="mx-auto max-w-xl rounded-2xl border p-8 text-center"><p className="font-semibold">프로젝트를 불러오지 못했습니다.</p><p className="mt-2 text-sm text-muted-foreground">{errorMessage(projectQuery.error)}</p><Button className="mt-5" variant="outline" onClick={onBack}>갤러리로 돌아가기</Button></div>;
   const project = projectQuery.data; const meta = asStudioMetadata(project); const shots = meta.shots ?? []; const hasStartImage = Boolean(meta.inputImageUrl);
-  const renderStatus = renderStatusQuery.data?.status ?? meta.render?.status ?? 'QUEUED';
-  const renderError = renderStatusQuery.data?.error;
+  const statusFetchError = renderStatusQuery.isError;
+  const renderStatus = statusFetchError ? 'FETCH_ERROR' : (renderStatusQuery.data?.status ?? meta.render?.status ?? 'QUEUED');
+  const renderError = renderStatusQuery.data?.error ?? (statusFetchError ? errorMessage(renderStatusQuery.error) : undefined);
   const renderVideoUrl = renderStatusQuery.data?.videoUrl ?? meta.render?.videoUrl ?? project.fileUrl ?? null;
   const rendering = ['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING'].includes(renderStatus);
   const rerender = async () => {
@@ -243,10 +244,10 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
     }
   };
   const wsEngineLabel = (meta.render?.engine ?? 'H3').toUpperCase();
-  const renderLabel = renderStatus === 'COMPLETED' ? '렌더 완료' : renderStatus === 'FAILED' || renderStatus === 'CANCELLED' ? '렌더 실패' : renderStatus === 'IN_PROGRESS' || renderStatus === 'RUNNING' ? `${wsEngineLabel}에서 렌더 중` : '렌더 큐 대기 중';
+  const renderLabel = renderStatus === 'COMPLETED' ? '렌더 완료' : renderStatus === 'FAILED' || renderStatus === 'CANCELLED' || renderStatus === 'FETCH_ERROR' ? '렌더 실패' : renderStatus === 'IN_PROGRESS' || renderStatus === 'RUNNING' ? `${wsEngineLabel}에서 렌더 중` : '렌더 큐 대기 중';
   const renderDescription = renderError ?? (renderStatus === 'COMPLETED'
     ? '첫 샷이 완성되었습니다. 결과를 확인하고 다음 샷의 기준 프레임으로 사용할 수 있습니다.'
-    : renderStatus === 'FAILED' || renderStatus === 'CANCELLED'
+    : renderStatus === 'FAILED' || renderStatus === 'CANCELLED' || renderStatus === 'FETCH_ERROR'
       ? '작업이 완료되지 않았습니다. 다시 렌더해보세요.'
       : 'Runpod 워커가 첫 샷을 처리하고 있습니다. 이 화면에서 상태가 자동으로 갱신됩니다.');
 

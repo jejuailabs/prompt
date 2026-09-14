@@ -60,6 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     let job;
     try {
       job = await queueRunpodWorkflow(engine, workflow, firstFrame ? [firstFrame] : undefined);
+      console.log(`[render-queue] project=${project.id} engine=${engine} job=${job.id} status=${job.status} aspect=${aspect} duration=${duration}s`);
     } catch (error) {
       await failMeteredOperation(ledger.operationId, error instanceof Error ? error.message : 'Runpod 렌더 요청 실패');
       throw error;
