@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>NEON TETRIS</title>
+<style>
+html,body{margin:0;height:100%;background:#0a0a1a;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;overflow:hidden;touch-action:none}
+#wrap{position:relative}
+canvas{display:block;border-radius:12px;box-shadow:0 0 40px #60a5fa55;background:#0a0a1a;max-width:96vw;max-height:96vh}
+#hud{position:absolute;top:10px;left:14px;right:14px;display:flex;justify-content:space-between;color:#fff;font-size:12px;letter-spacing:1px;text-shadow:0 0 6px #60a5fa;pointer-events:none}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,3,12,.74);color:#fff;text-align:center;backdrop-filter:blur(2px);border-radius:12px}
+#overlay h1{margin:0 0 6px;font-size:24px;color:#60a5fa;letter-spacing:2px}
+#overlay p{margin:3px 0;font-size:12px;color:#c9c2e0}
+#overlay button{margin-top:14px;padding:10px 26px;font-size:14px;font-weight:700;color:#fff;background:linear-gradient(135deg,#60a5fa,#2563eb);border:0;border-radius:999px;cursor:pointer}
+#overlay button:hover{filter:brightness(1.15)}
+.badge{font-size:10px;color:#8f86ad;margin-top:12px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="300" height="600"></canvas>
+  <div id="hud"><span id="hScore">SCORE 0</span><span id="hLevel">LEVEL 1</span></div>
+  <div id="overlay">
+    <h1>NEON TETRIS</h1>
+    <p>이동: ← → ↓ · 회전: ↑ · 드롭: 스페이스</p>
+    <p>모바일: 스와이프 이동 · 탭 회전</p>
+    <button id="btnStart">게임 시작</button>
+    <div class="badge">PLAYLAB SANDBOX · TIER 1 IFRAME ENGINE</div>
+  </div>
+</div>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const COLS=10,ROWS=20,SZ=30,W=cv.width,H=cv.height;
+const overlay=document.getElementById('overlay'),hScore=document.getElementById('hScore'),hLevel=document.getElementById('hLevel');
+const SHAPES=[
+  [[1,1,1,1]],
+  [[1,1],[1,1]],
+  [[0,1,0],[1,1,1]],
+  [[1,0,0],[1,1,1]],
+  [[0,0,1],[1,1,1]],
+  [[0,1,1],[1,1,0]],
+  [[1,1,0],[0,1,1]]
+];
+const COLORS=['#06b6d4','#fbbf24','#a78bfa','#f97316','#3b82f6','#22c55e','#ef4444'];
+let board,piece,px,py,pidx,score,level,lines,running,timer,dropInterval;
+
+function newBoard(){return Array.from({length:ROWS},()=>Array(COLS).fill(0));}
+function rotate(m){return m[0].map((_,i)=>m.map(r=>r[i]).reverse());}
+function valid(shape,ox,oy){for(let r=0;r<shape.length;r++)for(let c=0;c<shape[r].length;c++){if(!shape[r][c])continue;const nx=ox+c,ny=oy+r;if(nx<0||nx>=COLS||ny>=ROWS)return false;if(ny>=0&&board[ny][nx])return false;}return true;}
+function lock(){for(let r=0;r<piece.length;r++)for(let c=0;c<piece[r].length;c++){if(!piece[r][c])continue;const ny=py+r;if(ny<0){gameOver();return;}board[ny][px+c]=pidx+1;}clearLines();spawn();}
+function clearLines(){let cleared=0;for(let r=ROWS-1;r>=0;r--){if(board[r].every(c=>c)){board.splice(r,1);board.unshift(Array(COLS).fill(0));cleared++;r++;}}if(cleared){lines+=cleared;score+=[0,100,300,500,800][cleared]*level;level=Math.floor(lines/10)+1;dropInterval=Math.max(80,500-level*40);hScore.textContent='SCORE '+score;hLevel.textContent='LEVEL '+level;}}
+function spawn(){pidx=Math.floor(Math.random()*SHAPES.length);piece=SHAPES[pidx].map(r=>[...r]);px=Math.floor((COLS-piece[0].length)/2);py=-piece.length;if(!valid(piece,px,0)){gameOver();}}
+function gameOver(){running=false;overlay.querySelector('h1').textContent='GAME OVER';overlay.querySelectorAll('p')[0].textContent=`점수: ${score} · 레벨: ${level}`;overlay.querySelector('button').textContent='다시 시작';overlay.style.display='flex';}
+
+function draw(){
+  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#151530';ctx.lineWidth=0.5;
+  for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*SZ,0);ctx.lineTo(x*SZ,H);ctx.stroke();}
+  for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*SZ);ctx.lineTo(W,y*SZ);ctx.stroke();}
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){if(!board[r][c])continue;ctx.fillStyle=COLORS[board[r][c]-1];ctx.shadowColor=COLORS[board[r][c]-1];ctx.shadowBlur=6;ctx.beginPath();ctx.roundRect(c*SZ+1,r*SZ+1,SZ-2,SZ-2,3);ctx.fill();}
+  ctx.shadowBlur=0;
+  if(piece)for(let r=0;r<piece.length;r++)for(let c=0;c<piece[r].length;c++){if(!piece[r][c]||py+r<0)continue;ctx.fillStyle=COLORS[pidx];ctx.shadowColor=COLORS[pidx];ctx.shadowBlur=8;ctx.beginPath();ctx.roundRect((px+c)*SZ+1,(py+r)*SZ+1,SZ-2,SZ-2,3);ctx.fill();}
+  ctx.shadowBlur=0;
+}
+
+function update(){
+  if(!running)return;
+  timer+=16;if(timer<dropInterval)return;timer=0;
+  if(valid(piece,px,py+1))py++;else lock();
+}
+
+document.addEventListener('keydown',e=>{
+  if(!running)return;
+  if(e.key==='ArrowLeft'&&valid(piece,px-1,py)){px--;e.preventDefault();}
+  if(e.key==='ArrowRight'&&valid(piece,px+1,py)){px++;e.preventDefault();}
+  if(e.key==='ArrowDown'){if(valid(piece,px,py+1))py++;e.preventDefault();}
+  if(e.key==='ArrowUp'){const rot=rotate(piece);if(valid(rot,px,py))piece=rot;e.preventDefault();}
+  if(e.key===' '){while(valid(piece,px,py+1))py++;lock();e.preventDefault();}
+});
+let tx=0,ty=0,tapped=false;
+cv.addEventListener('touchstart',e=>{const t=e.touches[0];tx=t.clientX;ty=t.clientY;tapped=true;},{passive:true});
+cv.addEventListener('touchmove',e=>{e.preventDefault();tapped=false;},{passive:false});
+cv.addEventListener('touchend',e=>{if(!running)return;const t=e.changedTouches[0];const dx=t.clientX-tx,dy=t.clientY-ty;
+  if(tapped&&Math.abs(dx)<10&&Math.abs(dy)<10){const rot=rotate(piece);if(valid(rot,px,py))piece=rot;return;}
+  if(Math.abs(dx)>Math.abs(dy)){if(dx>30&&valid(piece,px+1,py))px++;if(dx<-30&&valid(piece,px-1,py))px--;}
+  else if(dy>30){while(valid(piece,px,py+1))py++;lock();}
+});
+
+document.getElementById('btnStart').onclick=()=>{board=newBoard();score=0;level=1;lines=0;dropInterval=500;timer=0;hScore.textContent='SCORE 0';hLevel.textContent='LEVEL 1';spawn();overlay.style.display='none';running=true;};
+(function loop(){update();draw();requestAnimationFrame(loop);})();
+</script>
+</body>
+</html>

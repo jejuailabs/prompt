@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>NEON PONG</title>
+<style>
+html,body{margin:0;height:100%;background:#0a0a1a;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;overflow:hidden;touch-action:none}
+#wrap{position:relative}
+canvas{display:block;border-radius:12px;box-shadow:0 0 40px #e879f955;background:#0a0a1a;max-width:96vw;max-height:96vh}
+#hud{position:absolute;top:10px;left:14px;right:14px;display:flex;justify-content:space-between;color:#fff;font-size:12px;letter-spacing:1px;text-shadow:0 0 6px #e879f9;pointer-events:none}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,3,12,.74);color:#fff;text-align:center;backdrop-filter:blur(2px);border-radius:12px}
+#overlay h1{margin:0 0 6px;font-size:24px;color:#e879f9;letter-spacing:2px}
+#overlay p{margin:3px 0;font-size:12px;color:#c9c2e0}
+#overlay button{margin-top:14px;padding:10px 26px;font-size:14px;font-weight:700;color:#fff;background:linear-gradient(135deg,#e879f9,#a21caf);border:0;border-radius:999px;cursor:pointer}
+#overlay button:hover{filter:brightness(1.15)}
+.badge{font-size:10px;color:#8f86ad;margin-top:12px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="480" height="360"></canvas>
+  <div id="hud"><span id="hPlayer">YOU 0</span><span id="hCpu">CPU 0</span></div>
+  <div id="overlay">
+    <h1>NEON PONG</h1>
+    <p>이동: ↑ ↓ 또는 W S · 모바일: 터치 드래그</p>
+    <p>CPU를 이기세요! 먼저 7점!</p>
+    <button id="btnStart">게임 시작</button>
+    <div class="badge">PLAYLAB SANDBOX · TIER 1 IFRAME ENGINE</div>
+  </div>
+</div>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=cv.width,H=cv.height;
+const overlay=document.getElementById('overlay'),hPlayer=document.getElementById('hPlayer'),hCpu=document.getElementById('hCpu');
+const PW=10,PH=60,BR=6,WIN=7;
+let player,cpu,ball,pScore,cScore,running=false,keys={},touchY=null;
+
+function reset(){
+  player={x:20,y:H/2-PH/2};cpu={x:W-20-PW,y:H/2-PH/2};
+  ball={x:W/2,y:H/2,dx:4*(Math.random()>.5?1:-1),dy:3*(Math.random()-.5)};
+  pScore=0;cScore=0;hPlayer.textContent='YOU 0';hCpu.textContent='CPU 0';
+}
+function serveBall(dir){ball.x=W/2;ball.y=H/2;ball.dx=4*dir;ball.dy=3*(Math.random()-.5);}
+
+document.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(['arrowup','arrowdown'].includes(e.key.toLowerCase()))e.preventDefault();});
+document.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+cv.addEventListener('pointerdown',e=>{touchY=e.clientY;});
+cv.addEventListener('pointermove',e=>{if(touchY!==null){const r=cv.getBoundingClientRect();player.y=Math.max(0,Math.min(H-PH,(e.clientY-r.top)*(H/r.height)-PH/2));}});
+cv.addEventListener('pointerup',()=>{touchY=null;});
+
+function update(){
+  if(!running)return;
+  if(keys['arrowup']||keys['w'])player.y-=5;
+  if(keys['arrowdown']||keys['s'])player.y+=5;
+  player.y=Math.max(0,Math.min(H-PH,player.y));
+  const cpuCenter=cpu.y+PH/2;const diff=ball.y-cpuCenter;
+  cpu.y+=Math.min(3.5,Math.abs(diff))*Math.sign(diff);
+  cpu.y=Math.max(0,Math.min(H-PH,cpu.y));
+  ball.x+=ball.dx;ball.y+=ball.dy;
+  if(ball.y-BR<0){ball.y=BR;ball.dy*=-1;}
+  if(ball.y+BR>H){ball.y=H-BR;ball.dy*=-1;}
+  if(ball.x-BR<player.x+PW&&ball.y>player.y&&ball.y<player.y+PH&&ball.dx<0){ball.dx=-ball.dx*1.05;ball.dy+=(ball.y-(player.y+PH/2))*0.15;}
+  if(ball.x+BR>cpu.x&&ball.y>cpu.y&&ball.y<cpu.y+PH&&ball.dx>0){ball.dx=-ball.dx*1.05;ball.dy+=(ball.y-(cpu.y+PH/2))*0.15;}
+  ball.dx=Math.max(-10,Math.min(10,ball.dx));ball.dy=Math.max(-6,Math.min(6,ball.dy));
+  if(ball.x<-20){cScore++;hCpu.textContent='CPU '+cScore;if(cScore>=WIN){endGame('CPU');return;}serveBall(1);}
+  if(ball.x>W+20){pScore++;hPlayer.textContent='YOU '+pScore;if(pScore>=WIN){endGame('YOU');return;}serveBall(-1);}
+}
+
+function endGame(winner){running=false;overlay.querySelector('h1').textContent=winner==='YOU'?'YOU WIN!':'GAME OVER';
+  overlay.querySelectorAll('p')[0].textContent=`${pScore} : ${cScore}`;overlay.querySelector('button').textContent='다시 시작';overlay.style.display='flex';}
+
+function draw(){
+  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);
+  ctx.setLineDash([6,8]);ctx.strokeStyle='#2a1a3a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#e879f9';ctx.shadowColor='#e879f9';ctx.shadowBlur=10;
+  ctx.beginPath();ctx.roundRect(player.x,player.y,PW,PH,4);ctx.fill();
+  ctx.fillStyle='#c084fc';ctx.shadowColor='#c084fc';
+  ctx.beginPath();ctx.roundRect(cpu.x,cpu.y,PW,PH,4);ctx.fill();
+  ctx.fillStyle='#fff';ctx.shadowColor='#e879f9';ctx.shadowBlur=14;
+  ctx.beginPath();ctx.arc(ball.x,ball.y,BR,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#e879f920';ctx.font='bold 80px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(pScore,W/4,H/2);ctx.fillText(cScore,W*3/4,H/2);
+}
+
+document.getElementById('btnStart').onclick=()=>{reset();overlay.style.display='none';running=true;};
+(function loop(){update();draw();requestAnimationFrame(loop);})();
+</script>
+</body>
+</html>

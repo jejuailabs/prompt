@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>FLAPPY NEON</title>
+<style>
+html,body{margin:0;height:100%;background:#0a0a1a;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;overflow:hidden;touch-action:none}
+#wrap{position:relative}
+canvas{display:block;border-radius:12px;box-shadow:0 0 40px #fbbf2455;background:#0a0a1a;max-width:96vw;max-height:96vh}
+#hud{position:absolute;top:10px;left:14px;right:14px;display:flex;justify-content:space-between;color:#fff;font-size:12px;letter-spacing:1px;text-shadow:0 0 6px #fbbf24;pointer-events:none}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,3,12,.74);color:#fff;text-align:center;backdrop-filter:blur(2px);border-radius:12px}
+#overlay h1{margin:0 0 6px;font-size:24px;color:#fbbf24;letter-spacing:2px}
+#overlay p{margin:3px 0;font-size:12px;color:#c9c2e0}
+#overlay button{margin-top:14px;padding:10px 26px;font-size:14px;font-weight:700;color:#fff;background:linear-gradient(135deg,#fbbf24,#d97706);border:0;border-radius:999px;cursor:pointer}
+#overlay button:hover{filter:brightness(1.15)}
+.badge{font-size:10px;color:#8f86ad;margin-top:12px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="320" height="480"></canvas>
+  <div id="hud"><span id="hScore">SCORE 0</span><span id="hBest">BEST 0</span></div>
+  <div id="overlay">
+    <h1>FLAPPY NEON</h1>
+    <p>점프: 클릭 / 스페이스 / 탭</p>
+    <p>파이프 사이를 통과하세요!</p>
+    <button id="btnStart">게임 시작</button>
+    <div class="badge">PLAYLAB SANDBOX · TIER 1 IFRAME ENGINE</div>
+  </div>
+</div>
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const W=cv.width,H=cv.height;
+const overlay=document.getElementById('overlay'),hScore=document.getElementById('hScore'),hBest=document.getElementById('hBest');
+let bird,pipes,score,best=0,running=false,gameOver=false;
+const GAP=130,PW=45,GRAVITY=0.4,JUMP=-6.5,PIPE_SPEED=2.2;
+
+function reset(){bird={x:80,y:H/2,vy:0,r:12};pipes=[];score=0;gameOver=false;hScore.textContent='SCORE 0';}
+function addPipe(){const minY=80,maxY=H-GAP-80;const topH=minY+Math.random()*(maxY-minY);pipes.push({x:W+10,topH,scored:false});}
+
+function flap(){if(!running)return;bird.vy=JUMP;}
+
+function update(){
+  if(!running)return;
+  bird.vy+=GRAVITY;bird.y+=bird.vy;
+  if(bird.y-bird.r<0){bird.y=bird.r;bird.vy=0;}
+  if(bird.y+bird.r>H){die();return;}
+  if(!pipes.length||pipes[pipes.length-1].x<W-180)addPipe();
+  for(const p of pipes){
+    p.x-=PIPE_SPEED;
+    if(!p.scored&&p.x+PW<bird.x){p.scored=true;score++;hScore.textContent='SCORE '+score;}
+    if(bird.x+bird.r>p.x&&bird.x-bird.r<p.x+PW){if(bird.y-bird.r<p.topH||bird.y+bird.r>p.topH+GAP){die();return;}}
+  }
+  pipes=pipes.filter(p=>p.x>-PW-10);
+}
+
+function die(){running=false;gameOver=true;if(score>best){best=score;hBest.textContent='BEST '+best;}
+  overlay.querySelector('h1').textContent='GAME OVER';overlay.querySelectorAll('p')[0].textContent=`점수: ${score}`;
+  overlay.querySelector('button').textContent='다시 시작';overlay.style.display='flex';
+}
+
+function draw(){
+  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);
+  for(const p of pipes){
+    ctx.fillStyle='#fbbf24';ctx.shadowColor='#fbbf24';ctx.shadowBlur=8;
+    ctx.beginPath();ctx.roundRect(p.x,0,PW,p.topH,6);ctx.fill();
+    ctx.beginPath();ctx.roundRect(p.x,p.topH+GAP,PW,H-p.topH-GAP,6);ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#d97706';
+    ctx.fillRect(p.x-3,p.topH-20,PW+6,20);
+    ctx.fillRect(p.x-3,p.topH+GAP,PW+6,20);
+  }
+  ctx.fillStyle='#fbbf24';ctx.shadowColor='#fbbf24';ctx.shadowBlur=12;
+  ctx.beginPath();ctx.arc(bird.x,bird.y,bird.r,0,Math.PI*2);ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#0a0a1a';ctx.beginPath();ctx.arc(bird.x+4,bird.y-3,3,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bird.x+4,bird.y-3,1.5,0,Math.PI*2);ctx.fill();
+}
+
+document.addEventListener('keydown',e=>{if(e.key===' '){e.preventDefault();flap();}});
+cv.addEventListener('pointerdown',e=>{e.preventDefault();flap();});
+document.getElementById('btnStart').onclick=()=>{reset();overlay.style.display='none';running=true;};
+(function loop(){update();draw();requestAnimationFrame(loop);})();
+</script>
+</body>
+</html>

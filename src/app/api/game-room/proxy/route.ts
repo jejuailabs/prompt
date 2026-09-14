@@ -6,20 +6,26 @@ export async function GET(req: NextRequest) {
   if (!url) return NextResponse.json({ error: 'Missing url' }, { status: 400 });
 
   try {
-    const parsed = new URL(url);
-    // Only allow known safe origins
-    const allowed = [
-      'supabase.co',
-      'vercel.app',
-      'netlify.app',
-      'pages.dev',
-      'github.io',
-      'localhost',
-    ];
-    const isAllowed = allowed.some((d) => parsed.hostname.endsWith(d)) || parsed.protocol === 'https:';
-    if (!isAllowed) return NextResponse.json({ error: 'Blocked origin' }, { status: 403 });
+    const isRelative = url.startsWith('/');
+    let fetchUrl = url;
+    if (isRelative) {
+      const origin = req.nextUrl.origin;
+      fetchUrl = `${origin}${url}`;
+    } else {
+      const parsed = new URL(url);
+      const allowed = [
+        'supabase.co',
+        'vercel.app',
+        'netlify.app',
+        'pages.dev',
+        'github.io',
+        'localhost',
+      ];
+      const isAllowed = allowed.some((d) => parsed.hostname.endsWith(d)) || parsed.protocol === 'https:';
+      if (!isAllowed) return NextResponse.json({ error: 'Blocked origin' }, { status: 403 });
+    }
 
-    const res = await fetch(url, { headers: { Accept: 'text/html' } });
+    const res = await fetch(fetchUrl, { headers: { Accept: 'text/html' } });
     if (!res.ok) return NextResponse.json({ error: `Upstream ${res.status}` }, { status: 502 });
 
     const html = await res.text();

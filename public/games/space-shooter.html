@@ -60,8 +60,9 @@
     enemies = [];
     const rows = Math.min(2 + wave, 5), cols = 6;
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const bx = 50 + c * ((W - 100) / (cols - 1));
       enemies.push({
-        x: 50 + c * ((W - 100) / (cols - 1)), y: 60 + r * 44,
+        x: bx, baseX: bx, y: 60 + r * 44,
         w: 26, h: 20, t: Math.random() * 6.28, hp: r === 0 ? 2 : 1, phase: r * 0.6
       });
     }
@@ -96,10 +97,8 @@
     // enemies — oscillate left-right and drift down, bounce off walls
     enemies.forEach(en => {
       en.t += dt * 2 * SPEED;
-      en.x += Math.sin(en.t) * 28 * dt;
+      en.x = Math.max(16, Math.min(W - 16, en.baseX + Math.sin(en.t + en.phase) * 45));
       en.y += 8 * dt * SPEED;
-      if (en.x < 16) { en.x = 16; en.t = Math.PI - en.t; }
-      if (en.x > W - 16) { en.x = W - 16; en.t = Math.PI - en.t; }
     });
     // hit detection
     for (const b of bullets) for (const en of enemies) {
