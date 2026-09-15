@@ -51,14 +51,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!project) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
 
     const meta = metadata(project.metadata);
-    const render = meta.render as { engine?: RunpodVideoEngine; runpodJobId?: string; accountingJobId?: string; status?: string; videoUrl?: string; error?: string; executionTime?: number; delayTime?: number } | undefined;
+    const render = meta.render as { engine?: RunpodVideoEngine; runpodJobId?: string; accountingJobId?: string; status?: string; videoUrl?: string; error?: string; executionTime?: number; delayTime?: number; queuedAt?: string } | undefined;
     if (!render?.engine || !render.runpodJobId) throw new HttpError('진행 중인 렌더 작업이 없습니다', 404);
     // RunPod expires job results. Persisted terminal state must survive revisits.
     if ((render.status === 'COMPLETED' && render.videoUrl) || ['FAILED', 'CANCELLED', 'TIMED_OUT'].includes(render.status ?? '')) {
       await finishMeteredOperation({ operationId: render.accountingJobId, engine: render.engine, status: render.status!, executionTimeMs: render.executionTime, error: render.error });
       return ok({ id: render.runpodJobId, status: render.status, videoUrl: render.videoUrl ?? null, error: render.error, executionTime: render.executionTime, delayTime: render.delayTime });
     }
-    const job = await getRunpodJobStatus(render.engine, render.runpodJobId);
+    const job = await getRunpodJobStatus(render.engine, render.runpodJobId).catch(error => {
+      const age = Date.now() - Date.parse(render.queuedAt ?? project.createdAt.toISOString());
+      if (error instanceof Error && error.message.startsWith('Runpod API 404:') && age > 86400000) {
+        return { id: render.runpodJobId!, status: 'FAILED', error: '오래된 작업의 서버 기록이 만료되어 결과를 복구할 수 없습니다. 자동 재생성하지 않습니다.', output: undefined, executionTime: undefined, delayTime: undefined };
+      }
+      throw error;
+    });
     console.log(`[render-status] job=${render.runpodJobId} engine=${render.engine} status=${job.status} delay=${job.delayTime}ms exec=${job.executionTime}ms error=${job.error ?? 'none'}`);
     const terminal = ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'].includes(job.status);
     let videoUrl: string | null = null;
@@ -69,7 +75,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         job.error = '워커가 종료됐지만 재생 가능한 영상이 반환되지 않았습니다.';
       }
       const nextMeta = { ...meta, projectStatus: job.status === 'COMPLETED' ? 'completed' : 'failed', render: { ...render, status: job.status, completedAt: new Date().toISOString(), outputReceived: Boolean(job.output), error: job.error, videoUrl, executionTime: job.executionTime, delayTime: job.delayTime } };
-      await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(nextMeta), status: job.status === 'COMPLETED' ? 'completed' : 'failed', ...(videoUrl ? { fileUrl: videoUrl } : {}) } });
+      const saved = await db.artifact.updateMany({ where: { id: project.id, metadata: project.metadata }, data: { metadata: JSON.stringify(nextMeta), status: job.status === 'COMPLETED' ? 'completed' : 'failed', ...(videoUrl ? { fileUrl: videoUrl } : {}) } });
+      if (!saved.count) throw new HttpError('작업 상태가 변경됐습니다. 다시 확인해주세요.', 409);
     }
     await finishMeteredOperation({ operationId: render.accountingJobId, engine: render.engine, status: job.status, executionTimeMs: job.executionTime, error: job.error });
     return ok({ id: job.id, status: job.status, delayTime: job.delayTime, executionTime: job.executionTime, error: job.error, videoUrl });

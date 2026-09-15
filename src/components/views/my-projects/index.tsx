@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Clapperboard, Heart, Loader2, Trash2, Upload, User, Film, CheckCircle2, XCircle, Play } from 'lucide-react';
 import { api } from '@/lib/api-client';
+import { CancelVideo } from '@/components/shared/cancel-video';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import type { ArtifactDTO, PromptDTO, YoutubeAnalysisDTO } from '@/lib/types';
@@ -348,17 +349,27 @@ interface VideoMeta {
 
 function VideoProjectCard({ project, locale, onOpen, t }: { project: ArtifactDTO; locale: string; onOpen: () => void; t: (key: string) => string }) {
   const meta = project.metadata as unknown as VideoMeta;
-  const renderStatus = meta.render?.status ?? meta.projectStatus ?? 'editing';
-  const videoUrl = meta.render?.videoUrl ?? project.fileUrl ?? null;
+  const storedStatus = meta.render?.status ?? meta.projectStatus ?? 'editing';
+  const pending = ['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING', 'rendering'].includes(storedStatus);
+  const statusQuery = useQuery({
+    queryKey: ['video-studio-render-status', project.id],
+    queryFn: () => api.get<{ status: string; videoUrl?: string | null }>(`/api/video-studio/projects/${project.id}/render/status`),
+    enabled: pending,
+    retry: false,
+    refetchInterval: q => q.state.status === 'error' || ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'].includes(q.state.data?.status ?? '') ? false : 15000,
+  });
+  const renderStatus = statusQuery.data?.status ?? storedStatus;
+  const videoUrl = statusQuery.data?.videoUrl ?? meta.render?.videoUrl ?? project.fileUrl ?? null;
   const engine = (meta.render?.engine ?? meta.engine ?? 'H3').toUpperCase();
   const aspect = meta.aspectRatio ?? '9:16';
   const shotCount = meta.shots?.length ?? 1;
   const duration = meta.targetDurationSec ?? 6;
-  const isRendering = ['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING', 'rendering'].includes(renderStatus);
+  const isUnconfirmed = pending && (statusQuery.isError || !statusQuery.data);
+  const isRendering = !isUnconfirmed && ['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING', 'rendering'].includes(renderStatus);
   const isCompleted = renderStatus === 'COMPLETED' || renderStatus === 'completed';
   const isFailed = ['FAILED', 'CANCELLED', 'TIMED_OUT', 'failed'].includes(renderStatus);
 
-  const statusLabel = isRendering ? t('videoStatusRendering') : isCompleted ? t('videoStatusCompleted') : isFailed ? t('videoStatusFailed') : t('videoStatusEditing');
+  const statusLabel = isUnconfirmed ? (statusQuery.isError ? '상태 확인 불가' : '상태 확인 중') : renderStatus === 'CANCELLED' ? '생성 중지됨' : isRendering ? t('videoStatusRendering') : isCompleted ? t('videoStatusCompleted') : isFailed ? t('videoStatusFailed') : t('videoStatusEditing');
   const statusColor = isRendering ? 'text-blue-500' : isCompleted ? 'text-emerald-500' : isFailed ? 'text-destructive' : 'text-muted-foreground';
   const StatusIcon = isRendering ? Loader2 : isCompleted ? CheckCircle2 : isFailed ? XCircle : Clapperboard;
 
@@ -409,6 +420,7 @@ function VideoProjectCard({ project, locale, onOpen, t }: { project: ArtifactDTO
       </div>
       <div className="p-3">
         <h3 className="line-clamp-2 text-sm font-semibold">{project.title}</h3>
+        {(isRendering || isUnconfirmed) && <div className="my-2"><CancelVideo projectId={project.id} /></div>}
         <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{meta.prompt ?? project.description}</p>
         <div className="mt-3 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
