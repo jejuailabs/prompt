@@ -7,6 +7,7 @@ import { buildH3TextToVideoWorkflow, getEngineForFirstShot, type VideoAspectRati
 import { buildLtx2bWorkflow } from '@/lib/server/ltx-2b-workflow';
 import { buildWanWorkflow } from '@/lib/server/wan-workflow';
 import { beginMeteredOperation, failMeteredOperation } from '@/lib/server/operation-ledger';
+import { buildVideoModelPrompt, compileVideoIntent } from '@/lib/server/video-intent';
 
 function metadata(raw: string): Record<string, unknown> {
   try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
@@ -64,7 +65,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const inputImageUrl = typeof meta.inputImageUrl === 'string' ? meta.inputImageUrl : null;
     if (inputMode === 'image' && !inputImageUrl) throw new HttpError('시작 이미지를 찾을 수 없습니다', 400);
     const firstFrame = inputImageUrl ? await getRunpodFirstFrame(inputImageUrl) : undefined;
-    const renderInput = { prompt, durationSec: duration, aspectRatio: aspect as VideoAspectRatio, ...(firstFrame ? { firstFrameName: firstFrame.name } : {}) };
+    const intent = await compileVideoIntent(prompt, Boolean(firstFrame));
+    const modelPrompt = buildVideoModelPrompt(intent, Boolean(firstFrame));
+    const renderInput = { prompt: modelPrompt, durationSec: duration, aspectRatio: aspect as VideoAspectRatio, ...(firstFrame ? { firstFrameName: firstFrame.name } : {}) };
     const workflow = engine === 'h3' ? buildH3TextToVideoWorkflow(renderInput)
       : engine === 'wan' ? buildWanWorkflow(renderInput) : buildLtx2bWorkflow(renderInput);
     const ledger = await beginMeteredOperation({ userId: user.id, engine, prompt, aspect, style: typeof meta.style === 'string' ? meta.style : null });
@@ -81,7 +84,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       ...meta,
       projectStatus: 'rendering',
       activeShotId: body.shotId ?? 'shot-1',
-      render: { engine, runpodJobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString() },
+      render: { engine, runpodJobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString(), intent },
     };
     await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(nextMeta), status: 'processing' } });
     return ok({ projectId: project.id, engine, jobId: job.id, status: job.status, creditCharged: ledger.creditCharged });

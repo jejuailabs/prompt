@@ -34,7 +34,10 @@ export function buildH3TextToVideoWorkflow(input: VideoRenderInput): Record<stri
     '149': { inputs: { unet_name: 'minimax_h3_fl2va_pruned_int8_convrot.safetensors', weight_dtype: 'default' }, class_type: 'UNETLoader', _meta: { title: 'UNETLoader' } },
     '150': { inputs: { clip_name: 'qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', type: 'minimax', device: 'default' }, class_type: 'CLIPLoader', _meta: { title: 'CLIPLoader' } },
     '151': { inputs: { noise_seed: Math.floor(Math.random() * 2_147_483_647) }, class_type: 'RandomNoise', _meta: { title: 'RandomNoise' } },
-    '152': { inputs: { images: ['144', 0], audio: ['143', 0], fps: 24, bit_depth: 8, color_space: 'sRGB' }, class_type: 'CreateVideo', _meta: { title: 'CreateVideo' } },
+    // H3 can synthesize audio as well as video. The studio's first-shot flow is
+    // intentionally silent unless we add a dedicated audio direction UI, so do
+    // not attach its generated audio stream to the rendered file.
+    '152': { inputs: { images: ['144', 0], fps: 24, bit_depth: 8, color_space: 'sRGB' }, class_type: 'CreateVideo', _meta: { title: 'CreateVideo' } },
     '153': { inputs: { clip: ['150', 0], vae: ['141', 0], width: ['162', 0], height: ['163', 0], length: ['154', 1], prompt, ...(input.firstFrameName ? { first_frame: ['164', 0] } : {}) }, class_type: 'MiniMaxH3ImageToVideo', _meta: { title: 'MiniMaxH3ImageToVideo' } },
     '154': { inputs: { 'values.a': ['155', 0], expression: 'max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17' }, class_type: 'ComfyMathExpression', _meta: { title: 'Frame Count' } },
     '155': { inputs: { value: Math.max(4, Math.min(15, Math.round(input.durationSec))) }, class_type: 'PrimitiveFloat', _meta: { title: 'Duration' } },
