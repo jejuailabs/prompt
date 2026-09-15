@@ -65,7 +65,9 @@ export async function POST(req: NextRequest) {
       inputImageUrl: body.inputImageUrl ?? null,
       aspectRatio: body.aspectRatio ?? '9:16',
       quality: body.quality ?? 'draft',
-      engine: body.engine ?? 'ltx',
+      // No explicit engine means automatic selection: draft -> LTX, high quality -> H3.
+      // Persisting LTX here used to override the high-quality choice at render time.
+      engine: body.engine ?? null,
       projectStatus: 'editing',
       shots: [{
         id: 'shot-1',

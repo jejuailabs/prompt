@@ -7,6 +7,8 @@ export interface VideoRenderInput {
   durationSec: number;
   aspectRatio: VideoAspectRatio;
   firstFrameName?: string;
+  /** H3's verified 6-step turbo path is for drafts; standard uses 20 steps. */
+  quality?: 'draft' | 'standard';
 }
 
 /** Compatibility export: all LTX callers use the verified 2B workflow. */
@@ -46,9 +48,9 @@ export function buildH3TextToVideoWorkflow(input: VideoRenderInput): Record<stri
     '158': { inputs: { on_false: ['159', 0], on_true: ['160', 0], switch: ['161', 0] }, class_type: 'ComfySwitchNode', _meta: { title: 'If/Else Switch (Steps)' } },
     '159': { inputs: { value: 20 }, class_type: 'PrimitiveInt', _meta: { title: 'Standard steps' } },
     '160': { inputs: { value: 6 }, class_type: 'PrimitiveInt', _meta: { title: 'Turbo steps' } },
-    // The H3 Wizard ships this LoRA for preview throughput: 6 steps instead
-    // of 20. High-quality rerenders can be added as an explicit later option.
-    '161': { inputs: { value: true }, class_type: 'PrimitiveBoolean', _meta: { title: 'Enable Lightning LoRA' } },
+    // The Wizard's 6-step LoRA is used only for drafts. "고품질" must select
+    // the base 20-step path, rather than merely changing a UI label.
+    '161': { inputs: { value: input.quality !== 'standard' }, class_type: 'PrimitiveBoolean', _meta: { title: 'Enable Lightning LoRA' } },
     '162': { inputs: { value: width }, class_type: 'PrimitiveInt', _meta: { title: 'Width' } },
     '163': { inputs: { value: height }, class_type: 'PrimitiveInt', _meta: { title: 'Height' } },
     ...(input.firstFrameName ? { '164': { inputs: { image: input.firstFrameName }, class_type: 'LoadImage', _meta: { title: 'First frame' } } } : {}),

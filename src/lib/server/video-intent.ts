@@ -1,20 +1,20 @@
 import { chatJson } from '@/lib/server/ai';
 
+/**
+ * This internal structure follows MiniMax H3's published I2VA guide:
+ * first-frame alignment, integrated visual description, soundscape, music.
+ */
 export interface VideoIntent {
-  subject: string;
-  sceneAction: string;
-  cameraMovement: string;
-  cameraConstraints: string[];
-  visualConstraints: string[];
+  openingFrame: string;
+  actionProgression: string;
+  cameraDirection: string;
+  endingFrame: string;
+  continuity: string[];
+  overallSoundscape: string;
+  nonDiegeticMusic: string;
 }
 
-const defaultConstraints = [
-  'no unintended pan, tilt, orbit, roll, or lateral drift',
-  'no camera, gimbal, tripod, crew, camera operator, or filming equipment visible unless explicitly requested',
-  'no subtitles, captions, logos, signs, watermarks, or readable text unless explicitly requested',
-];
-
-function text(value: unknown, fallback: string, maxLength = 500) {
+function text(value: unknown, fallback: string, maxLength = 700) {
   if (typeof value !== 'string') return fallback;
   const normalized = value.replace(/\s+/g, ' ').trim();
   return normalized ? normalized.slice(0, maxLength) : fallback;
@@ -22,7 +22,11 @@ function text(value: unknown, fallback: string, maxLength = 500) {
 
 function textList(value: unknown, fallback: string[]) {
   if (!Array.isArray(value)) return fallback;
-  const values = value.filter((item): item is string => typeof item === 'string').map((item) => item.replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 8);
+  const values = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, 5);
   return values.length ? values : fallback;
 }
 
@@ -31,74 +35,96 @@ function fallbackIntent(prompt: string, hasReferenceImage: boolean): VideoIntent
   const backward = /(뒤로|후진|멀어지|backward|dolly\s*out|pull\s*back)/i.test(prompt);
   const left = /(왼쪽|좌측|left)/i.test(prompt);
   const right = /(오른쪽|우측|right)/i.test(prompt);
-  const gimbal = /(짐벌|gimbal|stabili[sz])/i.test(prompt);
-  const cameraMovement = forward
-    ? `A ${gimbal ? 'stabilized ' : ''}slow, straight dolly-in toward the primary subject.`
+  const stabilized = /(짐벌|gimbal|stabili[sz])/i.test(prompt);
+  const cameraDirection = forward
+    ? `The viewer camera pushes in along one straight path with ${stabilized ? 'stabilized, ' : ''}small-amplitude motion at a slow, even speed.`
     : backward
-      ? `A ${gimbal ? 'stabilized ' : ''}slow, straight dolly-out away from the primary subject.`
-      : left ? 'A smooth, controlled lateral track to the left.'
-        : right ? 'A smooth, controlled lateral track to the right.'
-          : 'A subtle, stable camera move that preserves the original composition.';
+      ? `The viewer camera pulls out along one straight path with ${stabilized ? 'stabilized, ' : ''}small-amplitude motion at a slow, even speed.`
+      : left
+        ? 'The viewer camera tracks left with small-amplitude, smooth motion at a slow, even speed.'
+        : right
+          ? 'The viewer camera tracks right with small-amplitude, smooth motion at a slow, even speed.'
+          : 'The viewer camera holds the opening composition with subtle, stable natural motion.';
 
   return {
-    subject: hasReferenceImage
-      ? 'Preserve the subjects, architecture, objects, and composition from the reference image.'
-      : text(prompt, 'Create the scene requested by the user.'),
-    sceneAction: hasReferenceImage ? 'Use only natural, physically plausible motion that follows the camera direction.' : 'Show only the requested visual action.',
-    cameraMovement,
-    cameraConstraints: defaultConstraints,
-    visualConstraints: ['preserve identity, geometry, lighting, and materials when a reference image is supplied'],
+    openingFrame: hasReferenceImage
+      ? 'The reference image establishes the exact opening subjects, objects, architecture, spatial layout, materials, lighting, and framing.'
+      : text(prompt, 'The requested scene is established in a clear cinematic opening composition.'),
+    actionProgression: hasReferenceImage
+      ? 'Motion begins naturally from the opening frame and develops continuously through one clear visual beat.'
+      : 'The requested visual action begins clearly and develops as one continuous cinematic beat.',
+    cameraDirection,
+    endingFrame: 'The shot settles into a coherent final composition that follows naturally from the opening frame.',
+    continuity: hasReferenceImage
+      ? ['Keep the visible subjects, geometry, materials, lighting, and spatial relationships consistent across the full shot.']
+      : ['Keep the scene visually coherent and physically plausible across the full shot.'],
+    overallSoundscape: 'N/A',
+    nonDiegeticMusic: 'N/A',
   };
 }
 
 /**
- * Converts a creator's natural-language direction into a model-facing production brief.
- * This intentionally separates what appears on screen from camera language, so words
- * such as "gimbal" are not hallucinated as props, people, spoken dialogue, or captions.
+ * Turns imprecise creator language into a small, chronological production
+ * specification. Camera words remain cinematography instructions, never props
+ * or dialogue. Positive continuity direction avoids conditioning on unwanted
+ * objects by repeating them in a negative prompt.
  */
-export async function compileVideoIntent(prompt: string, hasReferenceImage: boolean): Promise<VideoIntent> {
-  const fallback = fallbackIntent(prompt, hasReferenceImage);
+export async function compileVideoIntent(
+  prompt: string,
+  options: { hasReferenceImage: boolean; durationSec: number },
+): Promise<VideoIntent> {
+  const fallback = fallbackIntent(prompt, options.hasReferenceImage);
   if (!process.env.GEMINI_API_KEY) return fallback;
 
   try {
     const compiled = await chatJson<Partial<VideoIntent>>(
-      `You compile natural-language video directions into an English production brief for an image-to-video model. Return JSON only with exactly these keys: subject, sceneAction, cameraMovement, cameraConstraints, visualConstraints.
+      `You are a senior video director compiling a creator's Korean or English request for MiniMax H3 image-to-video generation. Return JSON only with exactly these keys: openingFrame, actionProgression, cameraDirection, endingFrame, continuity, overallSoundscape, nonDiegeticMusic.
 
 Rules:
-- The creator may write Korean, English, or both. Translate their intended visual direction into concise English. Never copy Korean words into the output.
-- Separate screen content from filming instructions. Words such as camera, lens, gimbal, dolly, crane, pan, tilt, orbit, and handheld normally describe how the viewer camera moves; do NOT show those items, an operator, or a crew unless the creator explicitly says they must be visible.
-- For a supplied reference image, preserve its visible people, objects, architecture, geometry, layout, lighting, and composition unless the creator explicitly asks to alter them.
-- Resolve ambiguous motion as viewer-camera motion, not as a person moving with a camera. Example: Korean "짐벌과 카메라를 들고 앞으로 걸어간다" means a stabilized camera moves straight forward; it does not mean a gimbal, camera, or Korean text appears in frame.
-- State exact movement constraints. If the request is forward movement, forbid panning, orbiting, lateral drift, roll, and rotation unless requested.
-- Default to a silent visual clip. Never add dialogue, spoken words, narration, music, subtitles, captions, logos, watermarks, or readable text unless explicitly requested.
-- Do not invent people, vehicles, objects, actions, or text.
-- Keep each string short. cameraConstraints and visualConstraints must be arrays of short English strings.`,
-      JSON.stringify({ creatorPrompt: prompt, hasReferenceImage }),
+- Write concise, natural English only. Translate intent; never copy Korean into the output.
+- Build one chronological shot: opening frame anchor -> action onset -> continuous development -> resolved ending frame. Do not invent a second scene or cut.
+- When hasReferenceImage is true, the supplied image is the exact visual state at 0.00 seconds. Preserve its visible subject identity, objects, architecture, layout, lighting, materials, and framing unless the creator explicitly asks for a change.
+- Separate what is visible from cinematography. Camera, lens, gimbal, dolly, crane, pan, tilt, orbit, and handheld normally describe viewer-camera motion. Do not make them visible props, people, dialogue, or text unless explicitly requested.
+- Express one dominant camera motion as a complete natural sentence using a standard motion term (for example Push In, Pull Out, Pan, Track) plus direction, amplitude, and speed. If the creator asks to move forward, use a straight Push In; do not reinterpret it as orbiting or a lateral move.
+- continuity is an array of at most three short, positive visual-consistency directions. Do not list forbidden items or use negative prompts.
+- Default to a silent clip: overallSoundscape and nonDiegeticMusic must be "N/A" unless audio is explicitly requested. Do not add dialogue, narration, subtitles, captions, logos, watermarks, signs, or readable text unless explicitly requested.
+- Do not invent people, vehicles, objects, actions, text, or sound.
+- Keep every string under 700 characters.`,
+      JSON.stringify({ creatorPrompt: prompt, ...options }),
     );
 
     return {
-      subject: text(compiled.subject, fallback.subject),
-      sceneAction: text(compiled.sceneAction, fallback.sceneAction),
-      cameraMovement: text(compiled.cameraMovement, fallback.cameraMovement),
-      cameraConstraints: textList(compiled.cameraConstraints, fallback.cameraConstraints),
-      visualConstraints: textList(compiled.visualConstraints, fallback.visualConstraints),
+      openingFrame: text(compiled.openingFrame, fallback.openingFrame),
+      actionProgression: text(compiled.actionProgression, fallback.actionProgression),
+      cameraDirection: text(compiled.cameraDirection, fallback.cameraDirection),
+      endingFrame: text(compiled.endingFrame, fallback.endingFrame),
+      continuity: textList(compiled.continuity, fallback.continuity),
+      overallSoundscape: text(compiled.overallSoundscape, fallback.overallSoundscape, 300),
+      nonDiegeticMusic: text(compiled.nonDiegeticMusic, fallback.nonDiegeticMusic, 300),
     };
   } catch {
-    // A render must remain available if the intent compiler is temporarily unavailable.
+    // Rendering remains available if the intent compiler is temporarily unavailable.
     return fallback;
   }
 }
 
+/** Builds the literal field order recommended by the public H3 I2VA guide. */
 export function buildVideoModelPrompt(intent: VideoIntent, hasReferenceImage: boolean) {
+  const alignment = hasReferenceImage
+    ? 'For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.'
+    : 'For the target video, establish the described opening composition at 0.00 seconds.';
+  const visual = [
+    intent.openingFrame,
+    intent.actionProgression,
+    intent.cameraDirection,
+    intent.endingFrame,
+    ...intent.continuity,
+  ].join(' ');
+
   return [
-    'VIDEO PRODUCTION INSTRUCTION. Follow these as visual direction, not as dialogue or on-screen text.',
-    hasReferenceImage ? 'REFERENCE IMAGE: Treat the supplied image as the exact first frame and preserve its visual identity.' : 'REFERENCE IMAGE: None.',
-    `SUBJECT: ${intent.subject}`,
-    `SCENE ACTION: ${intent.sceneAction}`,
-    `CAMERA MOVEMENT: ${intent.cameraMovement}`,
-    `CAMERA CONSTRAINTS: ${intent.cameraConstraints.join('; ')}.`,
-    `VISUAL CONSTRAINTS: ${intent.visualConstraints.join('; ')}.`,
-    'AUDIO: silent. Do not generate speech, voices, narration, music, or sound effects.',
-    'ON-SCREEN TEXT: none.',
-  ].join('\n');
+    alignment,
+    `integrated_multimodal_description: ${visual}`,
+    `overall_soundscape: ${intent.overallSoundscape}`,
+    `non_diegetic_music: ${intent.nonDiegeticMusic}`,
+  ].join('\n\n');
 }
