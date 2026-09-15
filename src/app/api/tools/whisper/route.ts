@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUserFast } from '@/lib/auth';
 import { queueRunpodJob, getRunpodJobStatus, getRunpodEndpointId } from '@/lib/server/runpod';
 import { beginMeteredOperation, finishMeteredOperation, failMeteredOperation } from '@/lib/server/operation-ledger';
-import { uploadBuffer } from '@/lib/server/storage';
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const POLL_INTERVAL = 2000;
 const MAX_POLLS = 150; // 5분
 
@@ -29,32 +27,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const form = await req.formData();
-    const file = form.get('file');
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: '오디오 파일을 선택해 주세요.' }, { status: 400 });
+    const { audioUrl, language = 'ko', fileName = 'audio' } = await req.json();
+    if (!audioUrl || typeof audioUrl !== 'string') {
+      return NextResponse.json({ error: '오디오 URL이 필요합니다.' }, { status: 400 });
     }
-
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-    const supported = ['mp3', 'm4a', 'wav', 'ogg', 'flac', 'webm', 'mp4', 'mpeg', 'mpga', 'oga', 'wma', 'aac'];
-    if (!supported.includes(ext)) {
-      return NextResponse.json({ error: `지원하지 않는 형식입니다. 지원: ${supported.join(', ')}` }, { status: 400 });
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: '파일은 100MB 이하만 지원합니다.' }, { status: 400 });
-    }
-
-    const language = (form.get('language') as string) ?? 'ko';
-
-    const bytes = Buffer.from(await file.arrayBuffer());
-    const audioPath = `whisper-input/${user.id}/${Date.now()}-${file.name}`;
-    const audioUrl = await uploadBuffer(audioPath, bytes, file.type || 'audio/mpeg');
 
     const ledger = await beginMeteredOperation({
       userId: user.id,
       engine: 'whisper',
-      prompt: file.name,
+      prompt: fileName,
       aspect: 'audio',
       style: language,
     });

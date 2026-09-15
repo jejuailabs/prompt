@@ -268,23 +268,40 @@ function WhisperTool() {
   const [language, setLanguage] = useState('ko');
   const [result, setResult] = useState<{ text: string; srt: string; segments: { start: number; end: number; text: string }[]; engine?: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
   const [error, setError] = useState('');
 
   async function create() {
     if (!file) return;
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setStatus('오디오 파일 업로드 중…');
     try {
-      const body = new FormData();
-      body.append('file', file);
-      body.append('language', language);
-      const response = await fetch('/api/tools/whisper', { method: 'POST', body });
+      const signRes = await fetch('/api/tools/whisper/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, contentType: file.type }),
+      });
+      const signData = await signRes.json();
+      if (!signRes.ok) throw new Error(signData.error);
+
+      await fetch(signData.signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'audio/mpeg' },
+        body: file,
+      }).then((r) => { if (!r.ok) throw new Error('오디오 파일 업로드에 실패했습니다.'); });
+
+      setStatus('GPU에서 음성 분석 중… (1~3분 소요)');
+      const response = await fetch('/api/tools/whisper', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioUrl: signData.publicUrl, language, fileName: file.name }),
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       setResult(data);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : '음성 인식에 실패했습니다.');
     } finally {
-      setLoading(false);
+      setLoading(false); setStatus('');
     }
   }
 
@@ -335,7 +352,7 @@ function WhisperTool() {
       <button onClick={create} disabled={loading || !file}
         className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 font-semibold text-primary-foreground">
         {loading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-        {loading ? 'GPU에서 음성 분석 중… (1~3분 소요)' : '텍스트로 변환하기'}
+        {loading ? (status || 'GPU에서 음성 분석 중…') : '텍스트로 변환하기'}
       </button>
 
       <ErrorBox text={error} />
