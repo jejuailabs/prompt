@@ -7,9 +7,10 @@ import { fail, ok } from '@/lib/server/handler';
 export async function POST(req: NextRequest) {
   try {
     const user = await getSessionUser().catch(() => null);
-    const { artifactId, durationMs } = (await req.json()) as {
+    const { artifactId, durationMs, score } = (await req.json()) as {
       artifactId?: string;
       durationMs?: number;
+      score?: number;
     };
     if (!artifactId) return ok({ recorded: false });
 
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
         artifactId,
         userId: user?.id ?? null,
         durationMs: durationMs ?? 0,
+        score: score ?? 0,
       },
     });
 

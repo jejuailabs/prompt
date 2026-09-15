@@ -68,7 +68,8 @@ function update(){
 }
 
 function endGame(winner){running=false;overlay.querySelector('h1').textContent=winner==='YOU'?'YOU WIN!':'GAME OVER';
-  overlay.querySelectorAll('p')[0].textContent=`${pScore} : ${cScore}`;overlay.querySelector('button').textContent='다시 시작';overlay.style.display='flex';}
+  overlay.querySelectorAll('p')[0].textContent=`${pScore} : ${cScore}`;overlay.querySelector('button').textContent='다시 시작';overlay.style.display='flex';
+  try{window.parent.postMessage({type:'game-score',score:pScore*100},'*');}catch{}}
 
 function draw(){
   ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);

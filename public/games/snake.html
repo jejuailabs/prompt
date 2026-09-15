@@ -48,7 +48,8 @@ function update(){
   if(head.x<0||head.x>=CW||head.y<0||head.y>=CH||snake.some(s=>s.x===head.x&&s.y===head.y)){
     running=false;if(score>best)best=score;hBest.textContent='BEST '+best;
     overlay.querySelector('h1').textContent='GAME OVER';overlay.querySelectorAll('p')[0].textContent=`점수: ${score}`;
-    overlay.querySelector('button').textContent='다시 시작';overlay.style.display='flex';return;
+    overlay.querySelector('button').textContent='다시 시작';overlay.style.display='flex';
+    try{window.parent.postMessage({type:'game-score',score},'*');}catch{}return;
   }
   snake.unshift(head);
   if(head.x===food.x&&head.y===food.y){score+=10;hScore.textContent='SCORE '+score;speed=Math.max(50,speed-2);placeFood();}

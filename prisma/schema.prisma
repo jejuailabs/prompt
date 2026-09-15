@@ -459,6 +459,7 @@ model GamePlay {
   userId     String?
   user       Profile? @relation(fields: [userId], references: [id])
   durationMs Int      @default(0)
+  score      Int      @default(0)
   createdAt  DateTime @default(now())
 }
 

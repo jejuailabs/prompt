@@ -58,6 +58,7 @@ function update(){
 function die(){running=false;gameOver=true;if(score>best){best=score;hBest.textContent='BEST '+best;}
   overlay.querySelector('h1').textContent='GAME OVER';overlay.querySelectorAll('p')[0].textContent=`점수: ${score}`;
   overlay.querySelector('button').textContent='다시 시작';overlay.style.display='flex';
+  try{window.parent.postMessage({type:'game-score',score},'*');}catch{}
 }
 
 function draw(){

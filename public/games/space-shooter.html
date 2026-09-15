@@ -171,6 +171,7 @@
     overlay.querySelectorAll('p')[0].textContent = '최종 점수: ' + score + ' · 도달 웨이브: ' + wave;
     overlay.querySelector('button').textContent = '다시 도전';
     overlay.style.display = 'flex';
+    try{window.parent.postMessage({type:'game-score',score},'*');}catch{}
   }
   document.getElementById('btnStart').addEventListener('click', start);
 })();

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>네온 마인 — Minesweeper</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#e0e0e0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;user-select:none;-webkit-user-select:none}
+#game-wrap{position:relative;max-width:96vw;max-height:96vh;display:flex;flex-direction:column;align-items:center}
+#hud{display:flex;gap:24px;margin-bottom:10px;font-size:15px;font-weight:600;letter-spacing:.5px}
+.hud-item{display:flex;align-items:center;gap:6px;color:#22c55e;text-shadow:0 0 8px rgba(34,197,94,.5)}
+.hud-item span{color:#e0e0e0}
+canvas{display:block;border-radius:8px;border:1px solid rgba(34,197,94,.25);box-shadow:0 0 20px rgba(34,197,94,.12)}
+#badge{margin-top:8px;font-size:9px;letter-spacing:2px;color:rgba(34,197,94,.35);text-align:center}
+/* overlay */
+#overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;background:rgba(10,10,26,.92);border-radius:8px}
+#overlay.hidden{display:none}
+.overlay-box{text-align:center;padding:30px 36px;max-width:340px}
+.overlay-box h1{font-size:28px;color:#22c55e;text-shadow:0 0 16px rgba(34,197,94,.6);margin-bottom:10px}
+.overlay-box p{font-size:14px;color:#a0a0b0;line-height:1.6;margin-bottom:20px}
+.overlay-box button{background:linear-gradient(135deg,#22c55e,#16a34a);border:none;color:#fff;font-size:16px;font-weight:700;padding:12px 36px;border-radius:8px;cursor:pointer;letter-spacing:1px;transition:transform .15s,box-shadow .15s}
+.overlay-box button:hover{transform:scale(1.05);box-shadow:0 0 20px rgba(34,197,94,.5)}
+</style>
+</head>
+<body>
+<div id="game-wrap">
+  <div id="hud">
+    <div class="hud-item">💣 <span id="mine-count">15</span></div>
+    <div class="hud-item">⏱ <span id="timer">0</span></div>
+  </div>
+  <canvas id="canvas"></canvas>
+  <div id="badge">PLAYLAB SANDBOX · TIER 1 IFRAME ENGINE</div>
+  <div id="overlay">
+    <div class="overlay-box">
+      <h1>네온 마인</h1>
+      <p>어둠 속에 숨겨진 15개의 지뢰를 피해<br>모든 안전한 칸을 밝혀내세요!<br><br>🖱 클릭: 칸 열기 &nbsp; 우클릭: 깃발<br>📱 탭: 칸 열기 &nbsp; 길게 누르기: 깃발</p>
+      <button id="start-btn">게임 시작</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ── Constants ── */
+var ROWS = 10, COLS = 10, MINES = 15;
+var CELL_GAP = 3;
+var BG = "#0a0a1a";
+var NEON = "#22c55e";
+var NUM_COLORS = {1:"#06b6d4",2:"#22c55e",3:"#ef4444",4:"#a855f7",5:"#f97316",6:"#14b8a6",7:"#1e293b",8:"#6b7280"};
+
+/* ── State — all initialized before any render ── */
+var canvas = document.getElementById("canvas");
+var ctx = canvas.getContext("2d");
+var mineCountEl = document.getElementById("mine-count");
+var timerEl = document.getElementById("timer");
+var overlay = document.getElementById("overlay");
+var startBtn = document.getElementById("start-btn");
+
+var cellSize = 0;
+var grid = [];        // 2D: {mine,revealed,flagged,adjacent}
+var gameState = "idle"; // idle | playing | won | lost
+var firstClick = true;
+var flagCount = 0;
+var revealedCount = 0;
+var timerVal = 0;
+var timerInterval = null;
+var particles = [];
+var explosions = [];
+var animFrame = null;
+var longPressTimer = null;
+var longPressTriggered = false;
+var touchStartPos = null;
+
+/* ── Sizing ── */
+function resize(){
+  var maxW = Math.min(window.innerWidth * 0.96, 520);
+  var maxH = Math.min(window.innerHeight * 0.96 - 80, 520);
+  var s = Math.floor(Math.min(maxW, maxH) / COLS);
+  cellSize = Math.max(s, 28);
+  canvas.width = cellSize * COLS;
+  canvas.height = cellSize * ROWS;
+  draw();
+}
+
+/* ── Grid init ── */
+function initGrid(){
+  grid = [];
+  for(var r=0;r<ROWS;r++){
+    grid[r]=[];
+    for(var c=0;c<COLS;c++){
+      grid[r][c]={mine:false,revealed:false,flagged:false,adjacent:0};
+    }
+  }
+}
+
+function placeMines(safeR, safeC){
+  var placed=0;
+  while(placed<MINES){
+    var r=Math.floor(Math.random()*ROWS);
+    var c=Math.floor(Math.random()*COLS);
+    if(grid[r][c].mine) continue;
+    if(Math.abs(r-safeR)<=1 && Math.abs(c-safeC)<=1) continue;
+    grid[r][c].mine=true;
+    placed++;
+  }
+  // compute adjacency
+  for(var r=0;r<ROWS;r++){
+    for(var c=0;c<COLS;c++){
+      if(grid[r][c].mine) continue;
+      var count=0;
+      forNeighbors(r,c,function(nr,nc){if(grid[nr][nc].mine)count++;});
+      grid[r][c].adjacent=count;
+    }
+  }
+}
+
+function forNeighbors(r,c,fn){
+  for(var dr=-1;dr<=1;dr++){
+    for(var dc=-1;dc<=1;dc++){
+      if(dr===0&&dc===0)continue;
+      var nr=r+dr, nc=c+dc;
+      if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS) fn(nr,nc);
+    }
+  }
+}
+
+/* ── Drawing ── */
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle=BG;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  for(var r=0;r<ROWS;r++){
+    for(var c=0;c<COLS;c++){
+      drawCell(r,c);
+    }
+  }
+
+  // explosions
+  for(var i=explosions.length-1;i>=0;i--){
+    var e=explosions[i];
+    e.t+=0.04;
+    if(e.t>=1){explosions.splice(i,1);continue;}
+    var alpha=1-e.t;
+    var rad=cellSize*0.6*(0.5+e.t);
+    ctx.beginPath();
+    ctx.arc(e.x,e.y,rad,0,Math.PI*2);
+    ctx.fillStyle="rgba(239,68,68,"+alpha*0.5+")";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(e.x,e.y,rad*0.5,0,Math.PI*2);
+    ctx.fillStyle="rgba(255,200,60,"+alpha*0.7+")";
+    ctx.fill();
+  }
+
+  // particles (win)
+  for(var i=particles.length-1;i>=0;i--){
+    var p=particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.12; p.life-=0.012;
+    if(p.life<=0){particles.splice(i,1);continue;}
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.fillRect(p.x-2,p.y-2,4,4);
+    ctx.globalAlpha=1;
+  }
+
+  if(gameState==="playing" || explosions.length>0 || particles.length>0){
+    animFrame=requestAnimationFrame(draw);
+  }
+}
+
+function drawCell(r,c){
+  var cell=grid[r][c];
+  var x=c*cellSize+CELL_GAP/2;
+  var y=r*cellSize+CELL_GAP/2;
+  var s=cellSize-CELL_GAP;
+  var rad=4;
+
+  if(cell.revealed){
+    if(cell.mine){
+      // mine cell
+      ctx.fillStyle="#1a0808";
+      roundRect(ctx,x,y,s,s,rad);
+      ctx.fill();
+      // mine icon
+      ctx.fillStyle="#ef4444";
+      ctx.beginPath();
+      ctx.arc(x+s/2,y+s/2,s*0.22,0,Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle="#ef4444";
+      ctx.lineWidth=2;
+      for(var a=0;a<4;a++){
+        var ang=a*Math.PI/4;
+        ctx.beginPath();
+        ctx.moveTo(x+s/2+Math.cos(ang)*s*0.12,y+s/2+Math.sin(ang)*s*0.12);
+        ctx.lineTo(x+s/2+Math.cos(ang)*s*0.32,y+s/2+Math.sin(ang)*s*0.32);
+        ctx.stroke();
+      }
+    } else {
+      // revealed safe
+      ctx.fillStyle="#111128";
+      roundRect(ctx,x,y,s,s,rad);
+      ctx.fill();
+      if(cell.adjacent>0){
+        ctx.fillStyle=NUM_COLORS[cell.adjacent]||"#ccc";
+        ctx.font="bold "+Math.floor(s*0.52)+"px 'Segoe UI',sans-serif";
+        ctx.textAlign="center";ctx.textBaseline="middle";
+        ctx.fillText(cell.adjacent,x+s/2,y+s/2+1);
+      }
+    }
+  } else {
+    // unrevealed
+    var glow = (gameState==="playing" || gameState==="idle");
+    ctx.fillStyle="#161636";
+    roundRect(ctx,x,y,s,s,rad);
+    ctx.fill();
+    if(glow){
+      ctx.strokeStyle="rgba(34,197,94,0.18)";
+      ctx.lineWidth=1;
+      roundRect(ctx,x,y,s,s,rad);
+      ctx.stroke();
+    }
+    if(cell.flagged){
+      // flag
+      ctx.fillStyle="#f59e0b";
+      ctx.font=Math.floor(s*0.45)+"px serif";
+      ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.fillText("🚩",x+s/2,y+s/2+1);
+    }
+  }
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+/* ── Game Logic ── */
+function revealCell(r,c){
+  if(r<0||r>=ROWS||c<0||c>=COLS) return;
+  var cell=grid[r][c];
+  if(cell.revealed||cell.flagged) return;
+
+  if(firstClick){
+    firstClick=false;
+    placeMines(r,c);
+    startTimer();
+  }
+
+  cell.revealed=true;
+  revealedCount++;
+
+  if(cell.mine){
+    gameOver();
+    return;
+  }
+
+  // flood fill
+  if(cell.adjacent===0){
+    forNeighbors(r,c,function(nr,nc){revealCell(nr,nc);});
+  }
+
+  checkWin();
+}
+
+function toggleFlag(r,c){
+  if(gameState!=="playing"&&gameState!=="idle") return;
+  var cell=grid[r][c];
+  if(cell.revealed) return;
+  cell.flagged=!cell.flagged;
+  flagCount+=(cell.flagged?1:-1);
+  mineCountEl.textContent=MINES-flagCount;
+  draw();
+}
+
+function gameOver(){
+  gameState="lost";
+  stopTimer();
+  // reveal all mines with explosion
+  for(var r=0;r<ROWS;r++){
+    for(var c=0;c<COLS;c++){
+      if(grid[r][c].mine){
+        grid[r][c].revealed=true;
+        explosions.push({
+          x:c*cellSize+cellSize/2,
+          y:r*cellSize+cellSize/2,
+          t:Math.random()*0.3
+        });
+      }
+    }
+  }
+  animFrame=requestAnimationFrame(draw);
+  setTimeout(function(){
+    showOverlayMsg("💥 게임 오버","지뢰를 밟았습니다!","다시 시작");
+  },1200);
+}
+
+function checkWin(){
+  var safeCells=ROWS*COLS-MINES;
+  if(revealedCount>=safeCells){
+    gameState="won";
+    stopTimer();
+    var score=revealedCount*10+Math.max(0,500-timerVal);
+    // particles
+    for(var i=0;i<120;i++){
+      particles.push({
+        x:canvas.width/2,y:canvas.height/2,
+        vx:(Math.random()-0.5)*8,
+        vy:(Math.random()-0.5)*8-3,
+        life:1,
+        color:["#22c55e","#06b6d4","#f59e0b","#a855f7","#ef4444"][Math.floor(Math.random()*5)]
+      });
+    }
+    animFrame=requestAnimationFrame(draw);
+    try{window.parent.postMessage({type:"game-score",score:score},"*");}catch(e){}
+    setTimeout(function(){
+      showOverlayMsg("🎉 승리!","점수: "+score+"점\n(셀 "+revealedCount+"×10 + 시간보너스 "+Math.max(0,500-timerVal)+")","다시 시작");
+    },1500);
+  }
+}
+
+/* ── Timer ── */
+function startTimer(){
+  gameState="playing";
+  timerVal=0;
+  timerEl.textContent="0";
+  timerInterval=setInterval(function(){
+    timerVal++;
+    timerEl.textContent=timerVal;
+  },1000);
+}
+function stopTimer(){
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+}
+
+/* ── Overlay ── */
+function showOverlayMsg(title,msg,btnText){
+  overlay.classList.remove("hidden");
+  overlay.innerHTML='<div class="overlay-box"><h1>'+title+'</h1><p>'+msg.replace(/\n/g,"<br>")+'</p><button id="restart-btn">'+btnText+'</button></div>';
+  document.getElementById("restart-btn").addEventListener("click",startGame);
+}
+
+/* ── Start ── */
+function startGame(){
+  overlay.classList.add("hidden");
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  stopTimer();
+  initGrid();
+  firstClick=true;
+  flagCount=0;
+  revealedCount=0;
+  timerVal=0;
+  timerEl.textContent="0";
+  mineCountEl.textContent=MINES;
+  gameState="idle";
+  particles=[];
+  explosions=[];
+  draw();
+}
+
+/* ── Input: mouse ── */
+function getCellFromXY(px,py){
+  var rect=canvas.getBoundingClientRect();
+  var x=px-rect.left, y=py-rect.top;
+  var c=Math.floor(x/cellSize), r=Math.floor(y/cellSize);
+  if(r<0||r>=ROWS||c<0||c>=COLS) return null;
+  return {r:r,c:c};
+}
+
+canvas.addEventListener("click",function(e){
+  if(gameState==="won"||gameState==="lost") return;
+  var cell=getCellFromXY(e.clientX,e.clientY);
+  if(!cell) return;
+  revealCell(cell.r,cell.c);
+  draw();
+});
+
+canvas.addEventListener("contextmenu",function(e){
+  e.preventDefault();
+  if(gameState==="won"||gameState==="lost") return;
+  var cell=getCellFromXY(e.clientX,e.clientY);
+  if(!cell) return;
+  toggleFlag(cell.r,cell.c);
+});
+
+/* ── Input: touch (long press = flag) ── */
+canvas.addEventListener("touchstart",function(e){
+  e.preventDefault();
+  if(gameState==="won"||gameState==="lost") return;
+  var t=e.touches[0];
+  touchStartPos={x:t.clientX,y:t.clientY};
+  longPressTriggered=false;
+  longPressTimer=setTimeout(function(){
+    longPressTriggered=true;
+    var cell=getCellFromXY(touchStartPos.x,touchStartPos.y);
+    if(cell) toggleFlag(cell.r,cell.c);
+  },500);
+},{passive:false});
+
+canvas.addEventListener("touchmove",function(e){
+  if(longPressTimer){
+    var t=e.touches[0];
+    if(touchStartPos && (Math.abs(t.clientX-touchStartPos.x)>10||Math.abs(t.clientY-touchStartPos.y)>10)){
+      clearTimeout(longPressTimer);longPressTimer=null;
+    }
+  }
+},{passive:true});
+
+canvas.addEventListener("touchend",function(e){
+  e.preventDefault();
+  if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;}
+  if(longPressTriggered) return;
+  if(gameState==="won"||gameState==="lost") return;
+  if(!touchStartPos) return;
+  var cell=getCellFromXY(touchStartPos.x,touchStartPos.y);
+  if(cell){revealCell(cell.r,cell.c);draw();}
+  touchStartPos=null;
+},{passive:false});
+
+/* ── Boot ── */
+startBtn.addEventListener("click",startGame);
+initGrid();
+resize();
+window.addEventListener("resize",resize);
+
+})();
+</script>
+</body>
+</html>

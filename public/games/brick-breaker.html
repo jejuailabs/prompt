@@ -71,7 +71,8 @@ function update(){
   if(bricks.every(b=>!b.alive)){level++;ball.speed=Math.min(8,4+level*.5);makeBricks();resetBall();}
 }
 
-function showOverlay(title,desc){overlay.style.display='flex';overlay.querySelector('h1').textContent=title;overlay.querySelector('p').textContent=desc;btnStart.textContent=gameOver?'다시 시작':'게임 시작';}
+function showOverlay(title,desc){overlay.style.display='flex';overlay.querySelector('h1').textContent=title;overlay.querySelector('p').textContent=desc;btnStart.textContent=gameOver?'다시 시작':'게임 시작';
+  if(gameOver)try{window.parent.postMessage({type:'game-score',score},'*');}catch{}}
 
 function startGame(){overlay.style.display='none';if(gameOver){score=0;lives=3;level=1;ball.speed=4;gameOver=false;hLives.textContent='♥♥♥';}makeBricks();resetBall();running=true;}
 

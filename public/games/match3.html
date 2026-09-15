@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>매치 크러시 - Match Crush</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #0a0a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
+    overflow: hidden;
+    color: #fff;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas {
+    display: block;
+    max-width: 96vw;
+    max-height: 96vh;
+    border-radius: 12px;
+  }
+  #badge {
+    position: fixed;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #ec489966;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="badge">PLAYLAB SANDBOX &middot; TIER 1 IFRAME ENGINE</div>
+<script>
+'use strict';
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// ── Constants ──
+const COLS = 8, ROWS = 8;
+const GEMS = ['🐱','🐶','🐰','🦊','🐸','🐵','🍓','🍊'];
+const GEM_COLORS = ['#f472b6','#60a5fa','#fbbf24','#fb923c','#34d399','#a78bfa','#f87171','#fdba74'];
+const TIME_LIMIT = 60;
+const MATCH3_SCORE = 100, MATCH4_SCORE = 300, MATCH5_SCORE = 500;
+
+// ── Layout (computed on resize) ──
+let CELL = 60, PAD = 4, BOARD_X = 0, BOARD_Y = 0, W = 0, H = 0;
+let HUD_H = 70;
+
+// ── Game state (fully initialized) ──
+let board = [];
+let falling = false;
+let swapping = false;
+let swapA = null, swapB = null, swapT = 0;
+let selected = null;
+let dragStart = null;
+let score = 0;
+let combo = 0;
+let timeLeft = TIME_LIMIT;
+let timerInterval = null;
+let gameState = 'start'; // start | playing | over
+let particles = [];
+let floatingTexts = [];
+let shakeTimer = 0;
+let lastTime = 0;
+let hintTimer = 0;
+let hintCell = null;
+
+// ── Resize ──
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  const maxW = Math.min(window.innerWidth * 0.96, 560);
+  const maxH = Math.min(window.innerHeight * 0.96, 700);
+  CELL = Math.floor(Math.min((maxW - 20) / COLS, (maxH - HUD_H - 60) / ROWS));
+  CELL = Math.max(CELL, 36);
+  PAD = Math.max(2, Math.floor(CELL * 0.06));
+  const boardW = COLS * CELL;
+  const boardH = ROWS * CELL;
+  W = boardW + 20;
+  H = boardH + HUD_H + 50;
+  BOARD_X = (W - boardW) / 2;
+  BOARD_Y = HUD_H + 10;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Board helpers ──
+function randomGem() { return Math.floor(Math.random() * GEMS.length); }
+
+function initBoard() {
+  board = [];
+  for (let r = 0; r < ROWS; r++) {
+    board[r] = [];
+    for (let c = 0; c < COLS; c++) {
+      let g;
+      do {
+        g = randomGem();
+      } while (
+        (c >= 2 && board[r][c-1]?.type === g && board[r][c-2]?.type === g) ||
+        (r >= 2 && board[r-1]?.[c]?.type === g && board[r-2]?.[c]?.type === g)
+      );
+      board[r][c] = { type: g, x: c, y: r, offsetY: 0, scale: 1, alpha: 1 };
+    }
+  }
+}
+
+function cellAt(px, py) {
+  const c = Math.floor((px - BOARD_X) / CELL);
+  const r = Math.floor((py - BOARD_Y) / CELL);
+  if (c >= 0 && c < COLS && r >= 0 && r < ROWS) return { r, c };
+  return null;
+}
+
+// ── Match finding ──
+function findMatches() {
+  const matched = new Set();
+  // Horizontal
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS - 2; c++) {
+      const t = board[r][c].type;
+      if (t < 0) continue;
+      let len = 1;
+      while (c + len < COLS && board[r][c + len].type === t) len++;
+      if (len >= 3) {
+        for (let i = 0; i < len; i++) matched.add(r * COLS + (c + i));
+      }
+      c += len - 1;
+    }
+  }
+  // Vertical
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS - 2; r++) {
+      const t = board[r][c].type;
+      if (t < 0) continue;
+      let len = 1;
+      while (r + len < ROWS && board[r + len][c].type === t) len++;
+      if (len >= 3) {
+        for (let i = 0; i < len; i++) matched.add((r + i) * COLS + c);
+      }
+      r += len - 1;
+    }
+  }
+  return matched;
+}
+
+function scoreForGroup(size) {
+  if (size >= 5) return MATCH5_SCORE;
+  if (size >= 4) return MATCH4_SCORE;
+  return MATCH3_SCORE;
+}
+
+function groupMatches(matched) {
+  // Group connected matched cells
+  const visited = new Set();
+  const groups = [];
+  for (const id of matched) {
+    if (visited.has(id)) continue;
+    const group = [];
+    const stack = [id];
+    while (stack.length) {
+      const cur = stack.pop();
+      if (visited.has(cur)) continue;
+      visited.add(cur);
+      group.push(cur);
+      const cr = Math.floor(cur / COLS), cc = cur % COLS;
+      const t = board[cr][cc].type;
+      for (const [dr, dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+        const nr = cr+dr, nc = cc+dc;
+        if (nr>=0&&nr<ROWS&&nc>=0&&nc<COLS) {
+          const nid = nr*COLS+nc;
+          if (matched.has(nid) && !visited.has(nid) && board[nr][nc].type === t) {
+            stack.push(nid);
+          }
+        }
+      }
+    }
+    groups.push(group);
+  }
+  return groups;
+}
+
+// ── Particles ──
+function spawnParticles(cx, cy, color) {
+  for (let i = 0; i < 8; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 3;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      color,
+      size: 2 + Math.random() * 4
+    });
+  }
+}
+
+function spawnFloatingText(cx, cy, text) {
+  floatingTexts.push({ x: cx, y: cy, text, life: 1, vy: -1.5 });
+}
+
+// ── Remove matches & cascade ──
+function removeMatches() {
+  const matched = findMatches();
+  if (matched.size === 0) { combo = 0; return false; }
+  combo++;
+  const groups = groupMatches(matched);
+  for (const group of groups) {
+    const size = group.length;
+    const pts = scoreForGroup(size) * combo;
+    score += pts;
+    // Center of group for floating text
+    let cx = 0, cy = 0;
+    for (const id of group) {
+      const r = Math.floor(id / COLS), c = id % COLS;
+      const px = BOARD_X + c * CELL + CELL / 2;
+      const py = BOARD_Y + r * CELL + CELL / 2;
+      spawnParticles(px, py, GEM_COLORS[board[r][c].type]);
+      cx += px; cy += py;
+    }
+    cx /= group.length; cy /= group.length;
+    let label = '+' + pts;
+    if (combo > 1) label += ' x' + combo;
+    spawnFloatingText(cx, cy, label);
+  }
+  shakeTimer = 0.15;
+  // Remove
+  for (const id of matched) {
+    const r = Math.floor(id / COLS), c = id % COLS;
+    board[r][c].type = -1;
+  }
+  return true;
+}
+
+function applyGravity() {
+  let moved = false;
+  for (let c = 0; c < COLS; c++) {
+    let writeRow = ROWS - 1;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (board[r][c].type >= 0) {
+        if (writeRow !== r) {
+          board[writeRow][c].type = board[r][c].type;
+          board[writeRow][c].offsetY = (r - writeRow) * CELL;
+          board[r][c].type = -1;
+          moved = true;
+        }
+        writeRow--;
+      }
+    }
+    // Fill empty top
+    for (let r = writeRow; r >= 0; r--) {
+      board[r][c].type = randomGem();
+      board[r][c].offsetY = -(writeRow - r + 1) * CELL - CELL;
+      moved = true;
+    }
+  }
+  return moved;
+}
+
+// ── Animate gravity ──
+function animateGravity(dt) {
+  let still = true;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = board[r][c];
+      if (Math.abs(cell.offsetY) > 0.5) {
+        cell.offsetY *= Math.pow(0.0005, dt);
+        if (cell.offsetY > 0) cell.offsetY = Math.max(0, cell.offsetY - 600 * dt);
+        else cell.offsetY = Math.min(0, cell.offsetY + 600 * dt);
+        if (Math.abs(cell.offsetY) < 1) cell.offsetY = 0;
+        else still = false;
+      } else {
+        cell.offsetY = 0;
+      }
+    }
+  }
+  return still;
+}
+
+// ── Swap logic ──
+function trySwap(a, b) {
+  if (swapping || falling) return;
+  if (Math.abs(a.r - b.r) + Math.abs(a.c - b.c) !== 1) return;
+  swapA = a; swapB = b; swapT = 0; swapping = true;
+  selected = null;
+  hintTimer = 0;
+  hintCell = null;
+}
+
+function commitSwap() {
+  const tmp = board[swapA.r][swapA.c].type;
+  board[swapA.r][swapA.c].type = board[swapB.r][swapB.c].type;
+  board[swapB.r][swapB.c].type = tmp;
+}
+
+// ── Hint system ──
+function findHint() {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      // Try swap right
+      if (c < COLS - 1) {
+        const tmp = board[r][c].type;
+        board[r][c].type = board[r][c+1].type;
+        board[r][c+1].type = tmp;
+        if (findMatches().size > 0) {
+          board[r][c+1].type = board[r][c].type;
+          board[r][c].type = tmp;
+          return { r, c };
+        }
+        board[r][c+1].type = board[r][c].type;
+        board[r][c].type = tmp;
+      }
+      // Try swap down
+      if (r < ROWS - 1) {
+        const tmp = board[r][c].type;
+        board[r][c].type = board[r+1][c].type;
+        board[r+1][c].type = tmp;
+        if (findMatches().size > 0) {
+          board[r+1][c].type = board[r][c].type;
+          board[r][c].type = tmp;
+          return { r, c };
+        }
+        board[r+1][c].type = board[r][c].type;
+        board[r][c].type = tmp;
+      }
+    }
+  }
+  return null;
+}
+
+function hasAnyMoves() {
+  return findHint() !== null;
+}
+
+function shuffleBoard() {
+  // Fisher-Yates on types
+  const types = [];
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) types.push(board[r][c].type);
+  for (let i = types.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [types[i], types[j]] = [types[j], types[i]];
+  }
+  let idx = 0;
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) board[r][c].type = types[idx++];
+}
+
+// ── Input ──
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const touch = e.touches ? e.touches[0] : e;
+  return {
+    x: (touch.clientX - rect.left) * (W / rect.width),
+    y: (touch.clientY - rect.top) * (H / rect.height)
+  };
+}
+
+function onDown(e) {
+  e.preventDefault();
+  if (gameState === 'start') { startGame(); return; }
+  if (gameState === 'over') return;
+  if (swapping || falling) return;
+  const pos = getPos(e);
+  const cell = cellAt(pos.x, pos.y);
+  if (!cell) return;
+  dragStart = { ...cell, px: pos.x, py: pos.y };
+  if (selected && (selected.r !== cell.r || selected.c !== cell.c)) {
+    trySwap(selected, cell);
+    dragStart = null;
+  } else {
+    selected = cell;
+  }
+}
+
+function onMove(e) {
+  e.preventDefault();
+  if (!dragStart || swapping || falling || gameState !== 'playing') return;
+  const pos = getPos(e);
+  const dx = pos.x - dragStart.px;
+  const dy = pos.y - dragStart.py;
+  const threshold = CELL * 0.3;
+  if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+    let dr = 0, dc = 0;
+    if (Math.abs(dx) > Math.abs(dy)) dc = dx > 0 ? 1 : -1;
+    else dr = dy > 0 ? 1 : -1;
+    const target = { r: dragStart.r + dr, c: dragStart.c + dc };
+    if (target.r >= 0 && target.r < ROWS && target.c >= 0 && target.c < COLS) {
+      trySwap(dragStart, target);
+    }
+    dragStart = null;
+  }
+}
+
+function onUp(e) {
+  e.preventDefault();
+  dragStart = null;
+}
+
+canvas.addEventListener('mousedown', onDown);
+canvas.addEventListener('mousemove', onMove);
+canvas.addEventListener('mouseup', onUp);
+canvas.addEventListener('touchstart', onDown, { passive: false });
+canvas.addEventListener('touchmove', onMove, { passive: false });
+canvas.addEventListener('touchend', onUp, { passive: false });
+
+// ── Game lifecycle ──
+function startGame() {
+  score = 0;
+  combo = 0;
+  timeLeft = TIME_LIMIT;
+  selected = null;
+  swapping = false;
+  falling = false;
+  particles = [];
+  floatingTexts = [];
+  shakeTimer = 0;
+  hintTimer = 0;
+  hintCell = null;
+  initBoard();
+  // Clear initial matches
+  let safety = 0;
+  while (findMatches().size > 0 && safety++ < 100) {
+    initBoard();
+  }
+  gameState = 'playing';
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (gameState !== 'playing') return;
+    timeLeft--;
+    if (timeLeft <= 0) {
+      timeLeft = 0;
+      endGame();
+    }
+  }, 1000);
+}
+
+function endGame() {
+  gameState = 'over';
+  if (timerInterval) clearInterval(timerInterval);
+  try {
+    window.parent.postMessage({ type: 'game-score', score }, '*');
+  } catch(e) {}
+}
+
+// ── Drawing helpers ──
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawGlow(x, y, w, h, color, blur) {
+  ctx.save();
+  ctx.shadowColor = color;
+  ctx.shadowBlur = blur;
+  ctx.fillStyle = color + '33';
+  roundRect(x, y, w, h, 8);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ── Main draw ──
+function draw(timestamp) {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  // Shake
+  let sx = 0, sy = 0;
+  if (shakeTimer > 0) {
+    shakeTimer -= dt;
+    sx = (Math.random() - 0.5) * 6;
+    sy = (Math.random() - 0.5) * 6;
+  }
+
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.clearRect(-10, -10, W + 20, H + 20);
+
+  // Background
+  ctx.fillStyle = '#0a0a1a';
+  ctx.fillRect(-10, -10, W + 20, H + 20);
+
+  if (gameState === 'playing' || gameState === 'over') {
+    drawHUD();
+    drawBoard(dt);
+    drawParticles(dt);
+    drawFloatingTexts(dt);
+
+    // Process matches after gravity settles
+    if (gameState === 'playing' && !swapping) {
+      const still = animateGravity(dt);
+      if (falling && still) {
+        if (removeMatches()) {
+          applyGravity();
+        } else {
+          falling = false;
+          if (!hasAnyMoves()) {
+            shuffleBoard();
+            falling = true;
+            applyGravity();
+          }
+        }
+      }
+    } else if (gameState === 'playing') {
+      animateGravity(dt);
+    }
+
+    // Swap animation
+    if (swapping) {
+      swapT += dt * 4;
+      if (swapT >= 1) {
+        commitSwap();
+        if (findMatches().size > 0) {
+          falling = true;
+          removeMatches();
+          applyGravity();
+        } else {
+          // Swap back
+          commitSwap();
+        }
+        swapping = false;
+        swapA = null; swapB = null;
+      }
+    }
+
+    // Hint
+    if (gameState === 'playing' && !swapping && !falling) {
+      hintTimer += dt;
+      if (hintTimer > 4 && !hintCell) {
+        hintCell = findHint();
+      }
+    }
+  }
+
+  if (gameState === 'start') drawStartScreen();
+  if (gameState === 'over') drawGameOver();
+
+  ctx.restore();
+  requestAnimationFrame(draw);
+}
+
+function drawHUD() {
+  // Score
+  ctx.save();
+  ctx.shadowColor = '#ec4899';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = '#ec4899';
+  ctx.font = 'bold 28px "Segoe UI", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('⭐ ' + score.toLocaleString(), 14, 38);
+  ctx.restore();
+
+  // Timer
+  const timerColor = timeLeft <= 10 ? '#f43f5e' : '#a78bfa';
+  ctx.save();
+  ctx.shadowColor = timerColor;
+  ctx.shadowBlur = timeLeft <= 10 ? 15 : 6;
+  ctx.fillStyle = timerColor;
+  ctx.font = 'bold 28px "Segoe UI", sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('⏱ ' + timeLeft + 's', W - 14, 38);
+  ctx.restore();
+
+  // Combo
+  if (combo > 1) {
+    ctx.save();
+    ctx.shadowColor = '#fbbf24';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 18px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🔥 ' + combo + 'x 콤보!', W / 2, 38);
+    ctx.restore();
+  }
+
+  // Timer bar
+  const barW = W - 28;
+  const pct = timeLeft / TIME_LIMIT;
+  ctx.fillStyle = '#1e1e3a';
+  roundRect(14, 52, barW, 8, 4);
+  ctx.fill();
+  const grad = ctx.createLinearGradient(14, 0, 14 + barW * pct, 0);
+  grad.addColorStop(0, '#ec4899');
+  grad.addColorStop(1, '#a855f7');
+  ctx.fillStyle = grad;
+  roundRect(14, 52, barW * pct, 8, 4);
+  ctx.fill();
+}
+
+function drawBoard(dt) {
+  // Board background
+  ctx.fillStyle = '#12122a';
+  roundRect(BOARD_X - 4, BOARD_Y - 4, COLS * CELL + 8, ROWS * CELL + 8, 10);
+  ctx.fill();
+  ctx.strokeStyle = '#ec489944';
+  ctx.lineWidth = 1.5;
+  roundRect(BOARD_X - 4, BOARD_Y - 4, COLS * CELL + 8, ROWS * CELL + 8, 10);
+  ctx.stroke();
+
+  // Cells
+  const fontSize = Math.floor(CELL * 0.55);
+  ctx.font = fontSize + 'px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = board[r][c];
+      if (cell.type < 0) continue;
+
+      let px = BOARD_X + c * CELL;
+      let py = BOARD_Y + r * CELL + cell.offsetY;
+
+      // Swap animation offset
+      if (swapping && swapA && swapB) {
+        const easeT = swapT < 0.5 ? 2 * swapT * swapT : 1 - Math.pow(-2 * swapT + 2, 2) / 2;
+        if (r === swapA.r && c === swapA.c) {
+          px += (swapB.c - swapA.c) * CELL * easeT;
+          py += (swapB.r - swapA.r) * CELL * easeT;
+        } else if (r === swapB.r && c === swapB.c) {
+          px += (swapA.c - swapB.c) * CELL * easeT;
+          py += (swapA.r - swapB.r) * CELL * easeT;
+        }
+      }
+
+      // Cell background
+      const isSelected = selected && selected.r === r && selected.c === c;
+      const isHint = hintCell && hintCell.r === r && hintCell.c === c;
+
+      ctx.fillStyle = (r + c) % 2 === 0 ? '#1a1a3a' : '#161633';
+      roundRect(px + PAD, py + PAD, CELL - PAD * 2, CELL - PAD * 2, 6);
+      ctx.fill();
+
+      if (isSelected) {
+        drawGlow(px + 1, py + 1, CELL - 2, CELL - 2, '#ec4899', 14);
+        ctx.strokeStyle = '#ec4899';
+        ctx.lineWidth = 2;
+        roundRect(px + 2, py + 2, CELL - 4, CELL - 4, 6);
+        ctx.stroke();
+      }
+
+      if (isHint) {
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+        ctx.save();
+        ctx.globalAlpha = pulse * 0.5;
+        drawGlow(px + 1, py + 1, CELL - 2, CELL - 2, '#fbbf24', 18);
+        ctx.restore();
+      }
+
+      // Emoji
+      ctx.save();
+      if (cell.offsetY !== 0) {
+        ctx.globalAlpha = Math.min(1, 1 - Math.abs(cell.offsetY) / (CELL * 3));
+      }
+      ctx.fillText(GEMS[cell.type], px + CELL / 2, py + CELL / 2 + 2);
+      ctx.restore();
+    }
+  }
+}
+
+function drawParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 3 * dt;
+    p.life -= dt * 2;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawFloatingTexts(dt) {
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    const ft = floatingTexts[i];
+    ft.y += ft.vy;
+    ft.life -= dt * 1.2;
+    if (ft.life <= 0) { floatingTexts.splice(i, 1); continue; }
+    ctx.save();
+    ctx.globalAlpha = ft.life;
+    ctx.shadowColor = '#fbbf24';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 18px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, ft.x, ft.y);
+    ctx.restore();
+  }
+}
+
+function drawStartScreen() {
+  ctx.fillStyle = 'rgba(10,10,26,0.92)';
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H / 2;
+
+  // Title
+  ctx.save();
+  ctx.shadowColor = '#ec4899';
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = '#ec4899';
+  ctx.font = 'bold 40px "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('매치 크러시', cx, cy - 100);
+  ctx.restore();
+
+  // Subtitle
+  ctx.fillStyle = '#a78bfa';
+  ctx.font = '16px "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('🐱🐶🐰🦊🐸🐵', cx, cy - 60);
+
+  // Instructions
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '14px "Segoe UI", sans-serif';
+  const lines = [
+    '인접한 타일을 드래그하여 교환하세요',
+    '같은 캐릭터 3개 이상 일렬로 맞추면 점수!',
+    '3매치=100  4매치=300  5매치=500',
+    '연속 콤보 시 배수 보너스!',
+    '제한 시간: 60초'
+  ];
+  lines.forEach((l, i) => ctx.fillText(l, cx, cy - 15 + i * 24));
+
+  // Button
+  const bx = cx - 80, by = cy + 120, bw = 160, bh = 48;
+  ctx.save();
+  ctx.shadowColor = '#ec4899';
+  ctx.shadowBlur = 20;
+  const btnGrad = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
+  btnGrad.addColorStop(0, '#ec4899');
+  btnGrad.addColorStop(1, '#a855f7');
+  ctx.fillStyle = btnGrad;
+  roundRect(bx, by, bw, bh, 24);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px "Segoe UI", sans-serif';
+  ctx.fillText('게임 시작', cx, by + 30);
+
+  // Click anywhere or button
+  canvas.onclick = function handler(e) {
+    if (gameState === 'start') {
+      startGame();
+      canvas.onclick = null;
+    }
+  };
+}
+
+function drawGameOver() {
+  ctx.fillStyle = 'rgba(10,10,26,0.88)';
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H / 2;
+
+  ctx.save();
+  ctx.shadowColor = '#ec4899';
+  ctx.shadowBlur = 25;
+  ctx.fillStyle = '#ec4899';
+  ctx.font = 'bold 34px "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('게임 종료!', cx, cy - 70);
+  ctx.restore();
+
+  ctx.save();
+  ctx.shadowColor = '#fbbf24';
+  ctx.shadowBlur = 15;
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 48px "Segoe UI", sans-serif';
+  ctx.fillText('⭐ ' + score.toLocaleString(), cx, cy);
+  ctx.restore();
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '16px "Segoe UI", sans-serif';
+  ctx.fillText('최종 점수', cx, cy + 35);
+
+  // Restart button
+  const bx = cx - 80, by = cy + 65, bw = 160, bh = 48;
+  ctx.save();
+  ctx.shadowColor = '#ec4899';
+  ctx.shadowBlur = 20;
+  const btnGrad = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
+  btnGrad.addColorStop(0, '#ec4899');
+  btnGrad.addColorStop(1, '#a855f7');
+  ctx.fillStyle = btnGrad;
+  roundRect(bx, by, bw, bh, 24);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('다시 시작', cx, by + 30);
+
+  canvas._overHandler = canvas._overHandler || function(e) {
+    if (gameState !== 'over') return;
+    const pos = getPos(e);
+    const inBtn = pos.x >= bx && pos.x <= bx + bw && pos.y >= by && pos.y <= by + bh;
+    canvas.style.cursor = inBtn ? 'pointer' : 'default';
+  };
+  canvas.removeEventListener('mousemove', canvas._overHandler);
+  canvas.addEventListener('mousemove', canvas._overHandler);
+
+  canvas._restartHandler = canvas._restartHandler || function(e) {
+    if (gameState !== 'over') return;
+    const pos = getPos(e);
+    if (pos.x >= bx && pos.x <= bx + bw && pos.y >= by && pos.y <= by + bh) {
+      startGame();
+    }
+  };
+  canvas.removeEventListener('click', canvas._restartHandler);
+  canvas.addEventListener('click', canvas._restartHandler);
+
+  canvas._restartTouchHandler = canvas._restartTouchHandler || function(e) {
+    if (gameState !== 'over') return;
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.changedTouches[0];
+    const pos = {
+      x: (touch.clientX - rect.left) * (W / rect.width),
+      y: (touch.clientY - rect.top) * (H / rect.height)
+    };
+    if (pos.x >= bx && pos.x <= bx + bw && pos.y >= by && pos.y <= by + bh) {
+      startGame();
+    }
+  };
+  canvas.removeEventListener('touchend', canvas._restartTouchHandler);
+  canvas.addEventListener('touchend', canvas._restartTouchHandler);
+}
+
+// ── Init & start loop ──
+initBoard();
+lastTime = performance.now();
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

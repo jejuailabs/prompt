@@ -51,7 +51,7 @@ function valid(shape,ox,oy){for(let r=0;r<shape.length;r++)for(let c=0;c<shape[r
 function lock(){for(let r=0;r<piece.length;r++)for(let c=0;c<piece[r].length;c++){if(!piece[r][c])continue;const ny=py+r;if(ny<0){gameOver();return;}board[ny][px+c]=pidx+1;}clearLines();spawn();}
 function clearLines(){let cleared=0;for(let r=ROWS-1;r>=0;r--){if(board[r].every(c=>c)){board.splice(r,1);board.unshift(Array(COLS).fill(0));cleared++;r++;}}if(cleared){lines+=cleared;score+=[0,100,300,500,800][cleared]*level;level=Math.floor(lines/10)+1;dropInterval=Math.max(80,500-level*40);hScore.textContent='SCORE '+score;hLevel.textContent='LEVEL '+level;}}
 function spawn(){pidx=Math.floor(Math.random()*SHAPES.length);piece=SHAPES[pidx].map(r=>[...r]);px=Math.floor((COLS-piece[0].length)/2);py=-piece.length;if(!valid(piece,px,0)){gameOver();}}
-function gameOver(){running=false;overlay.querySelector('h1').textContent='GAME OVER';overlay.querySelectorAll('p')[0].textContent=`점수: ${score} · 레벨: ${level}`;overlay.querySelector('button').textContent='다시 시작';overlay.style.display='flex';}
+function gameOver(){running=false;overlay.querySelector('h1').textContent='GAME OVER';overlay.querySelectorAll('p')[0].textContent=`점수: ${score} · 레벨: ${level}`;overlay.querySelector('button').textContent='다시 시작';overlay.style.display='flex';try{window.parent.postMessage({type:'game-score',score},'*');}catch{}}
 
 function draw(){
   ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);

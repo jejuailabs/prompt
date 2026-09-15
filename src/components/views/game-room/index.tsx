@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Gamepad2, Heart, Loader2, Play, TrendingUp, Clock, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Gamepad2, Heart, Loader2, Play, TrendingUp, Clock, Plus, Trash2, Edit2, Trophy } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -26,7 +26,7 @@ interface GameDTO {
   playCount: number;
   likeCount: number;
   createdAt: string;
-  metadata: { params?: { palette?: string }; tags?: string[] };
+  metadata: { params?: { palette?: string }; tags?: string[]; emoji?: string };
 }
 
 export default function GameRoomView() {
@@ -37,6 +37,7 @@ export default function GameRoomView() {
   const setLoginOpen = useAppStore((s) => s.setLoginOpen);
   const qc = useQueryClient();
   const [sort, setSort] = useState<'popular' | 'recent'>('popular');
+  const [lbPeriod, setLbPeriod] = useState<'today' | 'week' | 'month' | 'all'>('today');
   const [submitOpen, setSubmitOpen] = useState(false);
   const [form, setForm] = useState({ title: '', url: '', description: '', thumbnailUrl: '', tags: '', controls: '' });
   const [submitError, setSubmitError] = useState('');
@@ -48,6 +49,11 @@ export default function GameRoomView() {
   });
 
   const games = data?.games ?? [];
+  const { data: lbData } = useQuery({
+    queryKey: ['leaderboard-global', lbPeriod],
+    queryFn: () => api.get<{ rankings: Array<{ rank: number; username: string; score: number; gameTitle: string; playedAt: string }> }>(`/api/game-room/leaderboard?period=${lbPeriod}&limit=10`),
+    refetchInterval: 60000,
+  });
   const pending = useQuery({ queryKey: ['game-room', 'pending'], queryFn: () => api.get<{ games: GameDTO[] }>('/api/game-room?scope=pending'), enabled: session?.role === 'admin' });
   const submitGame = async () => {
     if (!session) { setSubmitOpen(false); setLoginOpen(true); return; }
@@ -93,6 +99,45 @@ export default function GameRoomView() {
 
       {session?.role === 'admin' && (pending.data?.games.length ?? 0) > 0 && <Card className="p-4"><h2 className="font-semibold">게임 심사 대기</h2><div className="mt-3 space-y-2">{pending.data!.games.map((game) => <div key={game.id} className="flex flex-wrap items-center gap-3 rounded-md border p-3"><div className="min-w-0 flex-1"><p className="font-medium">{game.title}</p><a className="block truncate text-xs text-primary underline" href={game.contentUrl ?? '#'} target="_blank" rel="noreferrer">{game.contentUrl}</a></div><Button size="sm" onClick={() => void moderate(game.id, 'approve')}>승인</Button><Button size="sm" variant="destructive" onClick={() => void moderate(game.id, 'reject')}>반려</Button></div>)}</div></Card>}
 
+      {/* Leaderboard */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-500" />
+            <h2 className="font-semibold">게임 랭킹</h2>
+          </div>
+          <div className="flex gap-1">
+            {(['today', 'week', 'month', 'all'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setLbPeriod(p)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  lbPeriod === p ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {{ today: '오늘', week: '이번주', month: '이번달', all: '전체' }[p]}
+              </button>
+            ))}
+          </div>
+        </div>
+        {lbData?.rankings && lbData.rankings.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+            {lbData.rankings.map((r) => (
+              <div key={`${r.rank}-${r.username}-${r.score}`} className="flex items-center gap-2 py-1.5 text-sm border-b border-border/50 last:border-0">
+                <span className={`w-6 text-center font-bold ${r.rank <= 3 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                  {r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : r.rank}
+                </span>
+                <span className="flex-1 truncate font-medium">{r.username}</span>
+                <span className="text-xs text-muted-foreground truncate max-w-[100px]">{r.gameTitle}</span>
+                <span className="font-mono font-semibold tabular-nums text-sm">{r.score.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-6">아직 기록이 없습니다. 게임을 플레이해보세요!</p>
+        )}
+      </Card>
+
       {/* Game Grid */}
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -121,11 +166,15 @@ export default function GameRoomView() {
                     className="w-full h-full flex items-center justify-center"
                     style={{
                       background: game.metadata?.params?.palette
-                        ? `linear-gradient(135deg, ${game.metadata.params.palette}44, ${game.metadata.params.palette})`
+                        ? `linear-gradient(135deg, ${game.metadata.params.palette}22, ${game.metadata.params.palette}88)`
                         : undefined,
                     }}
                   >
-                    <Gamepad2 className="h-12 w-12 text-white/60" />
+                    {game.metadata?.emoji ? (
+                      <span className="text-5xl drop-shadow-lg">{game.metadata.emoji}</span>
+                    ) : (
+                      <Gamepad2 className="h-12 w-12 text-white/60" />
+                    )}
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

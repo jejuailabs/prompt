@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Edit2, Expand, Heart, Loader2, Maximize2, Minimize2, Share2, Trash2,
+  ArrowLeft, Edit2, Expand, Heart, Loader2, Maximize2, Minimize2, Share2, Trash2, Trophy,
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
@@ -50,6 +50,7 @@ export default function GamePlayView() {
   const [editForm, setEditForm] = useState({ title: '', description: '', contentUrl: '' });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [lbPeriod, setLbPeriod] = useState<'today' | 'week' | 'month' | 'all'>('today');
 
   const { data: game, isLoading } = useQuery({
     queryKey: ['game-play', gameId],
@@ -58,6 +59,13 @@ export default function GamePlayView() {
   });
 
   const isLocalGame = game?.contentUrl?.startsWith('/') ?? false;
+
+  const { data: lbData } = useQuery({
+    queryKey: ['leaderboard', gameId, lbPeriod],
+    queryFn: () => api.get<{ rankings: Array<{ rank: number; username: string; score: number; playedAt: string }> }>(`/api/game-room/leaderboard?gameId=${gameId}&period=${lbPeriod}&limit=10`),
+    enabled: !!gameId,
+    refetchInterval: 30000,
+  });
   const canManage = session && game && (session.role === 'admin' || session.id === game.ownerId);
 
   // For external games, fetch HTML via proxy for srcdoc rendering
@@ -79,6 +87,18 @@ export default function GamePlayView() {
         api.post('/api/game-room/play', { artifactId: gameId, durationMs: duration }).catch(() => undefined);
       }
     };
+  }, [gameId]);
+
+  // Listen for game score messages from iframe
+  useEffect(() => {
+    if (!gameId) return;
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'game-score' && typeof e.data.score === 'number' && e.data.score > 0) {
+        api.post('/api/game-room/play', { artifactId: gameId, score: e.data.score }).catch(() => undefined);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
   }, [gameId]);
 
   useEffect(() => {
@@ -242,9 +262,39 @@ export default function GamePlayView() {
               AdSense 300×250
             </div>
           </Card>
-          <Card className="p-3">
-            <p className="text-xs font-medium text-muted-foreground mb-2">추천 게임</p>
-            <p className="text-xs text-muted-foreground">곧 추가됩니다</p>
+          <Card className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Trophy className="h-4 w-4 text-yellow-500" />
+              <p className="text-sm font-semibold">랭킹</p>
+            </div>
+            <div className="flex gap-1 mb-3">
+              {(['today', 'week', 'month', 'all'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setLbPeriod(p)}
+                  className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                    lbPeriod === p ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  {{ today: '오늘', week: '이번주', month: '이번달', all: '전체' }[p]}
+                </button>
+              ))}
+            </div>
+            {lbData?.rankings && lbData.rankings.length > 0 ? (
+              <div className="space-y-1.5">
+                {lbData.rankings.map((r) => (
+                  <div key={`${r.rank}-${r.username}`} className="flex items-center gap-2 text-xs">
+                    <span className={`w-5 text-center font-bold ${r.rank <= 3 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                      {r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : r.rank}
+                    </span>
+                    <span className="flex-1 truncate">{r.username}</span>
+                    <span className="font-mono font-semibold tabular-nums">{r.score.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center py-4">아직 기록이 없습니다</p>
+            )}
           </Card>
         </div>
       </div>
