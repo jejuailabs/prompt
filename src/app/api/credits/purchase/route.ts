@@ -1,32 +1,14 @@
-// POST /api/credits/purchase — top-up via payment adapter
-// Demo mode: instant credit add, returns { balance }
-// Stripe mode: returns { checkoutUrl } for redirect
-import { NextRequest } from 'next/server';
-import { HttpError, requireUser } from '@/lib/auth';
-import { fail, ok, readJson } from '@/lib/server/handler';
-import { getPaymentProvider } from '@/lib/server/payment-adapters';
-
-const ALLOWED_AMOUNTS = [1000, 5000, 10000, 50000];
-
-export async function POST(req: NextRequest) {
+import { requireUser } from '@/lib/auth';
+import { db } from '@/lib/db';
+import { fail, ok } from '@/lib/server/handler';
+export async function POST() {
   try {
     const user = await requireUser();
-    const body = await readJson<{ amount?: number }>(req);
-    const amount = Number(body.amount);
-    if (!ALLOWED_AMOUNTS.includes(amount)) {
-      throw new HttpError('지원되지 않는 충전 금액입니다', 400);
-    }
-
-    const origin = req.headers.get('origin') || undefined;
-    const provider = getPaymentProvider();
-    const result = await provider.createCheckout(user.id, amount, origin);
-
-    return ok({
-      balance: result.balance >= 0 ? result.balance : undefined,
-      checkoutUrl: result.checkoutUrl,
-      provider: provider.name,
+    const request = await db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`credit-request:${user.id}`}))`;
+      const existing = await tx.creditTransaction.findFirst({ where: { userId: user.id, reason: 'topup_pending' } });
+      return existing ?? tx.creditTransaction.create({ data: { userId: user.id, amount: 0, reason: 'topup_pending' } });
     });
-  } catch (e) {
-    return fail(e);
-  }
+    return ok({ requestId: request.id, amount: 500, status: 'pending', message: '관리자의 승인을 대기 중입니다. 승인 후 500크레딧이 지급됩니다.' });
+  } catch (error) { return fail(error); }
 }

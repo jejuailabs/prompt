@@ -48,6 +48,7 @@ export async function POST(req: Request) {
     const body = await readJson<{ userId?: string; amount?: number; memo?: string }>(req);
     const userId = body.userId?.trim();
     const amount = Math.round(Number(body.amount));
+    if (amount > 0 && amount !== 500) throw new HttpError('당분간 크레딧 지급은 1회 500크레딧만 가능합니다.', 400);
     if (!userId || !Number.isFinite(amount) || amount === 0 || Math.abs(amount) > 1_000_000) throw new HttpError('유효한 회원과 조정 크레딧을 입력해주세요', 400);
     const result = await db.$transaction(async (tx) => {
       const target = await tx.profile.findUnique({ where: { id: userId } });

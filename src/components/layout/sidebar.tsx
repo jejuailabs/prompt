@@ -32,7 +32,7 @@ import {
 import type { ViewKey } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-const TOPUP_AMOUNTS = [1000, 5000, 10000] as const;
+const TOPUP_AMOUNTS = [500] as const;
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : 'Unknown error';
@@ -48,7 +48,7 @@ function CreditsWidget() {
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState<number>(5000);
+  const [amount, setAmount] = useState<number>(500);
   const [pending, setPending] = useState(false);
 
   const purchase = async () => {
@@ -57,8 +57,8 @@ function CreditsWidget() {
       await api.post<{ balance: number }>('/api/credits/purchase', { amount });
       refreshSession();
       toast({
-        title: locale === 'en' ? 'Credits topped up' : '크레딧이 충전되었습니다',
-        description: `+${amount.toLocaleString()}`,
+        title: '관리자의 승인을 대기 중입니다',
+        description: '승인 후 500크레딧이 지급됩니다. 현재 잔액은 변경되지 않았습니다.',
       });
       setOpen(false);
     } catch (e) {
@@ -85,7 +85,7 @@ function CreditsWidget() {
         <DialogContent className="sm:max-w-xs">
           <DialogHeader>
             <DialogTitle>{t('charge')}</DialogTitle>
-            <DialogDescription className="text-xs">{t('credits')} · {(session?.credits ?? 0).toLocaleString()}</DialogDescription>
+            <DialogDescription className="text-xs">500크레딧 충전을 관리자에게 요청합니다. 승인 전에는 지급되지 않습니다.</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-3 gap-2">
             {TOPUP_AMOUNTS.map((a) => (

@@ -37,8 +37,8 @@ export async function GET(req: NextRequest) {
     if (!id) throw new HttpError('작업 ID가 필요합니다', 400);
     const artifact = await db.artifact.findFirst({ where: { id, ownerId: user.id, sourceModule: 'video-studio-first-frame' } });
     if (!artifact) throw new HttpError('이미지 작업을 찾을 수 없습니다', 404);
-    const meta = JSON.parse(artifact.metadata) as { jobId: string; accountingJobId: string; status: string; error?: string };
-    if (artifact.status === 'completed' || artifact.status === 'failed') return ok({ id, status: meta.status, url: artifact.fileUrl, error: meta.error });
+    const meta = JSON.parse(artifact.metadata) as { jobId: string; accountingJobId: string; status: string; error?: string; executionTime?: number; delayTime?: number };
+    if (artifact.status === 'completed' || artifact.status === 'failed') return ok({ id, status: meta.status, url: artifact.fileUrl, error: meta.error, executionTime: meta.executionTime, delayTime: meta.delayTime });
     const job = await getRunpodJobStatus('flux', meta.jobId);
     let url: string | null = null;
     if (job.status === 'COMPLETED') {
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     }
     const terminal = ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'].includes(job.status);
     await finishMeteredOperation({ operationId: meta.accountingJobId, engine: 'flux', status: job.status, error: job.error, executionTimeMs: job.executionTime });
-    if (terminal) await db.artifact.update({ where: { id }, data: { fileUrl: url, status: url ? 'completed' : 'failed', metadata: JSON.stringify({ ...meta, status: job.status, error: job.error }) } });
-    return ok({ id, status: job.status, url, error: job.error });
+    if (terminal) await db.artifact.update({ where: { id }, data: { fileUrl: url, status: url ? 'completed' : 'failed', metadata: JSON.stringify({ ...meta, status: job.status, error: job.error, executionTime: job.executionTime, delayTime: job.delayTime }) } });
+    return ok({ id, status: job.status, url, error: job.error, executionTime: job.executionTime, delayTime: job.delayTime });
   } catch (error) { return fail(error); }
 }

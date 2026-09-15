@@ -18,8 +18,7 @@ export interface IPaymentProvider {
 class DemoPaymentProvider implements IPaymentProvider {
   name = 'demo';
   async createCheckout(userId: string, creditAmount: number): Promise<PurchaseResult> {
-    const balance = await addCredits(userId, creditAmount, 'purchase');
-    return { balance };
+    throw new Error('데모 충전은 비활성화되었습니다. 관리자 승인이 필요합니다.');
   }
 }
 

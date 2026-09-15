@@ -1,4 +1,5 @@
 'use client';
+import { GenerationTime } from '@/components/shared/generation-time';
 
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -267,6 +268,7 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
           <h1 className="min-w-0 flex-1 truncate text-lg font-bold">{project.title}</h1>
           <Badge variant="secondary">{shots.length} shot</Badge>
           {renderVideoUrl && renderStatus === 'COMPLETED' && <>
+            <GenerationTime executionTime={renderStatusQuery.data?.executionTime} delayTime={renderStatusQuery.data?.delayTime} />
             <Button variant="outline" size="sm" onClick={async () => { toast({ title: '다운로드 준비 중...' }); try { const res = await fetch(renderVideoUrl); const blob = await res.blob(); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `playlab-${project.title.replace(/\s+/g, '-')}.mp4`; a.click(); URL.revokeObjectURL(url); toast({ title: '다운로드 시작', description: '파일이 저장됩니다.' }); } catch { window.open(renderVideoUrl, '_blank'); } }}>
               <Download className="size-4" /> 다운로드
             </Button>

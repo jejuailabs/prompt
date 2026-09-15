@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { AlertTriangle, ArrowDown, ArrowUp, BarChart3, CheckCircle, Circle, Clock, Coins, Film, Info, Loader2, Radar, ReceiptText, RotateCcw, Shield, Trash2, Users, Wallet, Wrench, Zap } from 'lucide-react';
 import { api } from '@/lib/api-client';
+import { CreditRequests } from './credit-requests';
 import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
 import { useAppStore } from '@/lib/store';
 import { useSession } from '@/hooks/use-session';
@@ -172,6 +173,7 @@ export default function AdminView() {
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-4">
+            <CreditRequests />
             <DashboardTab />
           </TabsContent>
 
@@ -605,10 +607,11 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
               </TableCell>
               <TableCell>
                 <div className="flex min-w-44 gap-1.5">
+                  <Button size="sm" className="h-8 px-2 text-xs" disabled={creditM.isPending} onClick={() => creditM.mutate({ userId: u.id, amount: 500 })}>+500 지급</Button>
                   <Input
                     aria-label={`${u.username} 크레딧 조정`}
                     className="h-8 w-24 text-xs"
-                    placeholder="+/- 금액"
+                    placeholder="회수: 음수"
                     inputMode="numeric"
                     value={adjustments[u.id] ?? ''}
                     onChange={(event) => setAdjustments((current) => ({ ...current, [u.id]: event.target.value }))}
