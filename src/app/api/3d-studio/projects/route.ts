@@ -29,8 +29,9 @@ function parseMeta(raw: string): ProjectMeta {
 function userFacingBlenderError(error?: string): string | null {
   if (!error) return null;
   if (error.includes('address is required')) {
-    return 'Blender 워커가 시작 이미지 주소를 받지 못해 작업을 시작하지 못했습니다. 입력 규격을 수정했으니 새 에셋으로 다시 실행해주세요.';
+    return '연결된 워커가 이미지 에셋 생성용이 아닌 건축 분석용 워커여서 실패했습니다. 전용 생성 워커 연결 전에는 재시도할 수 없습니다.';
   }
+  if (error.includes('analysisId is required') || error.includes('parcel and scenario are required')) return '건축 분석용 워커에 이미지 에셋 작업이 전달되어 실패했습니다. 전용 생성 워커 연결이 필요합니다.';
   try {
     const parsed = JSON.parse(error) as { error_message?: unknown };
     if (typeof parsed.error_message === 'string' && parsed.error_message.trim()) return parsed.error_message.trim().slice(0, 300);
@@ -63,6 +64,10 @@ function buildBlenderPrompt(title: string, subtrack: Asset3dSubtrack, quality: s
   return `Create a ${role} in Blender named "${title}". Quality: ${quality}. Use the supplied reference images for silhouette, material, and composition. Return the rendered preview and, when available, the GLB asset. Reference images: ${imageUrls.join(', ')}`;
 }
 
+function requireImageTo3dWorker(): void {
+  throw new HttpError('이미지에서 3D 에셋을 만드는 전용 워커가 아직 연결되지 않았습니다. 크레딧은 차감되지 않습니다.', 503);
+}
+
 export async function GET() {
   try {
     const user = await getSessionUserFast();
@@ -80,6 +85,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const user = await requireUser();
+    // The deployed PLINT handler accepts parcel/scenario data, not images.
+    // Fail before creating an artifact or charging credits until an image-to-3D
+    // worker and its output adapter have been implemented and verified.
+    requireImageTo3dWorker();
     const body = await readJson<CreateProjectBody>(req);
     const subtrack = body.subtrack;
     if (!subtrack || !['character', 'product', 'floorplan'].includes(subtrack)) throw new HttpError('에셋 유형을 선택해주세요', 400);
