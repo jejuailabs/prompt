@@ -7,19 +7,34 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
+const audioContentTypes: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  m4a: 'audio/mp4',
+  aac: 'audio/aac',
+  wav: 'audio/wav',
+  wave: 'audio/wav',
+};
+
 export async function POST(req: NextRequest) {
   const user = await getSessionUserFast();
   if (!user) {
     return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
   }
 
-  const { fileName, contentType } = await req.json();
-  const ext = (fileName || 'audio.mp3').split('.').pop()?.toLowerCase() ?? 'mp3';
+  const { fileName } = await req.json();
+  const ext = String(fileName || 'audio.mp3').split('.').pop()?.toLowerCase() ?? 'mp3';
+  const contentType = audioContentTypes[ext];
+  if (!contentType) {
+    return NextResponse.json(
+      { error: 'MP3, M4A, AAC, WAV 형식의 오디오만 업로드할 수 있습니다.' },
+      { status: 400 },
+    );
+  }
   const path = `whisper-input/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
   const { data, error } = await supabase.storage
     .from('uploads')
-    .createSignedUploadUrl(path);
+    .createSignedUploadUrl(path, { upsert: false });
 
   if (error) {
     return NextResponse.json({ error: `업로드 URL 생성 실패: ${error.message}` }, { status: 500 });
@@ -32,5 +47,6 @@ export async function POST(req: NextRequest) {
     token: data.token,
     path,
     publicUrl: urlData.publicUrl,
+    contentType,
   });
 }

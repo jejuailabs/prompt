@@ -283,11 +283,26 @@ function WhisperTool() {
       const signData = await signRes.json();
       if (!signRes.ok) throw new Error(signData.error);
 
-      await fetch(signData.signedUrl, {
+      const uploadResponse = await fetch(signData.signedUrl, {
         method: 'PUT',
-        headers: { 'Content-Type': file.type || 'audio/mpeg' },
+        headers: {
+          'Content-Type': signData.contentType || file.type || 'audio/mpeg',
+          'cache-control': 'max-age=3600',
+          'x-upsert': 'false',
+        },
         body: file,
-      }).then((r) => { if (!r.ok) throw new Error('오디오 파일 업로드에 실패했습니다.'); });
+      });
+      if (!uploadResponse.ok) {
+        const detail = await uploadResponse.text();
+        let message = detail;
+        try {
+          const parsed = JSON.parse(detail) as { message?: string; error?: string };
+          message = parsed.message || parsed.error || detail;
+        } catch {
+          // The storage service can return a plain-text error body.
+        }
+        throw new Error(`오디오 파일 업로드 실패 (${uploadResponse.status}): ${message || '스토리지 서버 오류'}`);
+      }
 
       setStatus('GPU에서 음성 분석 중… (1~3분 소요)');
       const response = await fetch('/api/tools/whisper', {
