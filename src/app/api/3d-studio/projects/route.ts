@@ -26,6 +26,20 @@ function parseMeta(raw: string): ProjectMeta {
   try { return JSON.parse(raw) as ProjectMeta; } catch { return {}; }
 }
 
+function userFacingBlenderError(error?: string): string | null {
+  if (!error) return null;
+  if (error.includes('address is required')) {
+    return 'Blender 워커가 시작 이미지 주소를 받지 못해 작업을 시작하지 못했습니다. 입력 규격을 수정했으니 새 에셋으로 다시 실행해주세요.';
+  }
+  try {
+    const parsed = JSON.parse(error) as { error_message?: unknown };
+    if (typeof parsed.error_message === 'string' && parsed.error_message.trim()) return parsed.error_message.trim().slice(0, 300);
+  } catch {
+    // Preserve a concise non-JSON provider error below.
+  }
+  return error.replace(/\s+/g, ' ').trim().slice(0, 300) || 'Blender 작업을 완료하지 못했습니다.';
+}
+
 function toProject(row: { id: string; ownerId: string; title: string; status: string; metadata: string; createdAt: Date }) : Asset3dProjectDTO {
   const meta = parseMeta(row.metadata);
   return {
@@ -38,6 +52,7 @@ function toProject(row: { id: string; ownerId: string; title: string; status: st
     styleOptions: meta.styleOptions,
     outputs: meta.outputs ?? [],
     creditCharged: 0,
+    error: userFacingBlenderError(meta.blender?.error),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.createdAt.toISOString(),
   };
@@ -87,7 +102,10 @@ export async function POST(req: NextRequest) {
       return ok(toProject(failed));
     }
     try {
-      const job = await queueRunpodJob('blender', { prompt: buildBlenderPrompt(title, subtrack, quality, imageUrls), image_urls: imageUrls, quality, subtrack });
+      // The deployed Blender handler accepts its primary reference through the
+      // `address` field. Keep image_urls for handlers that consume a gallery,
+      // but always satisfy the required single-image contract as well.
+      const job = await queueRunpodJob('blender', { address: imageUrls[0], prompt: buildBlenderPrompt(title, subtrack, quality, imageUrls), image_urls: imageUrls, quality, subtrack });
       const meta = { ...baseMeta, blender: { jobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString() } };
       const queued = await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(meta), status: 'generating' } });
       return ok(toProject(queued));

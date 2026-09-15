@@ -343,6 +343,14 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
         </Card>
       )}
 
+      {project.status === 'failed' && (
+        <Card className="mb-6 border-destructive/30 bg-destructive/[.04] p-5">
+          <p className="font-semibold text-destructive">3D 에셋 생성에 실패했습니다</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{project.error || 'Blender 워커가 작업을 완료하지 못했습니다. 참조 이미지를 확인한 뒤 새 작업으로 다시 시도해주세요.'}</p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={onBack}><RotateCcw className="size-3.5" /> 새 에셋으로 다시 만들기</Button>
+        </Card>
+      )}
+
       {/* 3D viewer placeholder */}
       {outputs.length > 0 && (
         <div className="space-y-4">

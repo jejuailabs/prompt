@@ -541,6 +541,8 @@ export interface Asset3dProjectDTO {
   styleOptions?: Record<string, unknown>;
   resultArtifactId?: string | null;
   creditCharged: number;
+  /** Safe, user-facing failure reason from the Blender worker, if any. */
+  error?: string | null;
   outputs?: Asset3dOutputDTO[];
   createdAt: string;
   updatedAt: string;
