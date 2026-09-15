@@ -43,7 +43,7 @@ const SHAPES=[
   [[1,1,0],[0,1,1]]
 ];
 const COLORS=['#06b6d4','#fbbf24','#a78bfa','#f97316','#3b82f6','#22c55e','#ef4444'];
-let board,piece,px,py,pidx,score,level,lines,running,timer,dropInterval;
+let board=Array.from({length:ROWS},()=>Array(COLS).fill(0)),piece=null,px=0,py=0,pidx=0,score=0,level=1,lines=0,running=false,timer=0,dropInterval=500;
 
 function newBoard(){return Array.from({length:ROWS},()=>Array(COLS).fill(0));}
 function rotate(m){return m[0].map((_,i)=>m.map(r=>r[i]).reverse());}

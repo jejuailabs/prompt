@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAppStore } from '@/lib/store';
 
-const LIVE_TOOL_IDS = new Set(['tool-tts', 'tool-suno', 'tool-metaprompt', 'tool-qr', 'tool-thumbnail', 'tool-storyboard', 'tool-detail', 'tool-detail2', 'tool-converter', 'tool-srt', 'tool-autocut']);
+const LIVE_TOOL_IDS = new Set(['tool-tts', 'tool-suno', 'tool-metaprompt', 'tool-qr', 'tool-thumbnail', 'tool-storyboard', 'tool-detail', 'tool-detail2', 'tool-converter', 'tool-srt', 'tool-autocut', 'tool-whisper']);
 const VISUALS: Record<string, { accent: string; soft: string; glow: string }> = {
   'tool-tts': { accent: 'from-cyan-500 to-blue-600', soft: 'bg-cyan-50 text-cyan-600', glow: 'group-hover:shadow-cyan-100' },
   'tool-storyboard': { accent: 'from-amber-400 to-orange-500', soft: 'bg-amber-50 text-amber-600', glow: 'group-hover:shadow-amber-100' },
@@ -24,6 +24,7 @@ const VISUALS: Record<string, { accent: string; soft: string; glow: string }> = 
   'tool-autocut': { accent: 'from-purple-500 to-pink-500', soft: 'bg-purple-50 text-purple-600', glow: 'group-hover:shadow-purple-100' },
   'tool-srt': { accent: 'from-blue-500 to-indigo-600', soft: 'bg-blue-50 text-blue-600', glow: 'group-hover:shadow-blue-100' },
   'tool-url': { accent: 'from-slate-600 to-slate-800', soft: 'bg-slate-100 text-slate-600', glow: 'group-hover:shadow-slate-200' },
+  'tool-whisper': { accent: 'from-teal-500 to-cyan-600', soft: 'bg-teal-50 text-teal-600', glow: 'group-hover:shadow-teal-100' },
   'tool-qr': { accent: 'from-rose-500 to-red-600', soft: 'bg-rose-50 text-rose-600', glow: 'group-hover:shadow-rose-100' },
   'tool-thumbnail': { accent: 'from-pink-500 to-orange-500', soft: 'bg-pink-50 text-pink-600', glow: 'group-hover:shadow-pink-100' },
 };

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Gamepad2, Heart, Loader2, Play, TrendingUp, Clock, Plus } from 'lucide-react';
+import { Gamepad2, Heart, Loader2, Play, TrendingUp, Clock, Plus, Trash2, Edit2 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +21,7 @@ interface GameDTO {
   description: string;
   fileUrl: string | null;
   contentUrl: string | null;
+  ownerId: string;
   ownerName: string;
   playCount: number;
   likeCount: number;
@@ -55,6 +56,11 @@ export default function GameRoomView() {
     catch (e) { setSubmitError(e instanceof Error ? e.message : '등록 요청에 실패했습니다.'); } finally { setSubmitting(false); }
   };
   const moderate = async (id: string, action: 'approve' | 'reject') => { await api.post(`/api/game-room/${id}/moderate`, { action }); await qc.invalidateQueries({ queryKey: ['game-room'] }); };
+  const deleteGame = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('이 게임을 삭제하시겠습니까?')) return;
+    try { await api.del(`/api/game-room/${id}`); qc.invalidateQueries({ queryKey: ['game-room'] }); } catch {}
+  };
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6">
@@ -125,6 +131,16 @@ export default function GameRoomView() {
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <Play className="h-12 w-12 text-white fill-white" />
                 </div>
+                {session && (session.role === 'admin' || session.id === game.ownerId) && (
+                  <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <Button variant="secondary" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); navigate('game-play', { id: game.id }); }}>
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="destructive" size="icon" className="h-7 w-7" onClick={(e) => void deleteGame(game.id, e)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Info */}

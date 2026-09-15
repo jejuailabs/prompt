@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Heart, Trash2, Upload, User } from 'lucide-react';
+import { Clapperboard, Heart, Loader2, Trash2, Upload, User, Film, CheckCircle2, XCircle, Play } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -60,6 +60,12 @@ export default function MyProjectsView() {
   const savedYoutube = useQuery({
     queryKey: ['youtube', 'saved'],
     queryFn: () => api.get<YoutubeAnalysisDTO[]>('/api/youtube/saved'),
+    enabled: !!session,
+  });
+
+  const videoProjects = useQuery({
+    queryKey: ['video-studio-projects'],
+    queryFn: () => api.get<ArtifactDTO[]>('/api/video-studio/projects'),
     enabled: !!session,
   });
 
@@ -134,6 +140,7 @@ export default function MyProjectsView() {
           <TabsTrigger value="published">{t('tabPublished')}</TabsTrigger>
           <TabsTrigger value="drafts">{t('tabDrafts')}</TabsTrigger>
           <TabsTrigger value="prompts">{t('tabPrompts')}</TabsTrigger>
+          <TabsTrigger value="video-studio">{t('tabVideoStudio')}</TabsTrigger>
           <TabsTrigger value="youtube">영상 요약</TabsTrigger>
         </TabsList>
 
@@ -261,6 +268,45 @@ export default function MyProjectsView() {
           )}
         </TabsContent>
 
+        <TabsContent value="video-studio" className="mt-0">
+          {videoProjects.isLoading && <div className="flex justify-center py-12"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>}
+          {videoProjects.isError && (
+            <EmptyState
+              title={t('loadError')}
+              action={
+                <Button variant="outline" size="sm" onClick={() => void videoProjects.refetch()}>
+                  {tc('retry')}
+                </Button>
+              }
+            />
+          )}
+          {!videoProjects.isLoading && !videoProjects.isError && (videoProjects.data?.length ?? 0) === 0 && (
+            <EmptyState
+              icon={<Film className="size-5" aria-hidden="true" />}
+              title={t('emptyVideoTitle')}
+              description={t('emptyVideoDesc')}
+              action={
+                <Button size="sm" onClick={() => navigate('video-studio', { studio: 'quick' })}>
+                  <Clapperboard className="size-4" /> 첫 영상 만들기
+                </Button>
+              }
+            />
+          )}
+          {(videoProjects.data?.length ?? 0) > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {videoProjects.data!.map((project) => (
+                <VideoProjectCard
+                  key={project.id}
+                  project={project}
+                  locale={locale}
+                  onOpen={() => navigate('video-studio', { studio: 'workspace', project: project.id })}
+                  t={t}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="youtube" className="mt-0">
           {savedYoutube.isError && <EmptyState title="저장한 영상 요약을 불러오지 못했습니다" />}
           {!savedYoutube.isLoading && !savedYoutube.isError && (savedYoutube.data?.length ?? 0) === 0 && (
@@ -283,5 +329,98 @@ export default function MyProjectsView() {
 
       <UploadArtifactDialog open={uploadOpen} onOpenChange={setUploadOpen} />
     </div>
+  );
+}
+
+interface VideoMeta {
+  prompt?: string;
+  style?: string;
+  targetDurationSec?: number;
+  inputMode?: string;
+  inputImageUrl?: string | null;
+  aspectRatio?: string;
+  quality?: string;
+  engine?: string;
+  projectStatus?: string;
+  render?: { engine?: string; status?: string; videoUrl?: string | null; queuedAt?: string; completedAt?: string };
+  shots?: Array<{ id: string; duration: number }>;
+}
+
+function VideoProjectCard({ project, locale, onOpen, t }: { project: ArtifactDTO; locale: string; onOpen: () => void; t: (key: string) => string }) {
+  const meta = project.metadata as unknown as VideoMeta;
+  const renderStatus = meta.render?.status ?? meta.projectStatus ?? 'editing';
+  const videoUrl = meta.render?.videoUrl ?? project.fileUrl ?? null;
+  const engine = (meta.render?.engine ?? meta.engine ?? 'H3').toUpperCase();
+  const aspect = meta.aspectRatio ?? '9:16';
+  const shotCount = meta.shots?.length ?? 1;
+  const duration = meta.targetDurationSec ?? 6;
+  const isRendering = ['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING', 'rendering'].includes(renderStatus);
+  const isCompleted = renderStatus === 'COMPLETED' || renderStatus === 'completed';
+  const isFailed = ['FAILED', 'CANCELLED', 'TIMED_OUT', 'failed'].includes(renderStatus);
+
+  const statusLabel = isRendering ? t('videoStatusRendering') : isCompleted ? t('videoStatusCompleted') : isFailed ? t('videoStatusFailed') : t('videoStatusEditing');
+  const statusColor = isRendering ? 'text-blue-500' : isCompleted ? 'text-emerald-500' : isFailed ? 'text-destructive' : 'text-muted-foreground';
+  const StatusIcon = isRendering ? Loader2 : isCompleted ? CheckCircle2 : isFailed ? XCircle : Clapperboard;
+
+  const timeAgo = (iso?: string) => {
+    if (!iso) return '';
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return locale === 'en' ? 'just now' : '방금';
+    if (mins < 60) return locale === 'en' ? `${mins}m ago` : `${mins}분 전`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return locale === 'en' ? `${hrs}h ago` : `${hrs}시간 전`;
+    const days = Math.floor(hrs / 24);
+    return locale === 'en' ? `${days}d ago` : `${days}일 전`;
+  };
+
+  return (
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
+      className="cursor-pointer gap-0 overflow-hidden p-0 transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+    >
+      <div className="relative aspect-video bg-slate-900">
+        {videoUrl && isCompleted ? (
+          <video src={videoUrl} muted playsInline preload="metadata" className="size-full object-cover" />
+        ) : meta.inputImageUrl ? (
+          <img src={meta.inputImageUrl} alt="" className="size-full object-cover" />
+        ) : (
+          <div className="size-full bg-[radial-gradient(circle_at_65%_30%,rgba(124,58,237,.45),transparent_24%),linear-gradient(150deg,#0f172a,#1e1b4b_55%,#172554)]" />
+        )}
+        {isRendering && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <Loader2 className="size-8 animate-spin text-white" />
+          </div>
+        )}
+        {isCompleted && videoUrl && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity hover:opacity-100">
+            <Play className="size-10 text-white" />
+          </div>
+        )}
+        <Badge className="absolute left-2 top-2 border-0 bg-black/50 text-[10px] text-white hover:bg-black/50">
+          {engine}
+        </Badge>
+        <span className="absolute bottom-2 right-2 rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white">
+          {aspect} · {duration}초
+        </span>
+      </div>
+      <div className="p-3">
+        <h3 className="line-clamp-2 text-sm font-semibold">{project.title}</h3>
+        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{meta.prompt ?? project.description}</p>
+        <div className="mt-3 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <StatusIcon className={`size-3.5 ${statusColor} ${isRendering ? 'animate-spin' : ''}`} />
+            <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
+          </div>
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            <span>{shotCount} 샷</span>
+            {meta.render?.queuedAt && <span>{timeAgo(meta.render.completedAt ?? meta.render.queuedAt)}</span>}
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }

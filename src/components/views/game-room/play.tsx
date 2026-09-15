@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Expand, Heart, Loader2, Maximize2, Minimize2, Share2,
+  ArrowLeft, Edit2, Expand, Heart, Loader2, Maximize2, Minimize2, Share2, Trash2,
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
@@ -11,6 +11,9 @@ import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import messages from './messages';
 
 interface GameDetailDTO {
@@ -43,27 +46,33 @@ export default function GamePlayView() {
   const [gameSrcdoc, setGameSrcdoc] = useState<string | null>(null);
   const startTime = useRef(Date.now());
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ title: '', description: '', contentUrl: '' });
+  const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
   const { data: game, isLoading } = useQuery({
     queryKey: ['game-play', gameId],
     queryFn: () => api.get<GameDetailDTO>(`/api/game-room/${gameId}`),
     enabled: !!gameId,
   });
 
-  // Fetch game HTML for srcdoc rendering
+  const isLocalGame = game?.contentUrl?.startsWith('/') ?? false;
+  const canManage = session && game && (session.role === 'admin' || session.id === game.ownerId);
+
+  // For external games, fetch HTML via proxy for srcdoc rendering
   useEffect(() => {
-    if (!game?.contentUrl) return;
+    if (!game?.contentUrl || isLocalGame) return;
     fetch(`/api/game-room/proxy?url=${encodeURIComponent(game.contentUrl)}`)
       .then((r) => r.ok ? r.text() : null)
       .then((html) => { if (html) setGameSrcdoc(html); })
       .catch(() => undefined);
-  }, [game?.contentUrl]);
+  }, [game?.contentUrl, isLocalGame]);
 
-  // Record play session on mount
   useEffect(() => {
     if (!gameId) return;
     api.post('/api/game-room/play', { artifactId: gameId }).catch(() => undefined);
     startTime.current = Date.now();
-
     return () => {
       const duration = Date.now() - startTime.current;
       if (duration > 3000) {
@@ -72,7 +81,6 @@ export default function GamePlayView() {
     };
   }, [gameId]);
 
-  // Track ad impression
   useEffect(() => {
     if (!gameId) return;
     const timer = setTimeout(() => {
@@ -103,17 +111,60 @@ export default function GamePlayView() {
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
+  const handleEdit = () => {
+    if (!game) return;
+    setEditForm({ title: game.title, description: game.description, contentUrl: game.contentUrl ?? '' });
+    setEditOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!gameId) return;
+    setSaving(true);
+    try {
+      await api.patch(`/api/game-room/${gameId}`, editForm);
+      toast({ title: '게임이 수정되었습니다' });
+      setEditOpen(false);
+      qc.invalidateQueries({ queryKey: ['game-play', gameId] });
+    } catch (e) {
+      toast({ title: '수정 실패', description: e instanceof Error ? e.message : '오류가 발생했습니다', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!gameId) return;
+    try {
+      await api.del(`/api/game-room/${gameId}`);
+      toast({ title: '게임이 삭제되었습니다' });
+      navigate('game-room');
+    } catch (e) {
+      toast({ title: '삭제 실패', description: e instanceof Error ? e.message : '오류가 발생했습니다', variant: 'destructive' });
+    }
+    setDeleteConfirm(false);
+  };
+
   if (isLoading) return null;
   if (!game) return <EmptyState title="Game not found" description="" />;
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-4">
-      {/* Back + Title */}
+      {/* Back + Title + Management */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate('game-room')}>
           <ArrowLeft className="mr-1 h-4 w-4" /> {t.back}
         </Button>
         <h1 className="text-xl font-bold truncate">{game.title}</h1>
+        {canManage && (
+          <div className="flex gap-1 ml-auto">
+            <Button variant="outline" size="sm" onClick={handleEdit}>
+              <Edit2 className="h-3.5 w-3.5 mr-1" /> 수정
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setDeleteConfirm(true)}>
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> 삭제
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Game + Ad Layout */}
@@ -122,7 +173,15 @@ export default function GamePlayView() {
         <div className="flex-1">
           <div className="relative bg-black rounded-xl overflow-hidden aspect-[4/3]">
             {game.contentUrl ? (
-              gameSrcdoc ? (
+              isLocalGame ? (
+                <iframe
+                  ref={iframeRef}
+                  src={game.contentUrl}
+                  className="w-full h-full border-0"
+                  title={game.title}
+                  allow="autoplay"
+                />
+              ) : gameSrcdoc ? (
                 <iframe
                   ref={iframeRef}
                   srcDoc={gameSrcdoc}
@@ -141,18 +200,13 @@ export default function GamePlayView() {
                 게임 콘텐츠를 불러올 수 없습니다
               </div>
             )}
-            {/* Fullscreen toggle */}
             <Button
               variant="ghost"
               size="sm"
               className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white"
               onClick={toggleFullscreen}
             >
-              {isFullscreen ? (
-                <Minimize2 className="h-4 w-4" />
-              ) : (
-                <Maximize2 className="h-4 w-4" />
-              )}
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
           </div>
 
@@ -173,7 +227,6 @@ export default function GamePlayView() {
             </span>
           </div>
 
-          {/* Description */}
           {game.description && (
             <Card className="mt-3 p-3">
               <p className="text-sm whitespace-pre-wrap">{game.description}</p>
@@ -181,23 +234,47 @@ export default function GamePlayView() {
           )}
         </div>
 
-        {/* Right sidebar: Ad slot + more games */}
+        {/* Right sidebar */}
         <div className="w-full lg:w-[300px] shrink-0 space-y-4">
-          {/* Ad Banner slot */}
           <Card className="p-4 bg-muted/30 border-dashed flex flex-col items-center justify-center min-h-[250px]">
             <p className="text-xs text-muted-foreground mb-2">{t.adLabel}</p>
             <div className="w-full h-[250px] bg-muted/50 rounded flex items-center justify-center text-muted-foreground text-sm">
               AdSense 300×250
             </div>
           </Card>
-
-          {/* More games would go here */}
           <Card className="p-3">
             <p className="text-xs font-medium text-muted-foreground mb-2">추천 게임</p>
             <p className="text-xs text-muted-foreground">곧 추가됩니다</p>
           </Card>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>게임 수정</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <Input placeholder="게임 제목" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+            <Input placeholder="게임 URL" value={editForm.contentUrl} onChange={(e) => setEditForm({ ...editForm, contentUrl: e.target.value })} />
+            <Textarea placeholder="게임 설명" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+            <Button className="w-full" onClick={() => void handleSave()} disabled={saving}>
+              {saving ? '저장 중...' : '저장'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>게임 삭제</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">"{game.title}" 게임을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</p>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirm(false)}>취소</Button>
+            <Button variant="destructive" onClick={() => void handleDelete()}>삭제</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

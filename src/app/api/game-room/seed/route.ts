@@ -4,6 +4,14 @@ import { fail, ok } from '@/lib/server/handler';
 
 const GAMES = [
   {
+    title: '스페이스 슈터',
+    description: '우주선을 조종해 적을 물리치세요! 터치/클릭으로 발사, 좌우로 이동!',
+    contentUrl: '/games/space-shooter.html',
+    fileUrl: null,
+    tags: ['액션', '슈팅'],
+    controls: '← → 이동, 스페이스 발사, 모바일: 터치',
+  },
+  {
     title: '헬리 대쉬',
     description: '헬리콥터를 조종해 좁은 동굴 사이를 날아가세요. 클릭으로 상승, 놓으면 하강!',
     contentUrl: '/games/helicopter.html',

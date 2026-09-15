@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
         visibility: 'public',
       },
       include: {
-        owner: { select: { username: true } },
+        owner: { select: { id: true, username: true } },
         _count: { select: { gamePlays: true } },
       },
       orderBy: sort === 'recent'
@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
           description: g.description,
           fileUrl: g.fileUrl,
           contentUrl: g.contentUrl,
+          ownerId: g.owner.id,
           ownerName: g.owner.username,
           playCount: g._count.gamePlays,
           likeCount: g.likeCount,

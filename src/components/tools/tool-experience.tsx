@@ -263,6 +263,121 @@ function TranscriptTool({ autoCut = false }: { autoCut?: boolean }) {
   function downloadSrt() { if (!result) return; const url = URL.createObjectURL(new Blob([result.srt], { type: 'text/plain;charset=utf-8' })); const a = document.createElement('a'); a.href = url; a.download = `${file?.name.replace(/\.[^.]+$/, '') || 'subtitles'}.srt`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
   return <section className="mt-10 rounded-2xl border bg-card p-6 shadow-sm"><h2 className="text-2xl font-bold">{autoCut ? '자동 컷편집' : 'SRT 자막 생성기'}</h2><p className="mt-1 text-sm text-muted-foreground">{autoCut ? '음성 구간을 분석해 편집용 대본과 장면 구간을 만듭니다.' : '오디오·영상에서 Whisper 타임코드 자막을 추출해 SRT로 다운로드합니다.'}</p><input type="file" accept="audio/*,video/*" onChange={(event) => setFile(event.target.files?.[0] || null)} className="mt-5 block w-full rounded-lg border bg-background p-3 text-sm" /><p className="mt-2 text-xs text-muted-foreground">24MB 이하 파일을 지원합니다.</p><button onClick={create} disabled={loading || !file} className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 font-semibold text-primary-foreground">{loading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}{loading ? '음성 분석 중…' : autoCut ? '편집 구간 만들기' : 'SRT 만들기'}</button><ErrorBox text={error} />{result && <div className="mt-5"><Output title={autoCut ? '편집용 대본' : '추출된 대본'} value={result.text} />{autoCut ? <div className="mt-3 rounded-xl border p-4"><h3 className="font-semibold">장면 구간</h3><div className="mt-3 space-y-2 text-sm">{result.segments.map((segment, index) => <p key={index} className="rounded bg-muted p-2">{segment.start.toFixed(1)}s – {segment.end.toFixed(1)}s · {segment.text}</p>)}</div></div> : <button onClick={downloadSrt} className="mt-3 inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold"><Download className="size-4" />SRT 다운로드</button>}</div>}</section>;
 }
+function WhisperTool() {
+  const [file, setFile] = useState<File | null>(null);
+  const [language, setLanguage] = useState('ko');
+  const [result, setResult] = useState<{ text: string; srt: string; segments: { start: number; end: number; text: string }[]; engine?: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function create() {
+    if (!file) return;
+    setLoading(true); setError('');
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      body.append('language', language);
+      const response = await fetch('/api/tools/whisper', { method: 'POST', body });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setResult(data);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '음성 인식에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function downloadSrt() {
+    if (!result) return;
+    const url = URL.createObjectURL(new Blob([result.srt], { type: 'text/plain;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url;
+    a.download = `${file?.name.replace(/\.[^.]+$/, '') || 'transcript'}.srt`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  function downloadTxt() {
+    if (!result) return;
+    const url = URL.createObjectURL(new Blob([result.text], { type: 'text/plain;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url;
+    a.download = `${file?.name.replace(/\.[^.]+$/, '') || 'transcript'}.txt`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  const langs = [
+    ['ko', '한국어'], ['en', 'English'], ['ja', '日本語'], ['zh', '中文'],
+  ] as const;
+
+  return (
+    <section className="mt-10 rounded-2xl border bg-card p-6 shadow-sm">
+      <h2 className="text-2xl font-bold">음성 텍스트 변환</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        MP3, M4A, WAV 등 오디오 파일을 업로드하면 Whisper large-v3 GPU 워커가 텍스트로 변환합니다.
+      </p>
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        {langs.map(([code, label]) => (
+          <button key={code} onClick={() => setLanguage(code)}
+            className={`rounded-full border px-4 py-2 text-sm ${language === code ? 'border-primary bg-primary text-primary-foreground' : 'bg-background'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <input type="file"
+        accept=".mp3,.m4a,.wav,.ogg,.flac,.webm,.mp4,.aac,.wma"
+        onChange={(event) => setFile(event.target.files?.[0] || null)}
+        className="mt-5 block w-full rounded-lg border bg-background p-3 text-sm" />
+      <p className="mt-2 text-xs text-muted-foreground">
+        {file ? `${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)` : 'MP3, M4A, WAV, OGG, FLAC, AAC · 최대 100MB'}
+      </p>
+
+      <button onClick={create} disabled={loading || !file}
+        className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 font-semibold text-primary-foreground">
+        {loading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+        {loading ? 'GPU에서 음성 분석 중… (1~3분 소요)' : '텍스트로 변환하기'}
+      </button>
+
+      <ErrorBox text={error} />
+
+      {result && (
+        <div className="mt-5 space-y-4">
+          <Output title="변환된 텍스트" value={result.text} />
+
+          {result.segments.length > 0 && (
+            <div className="rounded-xl border p-4">
+              <h3 className="font-semibold">타임코드 구간</h3>
+              <div className="mt-3 max-h-80 space-y-2 overflow-auto text-sm">
+                {result.segments.map((seg, i) => (
+                  <p key={i} className="rounded bg-muted p-2">
+                    <span className="font-mono text-xs text-primary">{seg.start.toFixed(1)}s–{seg.end.toFixed(1)}s</span>
+                    {' '}{seg.text}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            <button onClick={downloadTxt}
+              className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold">
+              <Download className="size-4" /> TXT 다운로드
+            </button>
+            <button onClick={downloadSrt}
+              className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold">
+              <Download className="size-4" /> SRT 다운로드
+            </button>
+          </div>
+
+          {result.engine && (
+            <p className="text-xs text-muted-foreground">엔진: {result.engine} · RunPod GPU</p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function Output({ title, value }: { title: string; value: string }) { return <div className="rounded-xl border p-4"><div className="flex items-center justify-between gap-3"><h3 className="font-semibold">{title}</h3><button onClick={() => navigator.clipboard.writeText(value)} className="text-sm text-primary">복사</button></div><pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap font-sans text-sm leading-7 text-muted-foreground">{value}</pre></div>; }
 
-export function ToolExperience({ slug }: { slug: string }) { if (slug === 'tts') return <TtsTool />; if (slug === 'metaprompt') return <MetaPromptTool />; if (slug === 'suno') return <SunoTool />; if (slug === 'qr') return <QrTool />; if (slug === 'thumbnail') return <ThumbnailTool />; if (slug === 'storyboard') return <CreativePlanTool kind="storyboard" />; if (slug === 'detail') return <CreativePlanTool kind="detail" />; if (slug === 'detail2') return <CreativePlanTool kind="detail2" />; if (slug === 'converter') return <ConverterTool />; if (slug === 'srt') return <TranscriptTool />; if (slug === 'autocut') return <TranscriptTool autoCut />; return null; }
+export function ToolExperience({ slug }: { slug: string }) { if (slug === 'tts') return <TtsTool />; if (slug === 'metaprompt') return <MetaPromptTool />; if (slug === 'suno') return <SunoTool />; if (slug === 'qr') return <QrTool />; if (slug === 'thumbnail') return <ThumbnailTool />; if (slug === 'storyboard') return <CreativePlanTool kind="storyboard" />; if (slug === 'detail') return <CreativePlanTool kind="detail" />; if (slug === 'detail2') return <CreativePlanTool kind="detail2" />; if (slug === 'converter') return <ConverterTool />; if (slug === 'whisper') return <WhisperTool />; if (slug === 'srt') return <TranscriptTool />; if (slug === 'autocut') return <TranscriptTool autoCut />; return null; }

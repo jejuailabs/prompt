@@ -33,7 +33,7 @@ canvas{display:block;border-radius:12px;box-shadow:0 0 40px #fbbf2455;background
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const W=cv.width,H=cv.height;
 const overlay=document.getElementById('overlay'),hScore=document.getElementById('hScore'),hBest=document.getElementById('hBest');
-let bird,pipes,score,best=0,running=false,gameOver=false;
+let bird={x:80,y:240,vy:0,r:12},pipes=[],score=0,best=0,running=false,gameOver=false;
 const GAP=130,PW=45,GRAVITY=0.4,JUMP=-6.5,PIPE_SPEED=2.2;
 
 function reset(){bird={x:80,y:H/2,vy:0,r:12};pipes=[];score=0;gameOver=false;hScore.textContent='SCORE 0';}

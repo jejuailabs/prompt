@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>HELI DASH</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0714;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,sans-serif;overflow:hidden;touch-action:none}
+  #wrap{position:relative}
+  canvas{display:block;border-radius:12px;box-shadow:0 0 40px #a78bfa55;background:#0f1729;max-width:96vw;max-height:96vh}
+  #hud{position:absolute;top:10px;left:14px;right:14px;display:flex;justify-content:space-between;color:#fff;font-size:12px;letter-spacing:1px;text-shadow:0 0 6px #a78bfa;pointer-events:none}
+  #overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,3,12,.74);color:#fff;text-align:center;backdrop-filter:blur(2px);border-radius:12px}
+  #overlay h1{margin:0 0 6px;font-size:24px;color:#a78bfa;letter-spacing:2px}
+  #overlay p{margin:3px 0;font-size:12px;color:#c9c2e0}
+  #overlay button{margin-top:14px;padding:10px 26px;font-size:14px;font-weight:700;color:#fff;background:linear-gradient(135deg,#a78bfa,#5b21b6);border:0;border-radius:999px;cursor:pointer}
+  #overlay button:hover{filter:brightness(1.15)}
+  .badge{font-size:10px;color:#8f86ad;margin-top:12px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="560" height="400"></canvas>
+  <div id="hud"><span id="hScore">SCORE 0</span><span id="hBest">BEST 0</span></div>
+  <div id="overlay">
+    <h1>HELI DASH</h1>
+    <p>조종: 클릭 / 스페이스 / ↑ = 상승</p>
+    <p>놓으면 하강 · 벽과 장애물을 피하세요!</p>
+    <button id="btnStart">게임 시작</button>
+    <div class="badge">PLAYLAB SANDBOX · TIER 1 IFRAME ENGINE</div>
+  </div>
+</div>
+<script>
+(() => {
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const hScore = document.getElementById('hScore'), hBest = document.getElementById('hBest');
+  const W = cv.width, H = cv.height;
+  const ACCENT = '#a78bfa';
+
+  const GRAVITY = 0.35;
+  const LIFT = -5.5;
+  const GAP = 130;
+  const PIPE_W = 44;
+  const PIPE_SPEED = 2.8;
+  const PIPE_INTERVAL = 110;
+  const CEIL_H = 20;
+  const FLOOR_H = 20;
+
+  let running = false, raf = 0;
+  let best = parseInt(localStorage.getItem('heli-best') || '0', 10);
+  hBest.textContent = 'BEST ' + best;
+
+  const stars = Array.from({ length: 50 }, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    z: 0.4 + Math.random() * 1.2, r: Math.random() * 1.2 + 0.3
+  }));
+
+  const heli = { x: 100, y: H / 2, vy: 0, w: 36, h: 20, tilt: 0 };
+  let pipes = [];
+  let particles = [];
+  let score = 0;
+  let frameCount = 0;
+  let pressing = false;
+
+  function onDown(e) {
+    if (e.type === 'keydown' && e.key !== ' ' && e.key !== 'ArrowUp') return;
+    if (e.key === ' ') e.preventDefault();
+    pressing = true;
+  }
+  function onUp(e) {
+    if (e.type === 'keyup' && e.key !== ' ' && e.key !== 'ArrowUp') return;
+    pressing = false;
+  }
+
+  document.addEventListener('keydown', onDown);
+  document.addEventListener('keyup', onUp);
+  cv.addEventListener('pointerdown', (e) => { pressing = true; });
+  cv.addEventListener('pointerup', () => { pressing = false; });
+  cv.addEventListener('pointerleave', () => { pressing = false; });
+
+  function spawnPipe() {
+    const minTop = CEIL_H + 30;
+    const maxTop = H - FLOOR_H - GAP - 30;
+    const topH = minTop + Math.random() * (maxTop - minTop);
+    pipes.push({ x: W + 10, topH, passed: false });
+  }
+
+  function boom(x, y) {
+    for (let i = 0; i < 18; i++) particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 6,
+      vy: (Math.random() - 0.5) * 6,
+      life: 1,
+      color: Math.random() > 0.5 ? ACCENT : '#ff6b6b'
+    });
+  }
+
+  function update(dt) {
+    frameCount++;
+
+    stars.forEach(s => {
+      s.x -= s.z * PIPE_SPEED * dt * 60;
+      if (s.x < 0) { s.x = W; s.y = Math.random() * H; }
+    });
+
+    if (pressing) {
+      heli.vy += LIFT * dt * 4;
+    }
+    heli.vy += GRAVITY * dt * 60;
+    heli.vy = Math.max(-6, Math.min(6, heli.vy));
+    heli.y += heli.vy * dt * 60;
+    heli.tilt = heli.vy * 2;
+
+    if (frameCount % PIPE_INTERVAL === 0) spawnPipe();
+
+    pipes.forEach(p => { p.x -= PIPE_SPEED * dt * 60; });
+
+    for (const p of pipes) {
+      if (!p.passed && p.x + PIPE_W / 2 < heli.x) {
+        p.passed = true;
+        score++;
+      }
+    }
+    pipes = pipes.filter(p => p.x > -PIPE_W - 10);
+
+    // collision: ceiling / floor
+    if (heli.y - heli.h / 2 < CEIL_H || heli.y + heli.h / 2 > H - FLOOR_H) {
+      boom(heli.x, heli.y);
+      gameOver();
+      return;
+    }
+
+    // collision: pipes
+    const hx = heli.x, hy = heli.y, hr = 12;
+    for (const p of pipes) {
+      const pLeft = p.x - PIPE_W / 2, pRight = p.x + PIPE_W / 2;
+      if (hx + hr > pLeft && hx - hr < pRight) {
+        if (hy - hr < p.topH || hy + hr > p.topH + GAP) {
+          boom(heli.x, heli.y);
+          gameOver();
+          return;
+        }
+      }
+    }
+
+    particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= dt * 2.2; });
+    particles = particles.filter(p => p.life > 0);
+
+    hScore.textContent = 'SCORE ' + score;
+  }
+
+  function drawHeli() {
+    ctx.save();
+    ctx.translate(heli.x, heli.y);
+    ctx.rotate(heli.tilt * Math.PI / 180);
+
+    // body
+    ctx.fillStyle = ACCENT;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 18, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // cockpit
+    ctx.fillStyle = '#c4b5fd';
+    ctx.beginPath();
+    ctx.ellipse(6, -2, 7, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // tail
+    ctx.fillStyle = '#7c3aed';
+    ctx.beginPath();
+    ctx.moveTo(-16, -2);
+    ctx.lineTo(-26, -10);
+    ctx.lineTo(-26, -6);
+    ctx.lineTo(-18, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // rotor
+    const rotorPhase = (frameCount * 0.4) % Math.PI;
+    ctx.strokeStyle = '#e0d5ff';
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.7;
+    const rx = Math.cos(rotorPhase) * 22;
+    ctx.beginPath();
+    ctx.moveTo(-rx, -11);
+    ctx.lineTo(rx, -11);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // exhaust particles when lifting
+    if (pressing) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.globalAlpha = 0.6;
+      for (let i = 0; i < 3; i++) {
+        const ex = -20 + Math.random() * 4 - 2;
+        const ey = Math.random() * 6 - 3;
+        ctx.beginPath();
+        ctx.arc(ex, ey, 2 + Math.random() * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+  }
+
+  function draw() {
+    // sky gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#0f1729');
+    grad.addColorStop(0.5, '#1a1040');
+    grad.addColorStop(1, '#0f1729');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // stars
+    stars.forEach(s => {
+      ctx.globalAlpha = 0.2 + s.z * 0.3;
+      ctx.fillStyle = '#cfc4f2';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, 6.28);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    // ceiling
+    ctx.fillStyle = '#2d1b69';
+    ctx.fillRect(0, 0, W, CEIL_H);
+    ctx.fillStyle = '#a78bfa';
+    ctx.fillRect(0, CEIL_H - 2, W, 2);
+
+    // floor
+    ctx.fillStyle = '#2d1b69';
+    ctx.fillRect(0, H - FLOOR_H, W, FLOOR_H);
+    ctx.fillStyle = '#a78bfa';
+    ctx.fillRect(0, H - FLOOR_H, W, 2);
+
+    // pipes
+    pipes.forEach(p => {
+      const pLeft = p.x - PIPE_W / 2;
+      // top pipe
+      const topGrad = ctx.createLinearGradient(pLeft, 0, pLeft + PIPE_W, 0);
+      topGrad.addColorStop(0, '#5b21b6');
+      topGrad.addColorStop(0.5, '#7c3aed');
+      topGrad.addColorStop(1, '#5b21b6');
+      ctx.fillStyle = topGrad;
+      ctx.fillRect(pLeft, CEIL_H, PIPE_W, p.topH - CEIL_H);
+      // top pipe cap
+      ctx.fillStyle = '#a78bfa';
+      ctx.fillRect(pLeft - 4, p.topH - 8, PIPE_W + 8, 8);
+
+      // bottom pipe
+      const botTop = p.topH + GAP;
+      ctx.fillStyle = topGrad;
+      ctx.fillRect(pLeft, botTop, PIPE_W, H - FLOOR_H - botTop);
+      // bottom pipe cap
+      ctx.fillStyle = '#a78bfa';
+      ctx.fillRect(pLeft - 4, botTop, PIPE_W + 8, 8);
+    });
+
+    // score in center
+    ctx.fillStyle = '#fff';
+    ctx.globalAlpha = 0.12;
+    ctx.font = 'bold 72px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(score.toString(), W / 2, H / 2 + 24);
+    ctx.globalAlpha = 1;
+
+    drawHeli();
+
+    // particles
+    particles.forEach(p => {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  let last = 0;
+  function loop(ts) {
+    if (!running) return;
+    const dt = Math.min((ts - last) / 1000, 0.05);
+    last = ts;
+    update(dt);
+    draw();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function start() {
+    score = 0; frameCount = 0;
+    heli.y = H / 2; heli.vy = 0;
+    pipes = []; particles = [];
+    pressing = false;
+    overlay.style.display = 'none';
+    running = true; last = performance.now();
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(loop);
+  }
+
+  function gameOver() {
+    running = false; cancelAnimationFrame(raf);
+    pressing = false;
+    if (score > best) {
+      best = score;
+      try { localStorage.setItem('heli-best', best.toString()); } catch {}
+    }
+    hBest.textContent = 'BEST ' + best;
+    overlay.querySelector('h1').textContent = 'GAME OVER';
+    overlay.querySelectorAll('p')[0].textContent = '점수: ' + score + ' · 최고: ' + best;
+    overlay.querySelector('button').textContent = '다시 도전';
+    overlay.style.display = 'flex';
+  }
+
+  document.getElementById('btnStart').addEventListener('click', start);
+})();
+</script>
+</body>
+</html>

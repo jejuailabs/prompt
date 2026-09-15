@@ -33,7 +33,7 @@ canvas{display:block;border-radius:12px;box-shadow:0 0 40px #34d39955;background
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const W=cv.width,H=cv.height,G=20,CW=W/G,CH=H/G;
 const overlay=document.getElementById('overlay'),hScore=document.getElementById('hScore'),hBest=document.getElementById('hBest');
-let snake,dir,nextDir,food,score,best=0,running=false,timer=0,speed=120;
+let snake=[{x:Math.floor(CW/2),y:Math.floor(CH/2)}],dir={x:1,y:0},nextDir={x:1,y:0},food={x:3,y:3},score=0,best=0,running=false,timer=0,speed=120;
 const colors=['#34d399','#6ee7b7','#a7f3d0','#d1fae5'];
 
 function rand(max){return Math.floor(Math.random()*max);}

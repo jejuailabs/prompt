@@ -34,7 +34,7 @@ const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
 const W=cv.width,H=cv.height;
 const overlay=document.getElementById('overlay'),hPlayer=document.getElementById('hPlayer'),hCpu=document.getElementById('hCpu');
 const PW=10,PH=60,BR=6,WIN=7;
-let player,cpu,ball,pScore,cScore,running=false,keys={},touchY=null;
+let player={x:20,y:H/2-PH/2},cpu={x:W-20-PW,y:H/2-PH/2},ball={x:W/2,y:H/2,dx:0,dy:0},pScore=0,cScore=0,running=false,keys={},touchY=null;
 
 function reset(){
   player={x:20,y:H/2-PH/2};cpu={x:W-20-PW,y:H/2-PH/2};

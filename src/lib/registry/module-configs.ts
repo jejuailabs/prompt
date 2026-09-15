@@ -107,6 +107,13 @@ export const MODULE_CONFIGS: ModuleConfigSeed[] = [
     mainScreenSlot: 'none', entryView: 'pipeline-run', requiresAuth: false, adminOnly: false,
     group: 'tools',
   },
+  {
+    id: 'tool-whisper', phase: 1, titleKo: '음성 텍스트 변환', titleEn: 'Speech to Text',
+    descKo: 'MP3·M4A 오디오를 텍스트로 변환합니다', descEn: 'Convert MP3/M4A audio to text',
+    icon: 'headphones', navOrder: 56, enabled: true, status: 'new',
+    mainScreenSlot: 'none', entryView: 'ai-tools', requiresAuth: true, adminOnly: false,
+    group: 'tools', newUntilDays: 30,
+  },
   // ─── Admin ───
   {
     id: 'admin', phase: 0, titleKo: '어드민', titleEn: 'Admin',
