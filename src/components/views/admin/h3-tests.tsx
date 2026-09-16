@@ -11,7 +11,7 @@ export function H3Tests() {
   const [gpu, setGpu] = useState<'5090' | 'blackwell'>('5090');
   const [speed, setSpeed] = useState<H3Preset>('turbo8');
   const [quality, setQuality] = useState<H3Preset>('standard20');
-  const [prompt, setPrompt] = useState('해 질 무렵 바닷가를 천천히 걷는 사람. 카메라는 직선으로 전진한다. 음성 없음.');
+  const [prompt, setPrompt] = useState('한여름 늦은 오후, 야외 수영장 옆 그늘. 25세 성인 여성을 어깨 위 중심으로 담은 실사 영화의 클로즈업, 6초 원테이크. 얇은 흰색 면 티셔츠를 입고 있으며 어깨와 목둘레에 물이 살짝 묻어 있다. 옷은 불투명하고 비치지 않는다. 얼굴과 목에 작은 물방울이 맺혀 있고, 젖은 머리카락 몇 가닥이 관자놀이에 붙어 있다. 자연스러운 피부 결, 미세한 솜털, 속눈썹, 눈동자의 반사광, 물방울의 선명한 하이라이트와 티셔츠 목둘레의 면 섬유가 보인다. 부드러운 측면 자연광과 은은한 역광, 배경은 수영장의 청록빛 보케. 85mm 인물 렌즈 느낌, 얕은 심도지만 양쪽 눈은 또렷하게 초점 유지. 카메라는 눈높이에서 아주 천천히 직선으로 다가간다. 인물은 편안히 숨을 쉬고 한 번 자연스럽게 눈을 깜빡인 뒤 시선을 살짝 카메라 쪽으로 옮긴다. 얼굴 형태와 물방울 위치가 시간에 따라 안정적으로 유지된다. 과도한 피부 보정, 플라스틱 피부, 인위적인 샤프닝, 깜빡임, 얼굴 변형, 화면 전환, 자막, 로고, 대사와 내레이션 없음.');
   const [preview, setPreview] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
