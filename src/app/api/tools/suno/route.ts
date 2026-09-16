@@ -1,21 +1,205 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { chatJson, chatText } from '@/lib/server/ai';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { NextRequest, NextResponse } from "next/server";
+
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
+  const genAI = new GoogleGenerativeAI(apiKey);
   try {
-    const { idea } = await req.json() as { idea?: string };
-    const cleanIdea = idea?.trim() || '';
-    if (!cleanIdea) return NextResponse.json({ error: '음악 아이디어를 입력해 주세요.' }, { status: 400 });
-    if (cleanIdea.length > 1500) return NextResponse.json({ error: '아이디어는 1,500자까지 입력할 수 있습니다.' }, { status: 400 });
-    const korean = /[가-힣]/.test(cleanIdea);
-    const [stylePrompt, lyrics, meta] = await Promise.all([
-      chatText('당신은 Grammy 수준의 음악 프로듀서입니다. Suno AI Style of Music에 넣을 영어 프롬프트를 900자 이하, 쉼표로 연결된 한 문단으로 작성하세요. 장르, 악기, 리듬, 템포, 보컬, 믹싱, 분위기와 에너지 변화를 구체적으로 포함하고 가사는 쓰지 마세요.', cleanIdea),
-      chatText(`당신은 뛰어난 ${korean ? '한국어' : '영어'} 작사가입니다. Suno에 바로 넣을 완전한 오리지널 가사를 작성하세요. [Intro], [Verse 1], [Pre-Chorus], [Chorus], [Verse 2], [Bridge], [Final Chorus], [Outro]를 모두 포함하세요.`, cleanIdea),
-      chatJson<{ title: string; genre: string; mood: string }>(`아이디어를 바탕으로 노래 제목, 장르, 분위기를 JSON만으로 답하세요: {"title":"2~5단어 제목","genre":"장르","mood":"분위기"}. 제목 언어는 ${korean ? '한국어' : '영어'}입니다.`, cleanIdea),
+    const body = await req.json();
+
+    // ─── 간단 모드: 한 줄 아이디어 → AI가 장르·무드·보컬까지 알아서 결정 ───────────
+    if (body.mode === "simple") {
+      const idea = String(body.idea || "").trim();
+      if (!idea) return NextResponse.json({ error: "아이디어를 입력하세요." }, { status: 400 });
+      const isKo = /[가-힣]/.test(idea);
+
+      const styleSys = `You are a Grammy-winning music producer writing a Suno AI "Style of Music" prompt.
+From a short, possibly vague idea, YOU DECIDE the genre/subgenre, instrumentation, rhythm, bass, vocal delivery, production style, atmosphere and energy yourself.
+⚠️ HARD LIMIT: 1000 characters max (target ~900). Be DENSE — comma-separated descriptors, single paragraph, every word earns its place.
+Cover: genre blend, 1-2 real artist/sound references, key instrumentation & tone, rhythm/groove & tempo feel, bass, vocal delivery (gender/texture), production style, sonic atmosphere, energy dynamics.
+DO NOT write lyrics. DO NOT use [section] tags. Output ONLY the descriptor paragraph.`;
+
+      const lyricsSys = `You are an acclaimed ${isKo ? "Korean" : "English"} lyricist.
+From a short idea, write COMPLETE original song lyrics in ${isKo ? "Korean" : "English"}.
+Use Suno metatags exactly: [Intro], [Verse 1], [Pre-Chorus], [Chorus], [Verse 2], [Bridge], [Final Chorus], [Outro].
+Write ALL sections fully — never truncate, no placeholders. Make it singable, emotionally vivid, with a memorable hook.`;
+
+      const metaSys = `Classify a song idea for display chips. Reply with ONLY compact JSON, no markdown:
+{"genre":"<장르(한국어)>","mood":"<분위기(한국어)>","vocal":"있음 또는 없음","language":"한국어 또는 English"}`;
+
+      const flash = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const [styleR, lyricsR, titleR, metaR] = await Promise.all([
+        genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: styleSys })
+          .generateContent({ contents: [{ role: "user", parts: [{ text: `Idea: ${idea}` }] }], generationConfig: { maxOutputTokens: 4096 } }),
+        genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: lyricsSys })
+          .generateContent({ contents: [{ role: "user", parts: [{ text: `Idea: ${idea}\nWrite the full lyrics now.` }] }], generationConfig: { maxOutputTokens: 16384 } }),
+        flash.generateContent({ contents: [{ role: "user", parts: [{ text: `Suggest ONE punchy song title (2-5 words) in ${isKo ? "Korean" : "English"} for this idea: "${idea}". Reply with ONLY the title. No quotes.` }] }], generationConfig: { maxOutputTokens: 200 } }),
+        genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: metaSys })
+          .generateContent({ contents: [{ role: "user", parts: [{ text: idea }] }], generationConfig: { maxOutputTokens: 200 } }),
+      ]);
+
+      let sPrompt = styleR.response.text().trim().replace(/^["'`]|["'`]$/g, "");
+      if (sPrompt.length > 1000) {
+        const t = sPrompt.slice(0, 1000); const lc = t.lastIndexOf(",");
+        sPrompt = lc > 800 ? t.slice(0, lc) : t;
+      }
+      const sLyrics = lyricsR.response.text().trim();
+      const sTitle = titleR.response.text().trim().replace(/^["'「『【\[<]|["'」』】\]>]$/g, "").split("\n")[0].trim();
+      let meta = { genre: "", mood: "", vocal: "있음", language: isKo ? "한국어" : "English" };
+      try {
+        const parsed = JSON.parse(metaR.response.text().replace(/```json|```/g, "").trim());
+        meta = { ...meta, ...parsed };
+      } catch { /* keep defaults */ }
+
+      return NextResponse.json({ stylePrompt: sPrompt, lyrics: sLyrics, suggestedTitle: sTitle, meta });
+    }
+
+    const isAlbum = body.projectType === "album";
+    const trackLabel = isAlbum ? `Track ${body.trackIndex || 1} of ${body.trackCount}` : "Single";
+    const bpmText = body.bpmMode === "random" ? "tempo auto-matched to genre" : `${body.bpm} BPM`;
+
+    const styleSystem = `You are a Grammy-winning music producer writing a sonic brief for Suno AI.
+The style prompt is the MOST CRITICAL element — it determines everything about how the track sounds.
+DO NOT write lyrics. DO NOT use section tags like [Verse] or [Chorus].
+
+⚠️ HARD CONSTRAINT: Suno's Style of Music field accepts a MAXIMUM of 1000 CHARACTERS (including spaces).
+Your output MUST be 1000 characters or fewer — count as you write. Target ~900 chars to leave safety margin.
+This means you must be DENSE — every word earns its place. No filler, no transitions, no "and also".
+
+Your output is a single rich paragraph of comma-separated descriptors covering ALL of:
+① GENRE IDENTITY — specific subgenre blend (e.g. "post-grunge alt-metal" not just "rock")
+② ARTIST/SOUND REFERENCE — 1-2 real artists or albums this sonically resembles
+③ INSTRUMENTATION — key instruments, playing style, tone, articulation
+   (e.g. "down-tuned 7-string guitar, heavy palm muting, mid-scooped crunch")
+④ RHYTHM & GROOVE — drum character, kick/snare feel, hi-hat style, ${bpmText}
+⑤ BASS — tone, technique, relationship to kick
+⑥ VOCAL DELIVERY — gender, technique, texture, emotional delivery
+⑦ PRODUCTION STYLE — mixing approach, era/producer reference (e.g. "Rick Rubin-era raw", "modern hyperpop loudness")
+⑧ SONIC ATMOSPHERE — the emotional/sonic world
+⑨ ENERGY DYNAMICS — how intensity moves through the track
+
+Output ONLY the style descriptor paragraph. Comma-separated, single paragraph, ≤1000 characters.
+Be cinematic, specific, and dense. Cut adjectives that don't add sonic info.`;
+
+    const adv = body.advanced as {
+      vocalDirection?: string;
+      venueMood?: string;
+      energyCurve?: string;
+      bpmFeel?: string;
+      hookStyle?: string;
+      vocalProduction?: string;
+      songDevice?: string;
+      detailedMoods?: string[];
+      avoidElementsAdvanced?: string[];
+      instruments?: { guitar?: string; drums?: string; bass?: string; synth?: string };
+    } | null;
+
+    const isAutoOrEmpty = (v?: string) => !v || v === "자동" || v.startsWith("자동");
+    const advancedBlock = adv ? `
+
+═══ ADVANCED SONIC CONTROLS (these OVERRIDE genre defaults) ═══
+${!isAutoOrEmpty(adv.vocalDirection) ? `VOCAL DIRECTION: ${adv.vocalDirection} — describe vocal delivery to match this exactly` : ""}
+${!isAutoOrEmpty(adv.venueMood) ? `VENUE/PLACE TEXTURE: ${adv.venueMood} — the sonic world must evoke this specific environment` : ""}
+${!isAutoOrEmpty(adv.energyCurve) ? `ENERGY CURVE: ${adv.energyCurve} — dynamics must follow this shape across the track` : ""}
+${!isAutoOrEmpty(adv.bpmFeel) ? `TEMPO FEEL: ${adv.bpmFeel} — describe rhythm character in these terms` : ""}
+${!isAutoOrEmpty(adv.hookStyle) ? `HOOK STYLE: ${adv.hookStyle} — chorus/hook must have this character` : ""}
+${!isAutoOrEmpty(adv.vocalProduction) ? `VOCAL PRODUCTION: ${adv.vocalProduction} — describe vocal mix/processing this way` : ""}
+${!isAutoOrEmpty(adv.songDevice) ? `SONG DEVICE: ${adv.songDevice} — must explicitly mention this structural device` : ""}
+${(adv.detailedMoods?.length ?? 0) > 0 ? `DETAILED MOODS (atmospheric layers): ${adv.detailedMoods!.join(", ")} — weave these specific feelings into the description` : ""}
+${!isAutoOrEmpty(adv.instruments?.guitar) ? `GUITAR: ${adv.instruments!.guitar} (override genre default)` : ""}
+${!isAutoOrEmpty(adv.instruments?.drums) ? `DRUMS: ${adv.instruments!.drums} (override genre default)` : ""}
+${!isAutoOrEmpty(adv.instruments?.bass) ? `BASS: ${adv.instruments!.bass} (override genre default)` : ""}
+${adv.instruments?.synth && !adv.instruments.synth.startsWith("자동") ? `SYNTH PRESENCE: ${adv.instruments.synth}` : ""}
+${(adv.avoidElementsAdvanced?.length ?? 0) > 0 ? `\n⛔ HARD AVOID LIST (must NEVER appear in the prompt): ${adv.avoidElementsAdvanced!.join(", ")} — do not include any vocabulary, descriptors, or sonic elements that would produce these` : ""}
+═══════════════════════════════════════════════════════════` : "";
+
+    const lyricsCtx = body.lyricsContext as {
+      genre?: string; mood?: string; atmosphere?: string;
+      styleHint?: string; emotionSummary?: string;
+    } | null;
+
+    const lyricsContextBlock = lyricsCtx ? `
+
+═══ LYRICS CONTEXT (style MUST complement these lyrics) ═══
+Genre hint: ${lyricsCtx.genre || ""}
+Mood: ${lyricsCtx.mood || ""}
+Atmosphere: ${lyricsCtx.atmosphere || ""}
+Emotion: ${lyricsCtx.emotionSummary || ""}
+Style direction: ${lyricsCtx.styleHint || ""}
+═══════════════════════════════════════════════════════════` : "";
+
+    const styleUser = `Write a maximally detailed Suno style prompt for this track (${trackLabel}).
+Every parameter below MUST be reflected in the sonic description:
+
+GENRE: ${body.genre1}${body.genre2 ? ` + ${body.genre2}` : ""}
+MOOD: ${body.mood}
+INTENSITY: ${body.intensity}
+TEMPO: ${bpmText}
+VOCAL: ${body.vocal} (${body.language})
+PURPOSE: ${body.purpose || "general release"}
+THEME/CONTEXT: ${body.topic || "not specified"}
+AVOID: ${body.avoidElements || "nothing specific"}
+EXTRA DIRECTION: ${body.additionalRequests || "none"}${advancedBlock}${lyricsContextBlock}
+
+This is the most important output. Be specific, cinematic, and precise.
+Remember the 1000-character hard limit — be DENSE, not wordy.`;
+
+    const lyricsSystem = `You are an acclaimed ${body.language === "한국어" ? "Korean" : "English"} lyricist.
+Use Suno metatags: [Intro], [Verse 1], [Pre-Chorus], [Chorus], [Verse 2], [Bridge], [Final Chorus], [Outro]
+Write COMPLETE lyrics for ALL sections. Never truncate.
+Rhyme style: ${body.rhymeStyle || "natural"}
+Density: ${body.lyricDensity || "medium"}
+Genre/mood: ${body.genre1} / ${body.mood} / ${body.intensity}
+Avoid: ${body.avoidElements || "clichés"}`;
+
+    const lyricsUser = `Write complete song lyrics.
+Topic: ${body.topic || "자유 주제 — 감정적으로 임팩트 있는 오리지널 테마"}
+Hook: ${body.hookLyrics || "자유롭게 창작"}
+Notes: ${body.additionalRequests || "없음"}
+Write ALL sections fully. No placeholders.`;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const lyricsModel = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: lyricsSystem,
+    });
+
+    const [styleResult, lyricsResult, titleResult] = await Promise.all([
+      genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: styleSystem })
+        .generateContent({
+          contents: [{ role: "user", parts: [{ text: styleUser }] }],
+          generationConfig: { maxOutputTokens: 8192 },
+        }),
+      body.vocal !== "없음"
+        ? lyricsModel.generateContent({
+            contents: [{ role: "user", parts: [{ text: lyricsUser }] }],
+            generationConfig: { maxOutputTokens: 16384 },
+          })
+        : Promise.resolve(null),
+      model.generateContent({
+        contents: [{
+          role: "user",
+          parts: [{ text: `Suggest ONE punchy song title (2-5 words) in ${body.language === "한국어" ? "Korean" : "English"} for a ${body.genre1} track. Theme: "${body.topic || "open"}". Reply with ONLY the title. No quotes.` }],
+        }],
+        generationConfig: { maxOutputTokens: 200 },
+      }),
     ]);
-    const trimmedStyle = stylePrompt.length > 1000 ? stylePrompt.slice(0, Math.max(1, stylePrompt.slice(0, 1000).lastIndexOf(','))) : stylePrompt;
-    return NextResponse.json({ stylePrompt: trimmedStyle, lyrics, ...meta });
+
+    let stylePrompt = styleResult.response.text().trim().replace(/^["'`]|["'`]$/g, "");
+    if (stylePrompt.length > 1000) {
+      const trimmed = stylePrompt.slice(0, 1000);
+      const lastComma = trimmed.lastIndexOf(",");
+      stylePrompt = lastComma > 800 ? trimmed.slice(0, lastComma) : trimmed;
+    }
+    const lyrics = lyricsResult ? lyricsResult.response.text().trim() : null;
+    const suggestedTitle = titleResult.response.text().trim().replace(/^["'「『【\[<]|["'」』】\]>]$/g, "").split("\n")[0].trim();
+
+    return NextResponse.json({ stylePrompt, lyrics, suggestedTitle });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Suno 프롬프트 생성에 실패했습니다.' }, { status: 500 });
+    console.error("Suno prompt API error:", error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }
