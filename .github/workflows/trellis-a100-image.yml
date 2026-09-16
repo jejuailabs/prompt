@@ -1,20 +1,17 @@
-name: TRELLIS Blackwell worker image
+name: TRELLIS A100 worker image
 on:
   push:
     branches: [codex/3d-unity-pipeline]
-    paths:
-      - runpod-workflows/trellis-worker/**
-      - .github/workflows/trellis-worker-image.yml
+    paths: [.github/workflows/trellis-a100-image.yml]
   workflow_dispatch:
 permissions:
   contents: read
   packages: write
 concurrency:
-  group: trellis-worker-image
+  group: trellis-a100-image
   cancel-in-progress: false
 jobs:
   build:
-    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[a100-only]')
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -35,10 +32,11 @@ jobs:
         with:
           context: runpod-workflows/trellis-worker
           push: true
-          tags: ghcr.io/jejuailabs/playlab-trellis-blackwell:${{ github.sha }}
+          build-args: GPU_ARCH=8.0
+          tags: ghcr.io/jejuailabs/playlab-trellis-blackwell:a100-${{ github.sha }}
           provenance: false
           cache-from: type=gha,scope=trellis-blackwell
-          cache-to: type=gha,scope=trellis-blackwell,mode=max
+          cache-to: type=gha,scope=trellis-a100,mode=max
       - name: Record immutable image reference
         env:
           DIGEST: ${{ steps.image.outputs.digest }}

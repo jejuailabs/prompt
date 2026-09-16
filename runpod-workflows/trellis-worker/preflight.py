@@ -1,5 +1,6 @@
 """Run tiny real CUDA operations before downloading/loading any model weights."""
 import importlib
+import os
 import time
 import torch
 
@@ -9,8 +10,9 @@ def check():
     result = {'torch': torch.__version__, 'cuda': torch.version.cuda,
               'gpu': torch.cuda.get_device_name(), 'capability': list(torch.cuda.get_device_capability()),
               'torch_arches': torch.cuda.get_arch_list(), 'checks': []}
-    if result['capability'] != [12, 0]:
-        raise RuntimeError('This worker is built for Blackwell sm_120 only')
+    expected = [int(part) for part in os.environ.get('EXPECTED_GPU_ARCH', '12.0').split('.')]
+    if result['capability'] != expected:
+        raise RuntimeError(f"Worker architecture mismatch: expected {expected}, got {result['capability']}")
     for name in ['cumesh', 'flex_gemm', 'o_voxel', 'nvdiffrast.torch', 'xformers.ops']:
         importlib.import_module(name)
         result['checks'].append(name + ':import')
