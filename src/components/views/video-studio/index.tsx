@@ -50,20 +50,6 @@ interface FeaturedCard {
   tags: string[];
 }
 
-const featuredVideos: FeaturedCard[] = [
-  { id: 'sunrise', title: '새벽의 섬을 지나', creator: 'JIN', subtitle: '여행 필름 · 9:16', kind: 'video', duration: '00:08', model: 'H3', gradient: 'from-slate-950 via-sky-900 to-amber-300', tags: ['여행', '시네마틱'] },
-  { id: 'cafe', title: '비 오는 날의 카페', creator: 'minseo', subtitle: '브랜드 무드 필름', kind: 'video', duration: '00:06', model: 'Wan', gradient: 'from-stone-900 via-amber-800 to-orange-300', tags: ['카페', '무드'] },
-  { id: 'product', title: '한 방울의 이야기', creator: 'NOVA', subtitle: '제품 광고 · 16:9', kind: 'video', duration: '00:07', model: 'LTX', gradient: 'from-zinc-950 via-fuchsia-900 to-pink-300', tags: ['제품', '광고'] },
-  { id: 'night', title: '도시가 잠들기 전', creator: 'yoons', subtitle: '나레이션 숏폼', kind: 'video', duration: '00:10', model: 'H3', gradient: 'from-slate-950 via-indigo-900 to-cyan-300', tags: ['도시', '내레이션'] },
-];
-
-const featuredAssets: FeaturedCard[] = [
-  { id: 'character', title: '수현 · 캐릭터 바이블', creator: 'JIN', subtitle: '캐릭터 · 8개 참조 프레임', kind: 'asset', gradient: 'from-rose-950 via-rose-700 to-orange-200', tags: ['캐릭터', '리믹스 가능'] },
-  { id: 'place', title: '제주 해안의 아침', creator: 'seogwipo', subtitle: '장소 · 스타일 레퍼런스', kind: 'asset', gradient: 'from-cyan-950 via-teal-700 to-emerald-200', tags: ['장소', '제주'] },
-  { id: 'prop', title: '프리미엄 티 세트', creator: 'bloom', subtitle: '제품 · 3D 렌더 베이스', kind: 'asset', gradient: 'from-yellow-950 via-amber-700 to-yellow-100', tags: ['제품', 'Blender'] },
-  { id: 'style', title: '90s 필름 그레인', creator: 'filmclub', subtitle: '스타일 · 컬러 바이블', kind: 'asset', gradient: 'from-violet-950 via-purple-700 to-fuchsia-200', tags: ['스타일', '필름'] },
-];
-
 function errorMessage(error: unknown) {
   return error instanceof ApiError ? error.message : '요청을 완료하지 못했습니다.';
 }
@@ -78,7 +64,7 @@ export default function VideoStudioView() {
   const navigate = useAppStore((s) => s.navigate);
   const mode: StudioMode = params.studio === 'quick' ? 'quick' : params.studio === 'workspace' ? 'workspace' : 'gallery';
   const selectedProjectId = mode === 'workspace' ? params.project ?? null : null;
-  const remix = params.remix ? [...featuredVideos, ...featuredAssets].find((card) => card.id === params.remix) ?? null : null;
+  const remix = null;
 
   // A direct link or a pre-fix tab may not have an in-app history entry behind
   // it. Add Gallery as that entry so the browser Back button and the visible
@@ -104,11 +90,11 @@ export default function VideoStudioView() {
 
   if (mode === 'quick') return <QuickStart onBack={returnToGallery} onCreated={(id) => navigate('video-studio', { studio: 'workspace', project: id })} remix={remix} />;
   if (mode === 'workspace' && selectedProjectId) return <ProjectWorkspace projectId={selectedProjectId} onBack={returnToGallery} />;
-  return <StudioGallery session={Boolean(session)} onNewProject={() => openQuick()} onRemix={openQuick} onOpenProject={(id) => navigate('video-studio', { studio: 'workspace', project: id })} />;
+  return <StudioGallery session={Boolean(session)} onNewProject={() => openQuick()} onOpenProject={(id) => navigate('video-studio', { studio: 'workspace', project: id })} />;
 }
 
-function StudioGallery({ session, onNewProject, onRemix, onOpenProject }: {
-  session: boolean; onNewProject: () => void; onRemix: (card: FeaturedCard) => void; onOpenProject: (id: string) => void;
+function StudioGallery({ session, onNewProject, onOpenProject }: {
+  session: boolean; onNewProject: () => void; onOpenProject: (id: string) => void;
 }) {
   const [tab, setTab] = useState<GalleryTab>('video');
   const [search, setSearch] = useState('');
@@ -119,8 +105,16 @@ function StudioGallery({ session, onNewProject, onRemix, onOpenProject }: {
   const projects = useQuery({
     queryKey: ['video-studio-projects'], queryFn: () => api.get<ArtifactDTO[]>('/api/video-studio/projects'), enabled: session,
   });
-  const activeCards = tab === 'asset' ? featuredAssets : featuredVideos;
-  const filtered = activeCards.filter((card) => `${card.title} ${card.tags.join(' ')}`.toLowerCase().includes(search.toLowerCase()));
+
+
+  const publicAssets = useQuery({
+    queryKey: ['video-studio-public-assets'],
+    queryFn: () => api.get<ArtifactDTO[]>('/api/artifacts?scope=feed&type=3d_asset&moduleId=3d-studio&limit=12'),
+    enabled: tab === 'asset',
+  });
+  const gallery = tab === 'asset' ? publicAssets : publicVideos;
+  const published = (gallery.data ?? []).filter(item => item.status === 'published' && item.visibility === 'public' && item.fileUrl);
+  const filtered = published.filter(item => `${item.title} ${item.owner.username}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-7 pb-10">
@@ -136,18 +130,33 @@ function StudioGallery({ session, onNewProject, onRemix, onOpenProject }: {
 
       <section className="rounded-3xl border bg-card p-4 sm:p-6">
         <div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-1 rounded-xl bg-muted p-1">{([['video', 'Video Studio'], ['asset', 'Asset Studio'], ['projects', '내 프로젝트']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setTab(value)} className={cn('rounded-lg px-3 py-2 text-sm font-medium transition-colors', tab === value ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>{label}</button>)}</div>{tab !== 'projects' && <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="스타일, 장면, 에셋 검색" className="w-full sm:w-56" />}{tab === 'projects' && <Button size="sm" onClick={onNewProject}><Plus className="size-4" /> 새 프로젝트</Button>}</div>
-        {tab === 'projects' ? <ProjectShelf session={session} projects={projects.data ?? []} loading={projects.isLoading} onNewProject={onNewProject} onOpenProject={onOpenProject} /> : <><div className="mt-5 flex items-center justify-between"><div><h2 className="font-semibold">{tab === 'video' ? '지금 영감을 주는 영상' : '영상의 기준이 되는 에셋'}</h2><p className="mt-1 text-sm text-muted-foreground">좋아하는 결과를 선택해 그 스타일과 문맥으로 새 프로젝트를 시작하세요.</p></div><Badge variant="secondary">공개 갤러리</Badge></div><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{filtered.map((card) => <FeaturedTile key={card.id} card={card} onRemix={() => onRemix(card)} />)}{tab === 'video' && publicVideos.data?.slice(0, 4).map((video) => <ArtifactTile key={video.id} artifact={video} onRemix={onNewProject} />)}</div></>}
+        {tab === 'projects' ? <ProjectShelf session={session} projects={projects.data ?? []} loading={projects.isLoading} onNewProject={onNewProject} onOpenProject={onOpenProject} /> : <><div className="mt-5 flex items-center justify-between"><div><h2 className="font-semibold">{tab === 'video' ? '지금 영감을 주는 영상' : '영상의 기준이 되는 에셋'}</h2><p className="mt-1 text-sm text-muted-foreground">좋아하는 결과를 선택해 그 스타일과 문맥으로 새 프로젝트를 시작하세요.</p></div><Badge variant="secondary">공개 갤러리</Badge></div><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{gallery.isLoading ? <p role="status">공개 작품을 불러오는 중…</p> : gallery.isError ? <p role="alert">공개 작품을 불러오지 못했습니다. 잠시 후 다시 확인해주세요.</p> : filtered.length ? filtered.map(item => <ArtifactTile key={item.id} artifact={item} />) : <p className="col-span-full py-8 text-center text-muted-foreground">{search ? '검색 결과가 없습니다.' : '아직 공개된 작품이 없습니다.'}</p>}</div></>}
       </section>
     </div>
   );
 }
 
-function FeaturedTile({ card, onRemix }: { card: FeaturedCard; onRemix: () => void }) {
-  return <article className="group overflow-hidden rounded-2xl border bg-background"><div className={cn('relative aspect-[4/5] overflow-hidden bg-gradient-to-br', card.gradient)}><div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_25%,rgba(255,255,255,.35),transparent_24%),linear-gradient(145deg,transparent_30%,rgba(0,0,0,.55))]" /><div className="absolute inset-x-3 top-3 flex items-center justify-between"><Badge className="border-0 bg-black/40 text-white hover:bg-black/40">{card.kind === 'video' ? <Film className="mr-1 size-3" /> : <Box className="mr-1 size-3" />}{card.kind === 'video' ? '영상' : '에셋'}</Badge>{card.duration && <span className="rounded-md bg-black/40 px-2 py-1 text-xs text-white">{card.duration}</span>}</div><div className="absolute inset-x-3 bottom-3"><p className="font-semibold text-white">{card.title}</p><p className="mt-1 text-xs text-white/75">by {card.creator}</p></div></div><div className="space-y-3 p-3"><p className="text-xs text-muted-foreground">{card.subtitle}</p><div className="flex flex-wrap gap-1">{card.tags.map((tag) => <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>)}</div><Button variant="outline" size="sm" className="w-full" onClick={onRemix}><Wand2 className="size-3.5" /> 이 문맥으로 만들기</Button></div></article>;
-}
-
-function ArtifactTile({ artifact, onRemix }: { artifact: ArtifactDTO; onRemix: () => void }) {
-  return <article className="overflow-hidden rounded-2xl border bg-background"><div className="relative aspect-[4/5] bg-gradient-to-br from-primary/30 via-violet-500/30 to-slate-900">{artifact.fileUrl ? <img src={artifact.fileUrl} alt="" className="size-full object-cover" /> : <Film className="absolute left-1/2 top-1/2 size-10 -translate-x-1/2 -translate-y-1/2 text-white/80" />}<Badge className="absolute left-3 top-3 border-0 bg-black/40 text-white hover:bg-black/40">커뮤니티</Badge></div><div className="space-y-2 p-3"><p className="truncate font-medium">{artifact.title}</p><p className="text-xs text-muted-foreground">by {artifact.owner.username}</p><Button variant="outline" size="sm" className="w-full" onClick={onRemix}>이 영상에서 시작</Button></div></article>;
+function ArtifactTile({ artifact }: { artifact: ArtifactDTO }) {
+  const [failed, setFailed] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  return <article className="overflow-hidden rounded-2xl border bg-background">
+    <div className="relative flex aspect-[4/5] items-center justify-center bg-muted">
+      {artifact.type === 'video' && artifact.fileUrl && !failed
+        ? <video src={artifact.fileUrl} controls playsInline preload="metadata" className="size-full object-contain" onError={() => setFailed(true)} />
+        : <p className="p-4 text-sm text-muted-foreground">{failed ? '영상 미리보기를 불러올 수 없습니다.' : '3D 에셋'}</p>}
+    </div>
+    <div className="space-y-3 p-3">
+      <p className="truncate font-medium">{artifact.title}</p>
+      <details className="text-sm">
+        <summary className="flex cursor-pointer items-center gap-2">
+          {artifact.owner.avatarUrl && !avatarFailed ? <img src={artifact.owner.avatarUrl} alt="" className="size-8 rounded-full object-cover" onError={() => setAvatarFailed(true)} /> : <UsersRound className="size-8 rounded-full bg-muted p-1.5" />}
+          <span>@{artifact.owner.username}</span><span className="text-xs text-muted-foreground">작성자 프로필</span>
+        </summary>
+        <p className="mt-2 text-xs text-muted-foreground">작성자: @{artifact.owner.username} · 공개일: {new Date(artifact.createdAt).toLocaleDateString('ko-KR')}</p>
+      </details>
+      {artifact.fileUrl && <a href={artifact.fileUrl} target="_blank" rel="noopener noreferrer" className="block rounded border px-3 py-2 text-center text-sm">결과물 열기</a>}
+    </div>
+  </article>;
 }
 
 function ProjectShelf({ session, projects, loading, onNewProject, onOpenProject }: { session: boolean; projects: ArtifactDTO[]; loading: boolean; onNewProject: () => void; onOpenProject: (id: string) => void }) {
