@@ -20,5 +20,8 @@ RUN git clone https://github.com/JeffreyXiang/FlexGEMM.git /opt/FlexGEMM && git 
 RUN uv pip install --no-build-isolation --no-deps /app/TRELLIS.2/o-voxel
 ENV PYTHONPATH=/app/TRELLIS.2 ATTN_BACKEND=xformers SPARSE_ATTN_BACKEND=xformers SPARSE_CONV_BACKEND=flex_gemm NVIDIA_VISIBLE_DEVICES=all NVIDIA_DRIVER_CAPABILITIES=compute,utility HF_HOME=/runpod-volume/huggingface-cache OPENCV_IO_ENABLE_OPENEXR=1
 COPY handler.py preflight.py background.py /app/
-RUN python -m compileall -q /app/handler.py /app/preflight.py /app/background.py && python -c "import torch, xformers, cumesh, flex_gemm, o_voxel; assert torch.version.cuda == '13.0'; print(torch.__version__, torch.version.cuda)"
+RUN uv pip install moderngl
+# FlexGEMM queries the physical GPU during import. CI has no GPU; do not import it
+# here or fake a device. preflight.py performs real imports/operations on RunPod.
+RUN python -m compileall -q /app/handler.py /app/preflight.py /app/background.py && python -c "import torch, xformers, cumesh, importlib.util; assert all(importlib.util.find_spec(n) for n in ['flex_gemm', 'o_voxel', 'nvdiffrast', 'nvdiffrec_render', 'trellis2']); assert torch.version.cuda == '13.0'; print(torch.__version__, torch.version.cuda)"
 CMD ["python", "-u", "/app/handler.py"]
