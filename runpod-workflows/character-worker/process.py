@@ -44,7 +44,36 @@ def inspect_rig(meshes):
                 unweighted += 1
             elif len(weights) > 4 or any(not math.isfinite(w) for w in weights) or abs(sum(weights) - 1) > 0.02:
                 invalid += 1
-    return {"bones": len(bones), "unweighted_vertices": unweighted, "invalid_weights": invalid}
+    return {"bones": len(bones), "vertices": sum(len(o.data.vertices) for o in meshes),
+            "unweighted_vertices": unweighted, "invalid_weights": invalid}
+
+
+def repair_unweighted_vertices(meshes):
+    """Bind only genuinely unweighted vertices to their nearest deform bone.
+
+    SkinTokens can leave tiny disconnected details without a vertex group.  They
+    otherwise become static in Unity, so do not silently accept them.  Existing
+    weights are never overwritten; a vertex with no positive deform weight gets
+    one weight of 1.0 on the nearest bone in world space.
+    """
+    repaired = 0
+    for obj in meshes:
+        armature = next((m.object for m in obj.modifiers if m.type == "ARMATURE" and m.object), None)
+        if armature is None:
+            continue
+        bones = [bone for bone in armature.pose.bones if bone.bone.use_deform]
+        if not bones:
+            continue
+        group_indices = {group.index for group in obj.vertex_groups if group.name in {bone.name for bone in bones}}
+        for vertex in obj.data.vertices:
+            if any(group.group in group_indices and group.weight > 0 for group in vertex.groups):
+                continue
+            point = obj.matrix_world @ vertex.co
+            closest = min(bones, key=lambda bone: (armature.matrix_world @ bone.head - point).length_squared)
+            group = obj.vertex_groups.get(closest.name) or obj.vertex_groups.new(name=closest.name)
+            group.add([vertex.index], 1.0, "REPLACE")
+            repaired += 1
+    return repaired
 
 
 def process(source, destination, settings=None):
@@ -98,9 +127,11 @@ def process(source, destination, settings=None):
             image.scale(max(1, round(width*scale)), max(1, round(height*scale)))
     bpy.context.view_layer.update()
     after = measure(meshes)
+    repaired_unweighted_vertices = repair_unweighted_vertices(meshes)
     rig = inspect_rig(meshes)
     report.update({"after": after, "rig": rig, "stage": "prepared_mesh",
                    "status": "needs_review", "errors": rig_errors(rig),
+                   "rig_repair": {"unweighted_vertices_bound_to_nearest_bone": repaired_unweighted_vertices},
                    "warnings": ["Decimation is not animation retopology.",
                                 "Unity material, avatar and motion validation are still required."]})
     report["timings_ms"]["prepare"] = round((time.perf_counter()-prepared)*1000)
