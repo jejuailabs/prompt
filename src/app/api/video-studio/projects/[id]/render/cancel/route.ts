@@ -13,7 +13,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const render = meta.render;
     if (!render?.runpodJobId || !['h3', 'ltx', 'wan'].includes(render.engine)) throw new HttpError('중지할 작업이 없습니다', 400);
     if (['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'].includes(render.status)) return ok({ status: render.status });
-    const endpoint = getRunpodEndpointId(render.engine as RunpodVideoEngine);
+    const endpoint = getRunpodEndpointId(render.engine as RunpodVideoEngine, render.h3Gpu);
     if (!endpoint || !process.env.RUNPOD_API_KEY) throw new HttpError('렌더 서버 연결을 확인해주세요', 503);
     const response = await fetch(`https://api.runpod.ai/v2/${endpoint}/cancel/${encodeURIComponent(render.runpodJobId)}`, { method: 'POST', headers: { Authorization: `Bearer ${process.env.RUNPOD_API_KEY}` }, signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new HttpError('서버에서 중지를 확인하지 못했습니다. 상태 확인 후 다시 시도해주세요.', 502);

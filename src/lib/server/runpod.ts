@@ -35,7 +35,12 @@ function getApiKey(): string {
   return key;
 }
 
-export function getRunpodEndpointId(engine: RunpodVideoEngine): string | null {
+export type H3Gpu = '5090' | 'blackwell';
+
+export function getRunpodEndpointId(engine: RunpodVideoEngine, h3Gpu?: H3Gpu): string | null {
+  if (engine === 'h3' && h3Gpu === 'blackwell') {
+    return process.env.RUNPOD_H3_BLACKWELL_ENDPOINT_ID?.trim() || 'pnskne8mgep2vw';
+  }
   const configured = process.env[endpointEnv[engine]]?.trim();
   if (configured) return configured;
   // The dedicated PLAYLAB Blender endpoint predates the production environment
@@ -69,8 +74,9 @@ export async function queueRunpodWorkflow(
   engine: RunpodVideoEngine,
   workflow: Record<string, unknown>,
   images?: RunpodInputImage[],
+  h3Gpu?: H3Gpu,
 ): Promise<RunpodQueuedJob> {
-  const endpointId = getRunpodEndpointId(engine);
+  const endpointId = getRunpodEndpointId(engine, h3Gpu);
   if (!endpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
 
   return runpodFetch<RunpodQueuedJob>(`/v2/${endpointId}/run`, {
@@ -96,8 +102,9 @@ export async function queueRunpodJob(
 export async function getRunpodJobStatus(
   engine: RunpodVideoEngine,
   jobId: string,
+  h3Gpu?: H3Gpu,
 ): Promise<RunpodJobStatus> {
-  const endpointId = getRunpodEndpointId(engine);
+  const endpointId = getRunpodEndpointId(engine, h3Gpu);
   if (!endpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
   return runpodFetch<RunpodJobStatus>(`/v2/${endpointId}/status/${encodeURIComponent(jobId)}`);
 }

@@ -17,6 +17,8 @@ interface CreateVideoProjectBody {
   aspectRatio?: string;
   quality?: 'draft' | 'standard' | 'hero';
   engine?: 'h3' | 'wan' | 'ltx';
+  h3Gpu?: '5090' | 'blackwell';
+  preview?: boolean;
 }
 
 function parseMetadata(raw: string): Record<string, unknown> {
@@ -68,6 +70,8 @@ export async function POST(req: NextRequest) {
       // No explicit engine means automatic selection: draft -> LTX, high quality -> H3.
       // Persisting LTX here used to override the high-quality choice at render time.
       engine: body.engine ?? null,
+      h3Gpu: body.h3Gpu === 'blackwell' ? 'blackwell' : '5090',
+      preview: body.preview === true,
       projectStatus: 'editing',
       shots: [{
         id: 'shot-1',

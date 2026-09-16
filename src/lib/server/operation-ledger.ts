@@ -39,8 +39,10 @@ export async function beginMeteredOperation(input: {
   prompt: string;
   aspect?: string;
   style?: string | null;
+  preview?: boolean;
 }) {
   const item = CATALOG[input.engine];
+  const creditCharge = input.engine === 'h3' && input.preview ? Math.ceil(item.creditCharge / 2) : item.creditCharge;
   const provider = await providerFor(input.engine);
   const operation = await db.generationJob.create({
     data: {
@@ -55,15 +57,15 @@ export async function beginMeteredOperation(input: {
   });
 
   try {
-    await chargeCredits(input.userId, item.creditCharge, `${input.engine}_generation`, operation.id);
-    await db.generationJob.update({ where: { id: operation.id }, data: { creditCharged: item.creditCharge } });
+    await chargeCredits(input.userId, creditCharge, `${input.engine}_generation`, operation.id);
+    await db.generationJob.update({ where: { id: operation.id }, data: { creditCharged: creditCharge } });
   } catch (error) {
     await db.generationJob.delete({ where: { id: operation.id } }).catch(() => undefined);
     throw error;
   }
 
-  await logEvent('ai.operation.queued', { operationId: operation.id, userId: input.userId, engine: input.engine, creditCharged: item.creditCharge });
-  return { operationId: operation.id, creditCharged: item.creditCharge };
+  await logEvent('ai.operation.queued', { operationId: operation.id, userId: input.userId, engine: input.engine, creditCharged: creditCharge });
+  return { operationId: operation.id, creditCharged: creditCharge };
 }
 
 export async function failMeteredOperation(operationId: string, error: string) {

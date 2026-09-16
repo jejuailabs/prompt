@@ -51,14 +51,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!project) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
 
     const meta = metadata(project.metadata);
-    const render = meta.render as { engine?: RunpodVideoEngine; runpodJobId?: string; accountingJobId?: string; status?: string; videoUrl?: string; error?: string; executionTime?: number; delayTime?: number; queuedAt?: string } | undefined;
+    const render = meta.render as { engine?: RunpodVideoEngine; h3Gpu?: '5090' | 'blackwell'; runpodJobId?: string; accountingJobId?: string; status?: string; videoUrl?: string; error?: string; executionTime?: number; delayTime?: number; queuedAt?: string } | undefined;
     if (!render?.engine || !render.runpodJobId) throw new HttpError('진행 중인 렌더 작업이 없습니다', 404);
     // RunPod expires job results. Persisted terminal state must survive revisits.
     if ((render.status === 'COMPLETED' && render.videoUrl) || ['FAILED', 'CANCELLED', 'TIMED_OUT'].includes(render.status ?? '')) {
       await finishMeteredOperation({ operationId: render.accountingJobId, engine: render.engine, status: render.status!, executionTimeMs: render.executionTime, error: render.error });
       return ok({ id: render.runpodJobId, status: render.status, videoUrl: render.videoUrl ?? null, error: render.error, executionTime: render.executionTime, delayTime: render.delayTime });
     }
-    const job = await getRunpodJobStatus(render.engine, render.runpodJobId).catch(error => {
+    const job = await getRunpodJobStatus(render.engine, render.runpodJobId, render.h3Gpu).catch(error => {
       const age = Date.now() - Date.parse(render.queuedAt ?? project.createdAt.toISOString());
       if (error instanceof Error && error.message.startsWith('Runpod API 404:') && age > 86400000) {
         return { id: render.runpodJobId!, status: 'FAILED', error: '오래된 작업의 서버 기록이 만료되어 결과를 복구할 수 없습니다. 자동 재생성하지 않습니다.', output: undefined, executionTime: undefined, delayTime: undefined };

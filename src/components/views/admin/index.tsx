@@ -10,6 +10,7 @@ import { CreditRequests } from './credit-requests';
 import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
 import { useAppStore } from '@/lib/store';
 import { useSession } from '@/hooks/use-session';
+import { H3Tests } from './h3-tests';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -184,6 +185,7 @@ export default function AdminView() {
             <QuickToolsTab />
           </TabsContent>
           <TabsContent value="video-engine" className="mt-4">
+            <H3Tests />
             <VideoEngineTab />
           </TabsContent>
           <TabsContent value="moderation" className="mt-4">

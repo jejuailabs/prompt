@@ -1,3 +1,5 @@
+import { getH3Config } from '@/lib/server/h3-config';
+import { isH3Preset } from '@/lib/h3-presets';
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { HttpError, requireUser } from '@/lib/auth';
@@ -32,15 +34,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const user = await requireUser();
     const { id } = await params;
-    const body = await readJson<{ shotId?: string; engine?: string }>(req);
+    const body = await readJson<{ shotId?: string; engine?: string; h3Gpu?: '5090' | 'blackwell'; h3Preset?: string; seed?: number }>(req);
     const project = await db.artifact.findFirst({ where: { id, ownerId: user.id, sourceModule: 'video-studio' } });
     if (!project) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
 
     const meta = metadata(project.metadata);
-    const current = meta.render as { engine?: string; runpodJobId?: string; status?: string } | undefined;
+    const current = meta.render as { engine?: string; h3Gpu?: '5090' | 'blackwell'; runpodJobId?: string; status?: string } | undefined;
     if (current?.runpodJobId && ['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING'].includes(current.status ?? '')) {
       try {
-        const previous = await getRunpodJobStatus(current.engine as RunpodVideoEngine, current.runpodJobId);
+        const previous = await getRunpodJobStatus(current.engine as RunpodVideoEngine, current.runpodJobId, current.h3Gpu);
         if (['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING'].includes(previous.status)) {
           return ok({ projectId: project.id, engine: current.engine, jobId: current.runpodJobId, status: previous.status, creditCharged: 0 });
         }
@@ -58,6 +60,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const engine = engineOverride ?? (validEngines.includes(savedEngine as typeof validEngines[number]) ? savedEngine as typeof validEngines[number] : getEngineForFirstShot(inputMode, quality));
     if (!engine) throw new HttpError('첫·끝 프레임과 이어 만들기는 다음 워크플로우 단계에서 사용할 수 있습니다', 409);
 
+    if (body.h3Gpu !== undefined && !['5090', 'blackwell'].includes(body.h3Gpu)) throw new HttpError('지원하지 않는 H3 GPU입니다', 400);
+    const config = engine === 'h3' ? await getH3Config() : null;
+    if (body.h3Preset !== undefined && (user.role !== 'admin' || !isH3Preset(body.h3Preset))) throw new HttpError('관리자 프리셋 권한 또는 값이 올바르지 않습니다', 403);
+    if (body.seed !== undefined && (user.role !== 'admin' || !Number.isSafeInteger(body.seed) || body.seed < 0 || body.seed > 2147483647)) throw new HttpError('시드 값을 확인해주세요', 400);
+    const h3Gpu = user.role === 'admin' ? body.h3Gpu ?? current?.h3Gpu ?? config?.gpu ?? '5090' : config?.gpu ?? '5090';
+    const h3Preset = isH3Preset(body.h3Preset) ? body.h3Preset : quality === 'standard' ? config?.quality : config?.speed;
+    const preview = engine === 'h3' && meta.preview === true;
+    const seed = body.seed ?? Math.floor(Math.random() * 2147483647);
     const prompt = typeof meta.prompt === 'string' ? meta.prompt.trim() : '';
     if (prompt.length < 3) throw new HttpError('렌더할 프롬프트가 없습니다', 400);
     const duration = typeof meta.targetDurationSec === 'number' ? meta.targetDurationSec : 6;
@@ -67,13 +77,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const firstFrame = inputImageUrl ? await getRunpodFirstFrame(inputImageUrl) : undefined;
     const intent = await compileVideoIntent(prompt, { hasReferenceImage: Boolean(firstFrame), durationSec: duration });
     const modelPrompt = buildVideoModelPrompt(intent, Boolean(firstFrame));
-    const renderInput = { prompt: modelPrompt, durationSec: duration, aspectRatio: aspect as VideoAspectRatio, quality: quality === 'standard' ? 'standard' as const : 'draft' as const, ...(firstFrame ? { firstFrameName: firstFrame.name } : {}) };
+    const renderInput = { h3Preset, preview, seed, prompt: modelPrompt, durationSec: duration, aspectRatio: aspect as VideoAspectRatio, quality: quality === 'standard' ? 'standard' as const : 'draft' as const, ...(firstFrame ? { firstFrameName: firstFrame.name } : {}) };
     const workflow = engine === 'h3' ? buildH3TextToVideoWorkflow(renderInput)
       : engine === 'wan' ? buildWanWorkflow(renderInput) : buildLtx2bWorkflow(renderInput);
-    const ledger = await beginMeteredOperation({ userId: user.id, engine, prompt, aspect, style: typeof meta.style === 'string' ? meta.style : null });
+    const ledger = await beginMeteredOperation({ userId: user.id, engine, preview, prompt, aspect, style: typeof meta.style === 'string' ? meta.style : null });
     let job;
     try {
-      job = await queueRunpodWorkflow(engine, workflow, firstFrame ? [firstFrame] : undefined);
+      job = await queueRunpodWorkflow(engine, workflow, firstFrame ? [firstFrame] : undefined, h3Gpu);
       console.log(`[render-queue] project=${project.id} engine=${engine} job=${job.id} status=${job.status} aspect=${aspect} duration=${duration}s`);
     } catch (error) {
       await failMeteredOperation(ledger.operationId, error instanceof Error ? error.message : 'Runpod 렌더 요청 실패');
@@ -84,7 +94,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       ...meta,
       projectStatus: 'rendering',
       activeShotId: body.shotId ?? 'shot-1',
-      render: { engine, runpodJobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString(), intent, compiledPrompt: modelPrompt },
+      render: { engine, h3Gpu, h3Preset, preview, seed, configRevision: config?.revision, runpodJobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString(), intent, compiledPrompt: modelPrompt },
     };
     await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(nextMeta), status: 'processing' } });
     return ok({ projectId: project.id, engine, jobId: job.id, status: job.status, creditCharged: ledger.creditCharged });
