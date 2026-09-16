@@ -26,7 +26,7 @@ jobs:
         id: image
         with:
           context: .
-          file: runpod-workflows/rigging-worker/Dockerfile
+          file: runpod-workflows/rigging-worker/Dockerfile.runtime
           push: true
           tags: ghcr.io/jejuailabs/playlab-skintokens:${{ github.sha }}
           provenance: false
