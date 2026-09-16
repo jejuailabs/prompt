@@ -12,6 +12,7 @@ import { useAppStore } from '@/lib/store';
 import { useSession } from '@/hooks/use-session';
 import { H3Tests } from './h3-tests';
 import { VideoComparison } from './video-comparison';
+import { MotionUpload } from './motion-upload';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -170,10 +171,12 @@ export default function AdminView() {
               <Film className="mr-1 size-3.5" />
               {t('tabVideoEngine')}
             </TabsTrigger>
+            <TabsTrigger value="motion-upload">애니메이션 업로드</TabsTrigger>
             <TabsTrigger value="users">{t('tabUsers')}</TabsTrigger>
             <TabsTrigger value="logs">{t('tabLogs')}</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="motion-upload" className="mt-4"><MotionUpload /></TabsContent>
           <TabsContent value="dashboard" className="mt-4">
             <CreditRequests />
             <DashboardTab />

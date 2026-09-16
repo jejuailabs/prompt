@@ -71,3 +71,23 @@ export function inspectTrellisGlb(model: Buffer): GeometryReport {
     triangles, vertices, dimensions: { width: dimensions[0], height: dimensions[1], depth: dimensions[2] }, errors,
     pending: ['shape_review', 'blender_preparation', 'rigging_and_weights', 'motion_review', 'unity_import'] };
 }
+
+/** Minimal, provider-independent guard: never label a static GLB as rigged. */
+export function inspectRiggedGlb(model: Buffer): { joints: number; animations: number } {
+  if (model.length < 20 || model.toString('ascii', 0, 4) !== 'glTF' || model.readUInt32LE(4) !== 2 || model.readUInt32LE(8) !== model.length) throw new Error('유효한 리깅 GLB 2.0 파일이 아닙니다.');
+  const jsonLength = model.readUInt32LE(12);
+  if (model.toString('ascii', 16, 20) !== 'JSON' || 20 + jsonLength > model.length) throw new Error('리깅 GLB JSON 청크가 유효하지 않습니다.');
+  const scene = JSON.parse(model.toString('utf8', 20, 20 + jsonLength)) as { skins?: Array<{ joints?: number[] }>; nodes?: Array<{ skin?: number; mesh?: number }>; meshes?: Array<{ primitives?: Array<{ attributes?: Record<string, number> }> }>; animations?: unknown[] };
+  const joints = scene.skins?.reduce((sum, skin) => sum + (skin.joints?.length ?? 0), 0) ?? 0;
+  const skinnedNodes = scene.nodes?.filter((node) => Number.isInteger(node.skin)).length ?? 0;
+  if (!joints || !skinnedNodes) throw new Error('리깅 결과에 Armature 또는 스킨 웨이트가 없습니다. 정적 메시를 리깅 완료로 표시하지 않습니다.');
+  for (const node of scene.nodes ?? []) {
+    if (node.skin === undefined) continue;
+    const skin = scene.skins?.[node.skin];
+    const primitives = node.mesh === undefined ? undefined : scene.meshes?.[node.mesh]?.primitives;
+    if (!skin?.joints?.length || skin.joints.some(index => !Number.isInteger(index) || !scene.nodes?.[index]) || !primitives?.length || primitives.some(p => !Number.isInteger(p.attributes?.JOINTS_0) || !Number.isInteger(p.attributes?.WEIGHTS_0))) {
+      throw new Error('리깅 결과의 뼈대 참조 또는 JOINTS_0/WEIGHTS_0 데이터가 없습니다.');
+    }
+  }
+  return { joints, animations: scene.animations?.length ?? 0 };
+}

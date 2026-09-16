@@ -12,13 +12,14 @@ import {
   Loader2,
   RotateCcw,
   Sparkles,
+  Play,
   Wand2,
 } from 'lucide-react';
 import { api, ApiError, uploadFile } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useRefreshSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
-import type { ArtifactDTO, Asset3dProjectDTO, Asset3dSubtrack } from '@/lib/types';
+import type { ArtifactDTO, Asset3dProjectDTO, Asset3dSubtrack, Asset3dWorkflowMode } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -29,6 +30,7 @@ import { ViewHeader } from '@/components/shared/view-header';
 import { EmptyState } from '@/components/shared/empty-state';
 import { StepForm } from '@/components/shared/step-form';
 import { ModelPreview } from './model-preview';
+import { MotionLibrary } from './motion-library';
 
 function errMsg(e: unknown): string {
   if (e instanceof ApiError) return e.message;
@@ -158,6 +160,7 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
 
   const [subtrack, setSubtrack] = useState<Asset3dSubtrack>('character');
   const [quality, setQuality] = useState('standard');
+  const [workflowMode, setWorkflowMode] = useState<Asset3dWorkflowMode>('automatic');
   const [title, setTitle] = useState('');
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -188,6 +191,7 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
         subtrack,
         inputImageUrls: imageUrls,
         styleOptions: { quality },
+        workflowMode,
       });
       refreshSession();
       onCreated(res.id);
@@ -260,6 +264,17 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>생성 방식</Label>
+                    <Select value={workflowMode} onValueChange={(value) => setWorkflowMode(value as Asset3dWorkflowMode)}>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="automatic">자동 진행 · 3D → 리깅 → FBX 번들</SelectItem>
+                        <SelectItem value="guided">단계 확인 · 중간 GLB를 보고 다음 단계 진행</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs leading-5 text-muted-foreground">단계 확인 모드는 3D 결과를 확인한 뒤 자동 리깅과 FBX 변환을 시작합니다.</p>
+                  </div>
                 </div>
               ),
             },
@@ -292,6 +307,15 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
       return s === 'generating' || s === 'processing' ? 2000 : false;
     },
   });
+  const [advancing, setAdvancing] = useState(false);
+  const [heightMeters, setHeightMeters] = useState('1.70');
+  const [orientationConfirmed, setOrientationConfirmed] = useState(false);
+  const [jointNotes, setJointNotes] = useState('');
+  const advance = async (stage: 'blender' | 'rigging_animation') => {
+    setAdvancing(true);
+    try { await api.post(`/api/3d-studio/projects/${projectId}/advance`, stage === 'rigging_animation' ? { stage, heightMeters: Number(heightMeters), orientationConfirmed, jointNotes } : { stage }); await q.refetch(); }
+    finally { setAdvancing(false); }
+  };
 
   if (q.isLoading) {
     return (
@@ -350,6 +374,22 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
         </Card>
       )}
 
+      {project.workflowStages?.length ? (
+        <Card className="mb-6 p-5">
+          <div className="mb-4 flex items-center justify-between gap-3"><div><h2 className="font-semibold">3D 제작 단계</h2><p className="mt-1 text-sm text-muted-foreground">{project.workflowMode === 'guided' ? '중간 결과를 확인하고 직접 다음 단계로 진행합니다.' : '각 단계가 성공하면 자동으로 다음 단계로 이어집니다.'}</p></div><Badge variant="outline">{project.workflowMode === 'guided' ? '단계 확인' : '자동 완주'}</Badge></div>
+          <div className="space-y-3">
+            {project.workflowStages.map((stage) => <div key={stage.id} className="rounded-xl border p-4">
+              <div className="flex flex-wrap items-center gap-2"><p className="font-medium">{stage.title}</p><Badge variant={stage.status === 'completed' ? 'default' : stage.status === 'failed' ? 'destructive' : 'secondary'}>{stage.status === 'completed' ? '완료' : stage.status === 'running' ? '진행 중' : stage.status === 'awaiting_approval' ? '다음 단계 대기' : stage.status === 'failed' ? '실패' : '대기'}</Badge></div>
+              <p className="mt-1 text-sm text-muted-foreground">{stage.description}</p>
+              {stage.error && <p className="mt-2 text-sm text-destructive">{stage.error}</p>}
+              {stage.previewGlbUrl && <div className="mt-3 rounded-lg bg-muted"><ModelPreview src={stage.previewGlbUrl} /></div>}
+              {stage.id === 'blender' && stage.status === 'awaiting_approval' && (project.workflowMode === 'guided' || Boolean(stage.error)) && <Button className="mt-3" size="sm" onClick={() => void advance('blender')} disabled={advancing}><Play className="size-3.5" /> {advancing ? 'Blender 준비 요청 중…' : '이 3D 결과로 Blender 준비 진행'}</Button>}
+              {stage.id === 'rigging_animation' && stage.status === 'awaiting_approval' && <div className="mt-3 space-y-3 rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">캐릭터의 크기와 방향을 확인하세요. 뼈대와 웨이트를 자동 생성한 뒤 FBX로 변환합니다. 아래 메모는 기록용이며 관절을 수정하지는 않습니다. 관절 직접 편집과 동작 클립 연결은 아직 지원하지 않습니다.</p><div className="grid gap-2 sm:grid-cols-2"><Label className="text-xs">캐릭터 키(m)<input className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm" type="number" min="0.5" max="3" step="0.01" value={heightMeters} onChange={(event) => setHeightMeters(event.target.value)} /></Label><Label className="flex items-end gap-2 pb-1 text-xs"><input type="checkbox" checked={orientationConfirmed} onChange={(event) => setOrientationConfirmed(event.target.checked)} /> 얼굴이 +Z 전방을 향함</Label></div><textarea value={jointNotes} onChange={(event) => setJointNotes(event.target.value)} placeholder="수동 보정 메모: 예) 팔이 몸통에 붙어 있음, 발 위치를 넓혀야 함" className="min-h-16 w-full rounded-md border bg-background p-2 text-sm" /><Button size="sm" onClick={() => void advance('rigging_animation')} disabled={advancing || !orientationConfirmed}><Play className="size-3.5" /> {advancing ? '리깅 요청 중…' : 'SkinTokens 자동 리깅 요청'}</Button></div>}
+            </div>)}
+          </div>
+        </Card>
+      ) : null}
+
       {/* Display the generated mesh, not the input thumbnail. */}
       {project.generationTiming?.executionTimeMs !== undefined && (
         <p className="mb-4 text-sm text-muted-foreground">3D 생성 처리 {Math.round(project.generationTiming.executionTimeMs / 1000)}초 · 워커 대기 {Math.round((project.generationTiming.delayTimeMs ?? 0) / 1000)}초</p>
@@ -359,7 +399,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
           {outputs.map((output) => (
             <Card key={output.id} className="overflow-hidden">
               <div className="flex min-h-80 items-center justify-center bg-muted">
-                {output.glbUrl ? <ModelPreview src={output.glbUrl} /> : output.thumbnailUrl ? (
+                {output.riggedGlbUrl || output.glbUrl ? <ModelPreview src={output.riggedGlbUrl ?? output.glbUrl} /> : output.thumbnailUrl ? (
                   <img src={output.thumbnailUrl} alt="" className="h-full object-contain" />
                 ) : (
                   <div className="text-center text-muted-foreground">
@@ -369,7 +409,8 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
                 )}
               </div>
               <div className="space-y-3 p-4">
-                <p className="rounded-md bg-amber-500/10 p-3 text-sm">생성 메시 · 게임 캐릭터 준비 미완료. 형상 검토, 리깅·관절 변형 및 Unity 임포트 검증이 필요합니다.</p>
+                <p className={`rounded-md p-3 text-sm ${output.riggedFbxUrl ? 'bg-emerald-500/10' : 'bg-amber-500/10'}`}>{output.riggedFbxUrl ? '리깅된 캐릭터 번들 · 아래 모션 라이브러리에서 동작을 적용하고 관절 변형을 검수하세요.' : '생성 메시 · 게임 캐릭터 준비 미완료. 형상 검토, 리깅·관절 변형 및 Unity 임포트 검증이 필요합니다.'}</p>
+                <MotionLibrary projectId={projectId} riggedGlbUrl={output.riggedGlbUrl} />
                 {output.polyCount && (
                   <p className="text-sm text-muted-foreground">
                     {t('polyCount')}: {output.polyCount.toLocaleString()}
@@ -387,7 +428,11 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
                       <a href={output.fbxUrl} download target="_blank" rel="noreferrer"><Download className="size-3" /> {t('downloadFbx')}</a>
                     </Button>
                   )}
+                  {output.riggedFbxUrl && <Button variant="default" size="sm" asChild><a href={output.riggedFbxUrl} download target="_blank" rel="noreferrer"><Download className="size-3" /> 리깅된 FBX</a></Button>}
+                  {output.unityManifestUrl && <Button variant="outline" size="sm" asChild><a href={output.unityManifestUrl} download target="_blank" rel="noreferrer">Unity 머티리얼 정보</a></Button>}
                 </div>
+                {output.textureUrls && Object.keys(output.textureUrls).length > 0 && <div><p className="mb-2 text-sm font-medium">생성 텍스처</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.entries(output.textureUrls).map(([name, url]) => <a key={name} href={url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-lg border"><img src={url} alt={name} className="aspect-square w-full object-cover" /><span className="block truncate p-2 text-xs text-muted-foreground">{name}</span></a>)}</div></div>}
+                {output.animationUrls && Object.keys(output.animationUrls).length > 0 && <div><p className="mb-2 text-sm font-medium">기본 애니메이션</p><div className="flex flex-wrap gap-2">{Object.entries(output.animationUrls).map(([name, url]) => <Button key={name} variant="outline" size="sm" asChild><a href={url} download target="_blank" rel="noreferrer"><Download className="size-3" /> {name.replace(/_url$/, '')}</a></Button>)}</div></div>}
               </div>
             </Card>
           ))}

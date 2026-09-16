@@ -524,11 +524,34 @@ export interface Asset3dOutputDTO {
   glbUrl: string;
   fbxUrl?: string | null;
   textureUrls?: Record<string, string>;
+  unityManifestUrl?: string | null;
+  /** Only present after a rigging provider returns a skinned character. */
+  riggedGlbUrl?: string | null;
+  riggedFbxUrl?: string | null;
+  animationUrls?: Record<string, string>;
   thumbnailUrl?: string | null;
   polyCount?: number;
   dimensions?: { width: number; height: number; depth: number } | null;
   qcResult?: Record<string, unknown>;
   createdAt: string;
+}
+
+/** A visible, resumable checkpoint in the image-to-Unity-asset workflow. */
+export type Asset3dWorkflowMode = 'automatic' | 'guided';
+export type Asset3dStageStatus = 'pending' | 'running' | 'awaiting_approval' | 'completed' | 'failed';
+
+export interface Asset3dWorkflowStageDTO {
+  id: 'trellis' | 'blender' | 'rigging_animation' | 'unity_bundle';
+  title: string;
+  description: string;
+  status: Asset3dStageStatus;
+  startedAt?: string;
+  completedAt?: string;
+  error?: string;
+  previewGlbUrl?: string;
+  fbxUrl?: string;
+  textureUrls?: Record<string, string>;
+  progress?: number;
 }
 
 export interface Asset3dProjectDTO {
@@ -546,6 +569,8 @@ export interface Asset3dProjectDTO {
   error?: string | null;
   outputs?: Asset3dOutputDTO[];
   generationTiming?: { queuedAt?: string; completedAt?: string; delayTimeMs?: number; executionTimeMs?: number };
+  workflowMode?: Asset3dWorkflowMode;
+  workflowStages?: Asset3dWorkflowStageDTO[];
   createdAt: string;
   updatedAt: string;
 }

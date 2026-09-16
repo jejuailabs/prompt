@@ -7,7 +7,24 @@ const exportsForTest = {};
 vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/server/asset3d-qc.ts', 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText, { exports: exportsForTest, Buffer });
-const { inspectTrellisGlb } = exportsForTest;
+const { inspectTrellisGlb, inspectRiggedGlb } = exportsForTest;
+
+function rigFixture(withWeights = true) {
+  const scene = {asset:{version:'2.0'}, nodes:[{skin:0,mesh:0},{}], skins:[{joints:[1]}], meshes:[{primitives:[{attributes:{JOINTS_0:0,...(withWeights?{WEIGHTS_0:1}:{})}}]}]};
+  let json=JSON.stringify(scene); json=json.padEnd(Math.ceil(Buffer.byteLength(json)/4)*4,' ');
+  const b=Buffer.alloc(20+Buffer.byteLength(json));b.write('glTF');b.writeUInt32LE(2,4);b.writeUInt32LE(b.length,8);b.writeUInt32LE(Buffer.byteLength(json),12);b.write('JSON',16);b.write(json,20);return b;
+}
+
+test('static GLB is never accepted as a rigged result', () => {
+  assert.throws(() => inspectRiggedGlb(fixture()));
+});
+test('skeleton without skin-weight attributes is rejected', () => {
+  assert.throws(() => inspectRiggedGlb(rigFixture(false)));
+});
+test('rigging does not imply animation clips exist', () => {
+  const report=inspectRiggedGlb(rigFixture());
+  assert.equal(report.joints,1);assert.equal(report.animations,0);
+});
 
 function fixture(depth = 0.3) {
   const positions = Buffer.alloc(300 * 12);
