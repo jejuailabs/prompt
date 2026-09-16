@@ -1,6 +1,7 @@
 // YouTube analysis pipeline. Provider credentials never leave the server.
 import { db } from '@/lib/db';
 import { chatJson } from '@/lib/server/ai';
+import { YoutubeTranscript } from 'youtube-transcript';
 import type { YoutubeAnalysisDTO, YoutubeChapter } from '@/lib/types';
 
 export function parseYoutubeVideoId(value: string): string | null {
@@ -60,15 +61,28 @@ async function fetchYoutubeData(videoId: string) {
 }
 
 async function fetchTranscriptFromProvider(videoId: string): Promise<{ text: string; language?: string; source?: string } | null> {
+  // 1) youtube-transcript (no API key needed — scrapes YouTube captions directly)
+  try {
+    const items = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'ko' }).catch(() =>
+      YoutubeTranscript.fetchTranscript(videoId)
+    );
+    if (items?.length) {
+      const text = items.map((i) => i.text).join(' ').replace(/\s+/g, ' ').trim();
+      if (isTranscriptQualityAcceptable(text)) return { text, language: 'ko', source: 'youtube-captions' };
+    }
+  } catch { /* fallback to SocialKit */ }
+
+  // 2) SocialKit fallback (if API key is available)
   const socialKitKey = process.env.SOCIALKIT_API_KEY;
-  if (!socialKitKey) return null;
-  const res = await fetch(`https://api.socialkit.dev/youtube/transcript?video_id=${encodeURIComponent(videoId)}`, {
-    headers: { Authorization: `Bearer ${socialKitKey}` }, cache: 'no-store',
-  }).catch(() => null);
-  if (res?.ok) {
-    const data = await res.json() as { transcript?: string; text?: string; language?: string };
-    const text = data.transcript ?? data.text ?? '';
-    if (isTranscriptQualityAcceptable(text)) return { text, language: data.language, source: 'socialkit' };
+  if (socialKitKey) {
+    const res = await fetch(`https://api.socialkit.dev/youtube/transcript?video_id=${encodeURIComponent(videoId)}`, {
+      headers: { Authorization: `Bearer ${socialKitKey}` }, cache: 'no-store',
+    }).catch(() => null);
+    if (res?.ok) {
+      const data = await res.json() as { transcript?: string; text?: string; language?: string };
+      const text = data.transcript ?? data.text ?? '';
+      if (isTranscriptQualityAcceptable(text)) return { text, language: data.language, source: 'socialkit' };
+    }
   }
   return null;
 }
