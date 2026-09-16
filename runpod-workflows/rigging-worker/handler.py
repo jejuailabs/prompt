@@ -83,25 +83,15 @@ def handler(job):
         spec.loader.exec_module(module)
         output = directory / 'bundle'
         report = module.process(rigged, output, {'height_m': settings.get('height_meters', 1.7)})
-        if report.get('errors') and not diagnostic:
-            raise RuntimeError('Rig validation failed: ' + ', '.join(report['errors']))
-        if report.get('errors') and diagnostic:
-            # A bounded, explicit diagnostic returns the generated assets and
-            # exact QC metrics for a failed sample.  It never marks the output
-            # Unity-ready and is not used by the production request path.
-            files = {}
-            for file in output.rglob('*'):
-                if not file.is_file() or file.name == 'report.json':
-                    continue
-                name = file.relative_to(output).as_posix()
-                name = {'prepared.glb': 'rigged.glb', 'prepared.fbx': 'rigged.fbx'}.get(name, name)
-                content = file.read_bytes()
-                if len(content) > 50 * 1024 * 1024:
-                    raise ValueError('Output file exceeds size limit')
-                files[name] = base64.b64encode(content).decode('ascii')
+        if diagnostic:
+            # Keep diagnostics under RunPod's response limit.  The normal
+            # pipeline will move binary assets via signed storage uploads,
+            # never by putting GLB+FBX base64 in the result body.
             report.update({'provider': 'skintokens', 'diagnostic': True,
                            'unity_ready': False, 'animation_status': 'not_generated'})
-            return {'files': files, 'report': report}
+            return {'report': report}
+        if report.get('errors'):
+            raise RuntimeError('Rig validation failed: ' + ', '.join(report['errors']))
         # Verify the actual exported FBX, rather than trusting pre-export objects.
         import bpy
         bpy.ops.wm.read_factory_settings(use_empty=True)
