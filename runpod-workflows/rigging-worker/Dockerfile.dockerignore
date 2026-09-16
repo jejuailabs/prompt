@@ -1,0 +1,7 @@
+**
+!runpod-workflows/
+!runpod-workflows/rigging-worker/
+!runpod-workflows/rigging-worker/handler.py
+!runpod-workflows/character-worker/
+!runpod-workflows/character-worker/process.py
+!runpod-workflows/character-worker/policy.py

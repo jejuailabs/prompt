@@ -1,0 +1,90 @@
+"""SkinTokens -> rigged GLB -> Blender FBX. One job at a time; no paid APIs."""
+import base64
+import importlib.util
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
+import time
+
+import runpod
+
+ROOT = Path('/opt/SkinTokens')
+sys.path.insert(0, str(ROOT))
+os.chdir(ROOT)
+_demo = None
+_server = None
+
+
+def runtime():
+    global _demo, _server
+    if _demo is None:
+        import demo
+        _demo = demo
+    if _server is None or _server.poll() is not None:
+        _server = _demo.start_bpy_server()
+        _demo.wait_for_bpy_server(timeout=90)
+    return _demo
+
+
+def handler(job):
+    start = time.perf_counter()
+    data = job.get('input', {})
+    encoded = data.get('model_base64')
+    if not isinstance(encoded, str) or not 1 <= len(encoded) <= 70_000_000:
+        raise ValueError('GLB payload missing or too large')
+    model = base64.b64decode(encoded, validate=True)
+    if len(model) < 20 or model[:4] != b'glTF' or int.from_bytes(model[4:8], 'little') != 2 or int.from_bytes(model[8:12], 'little') != len(model):
+        raise ValueError('Invalid GLB 2.0')
+    settings = data.get('settings') or {}
+    if not isinstance(settings, dict):
+        raise ValueError('settings must be an object')
+    with tempfile.TemporaryDirectory(prefix='skintokens-') as folder:
+        directory = Path(folder)
+        source, rigged = directory / 'source.glb', directory / 'rigged.glb'
+        source.write_bytes(model)
+        demo = runtime()
+        loaded = time.perf_counter()
+        demo.run_rig([source], 5, 0.95, 1.0, 2.0, 10,
+                     settings.get('use_skeleton') is True, True, False,
+                     [rigged], demo.MODEL_CKPTS[0], None)
+        inferred = time.perf_counter()
+        if not rigged.is_file():
+            raise RuntimeError('SkinTokens did not export a GLB')
+        # Reuse Blender preparation only AFTER rigging. It preserves skinned topology.
+        spec = importlib.util.spec_from_file_location('character_process', '/opt/character/process.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        output = directory / 'bundle'
+        report = module.process(rigged, output, {'height_m': settings.get('height_meters', 1.7)})
+        if report.get('errors'):
+            raise RuntimeError('Rig validation failed: ' + ', '.join(report['errors']))
+        # Verify the actual exported FBX, rather than trusting pre-export objects.
+        import bpy
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        bpy.ops.import_scene.fbx(filepath=str(output / 'prepared.fbx'))
+        fbx_rig = module.inspect_rig([o for o in bpy.context.scene.objects if o.type == 'MESH'])
+        if module.rig_errors(fbx_rig):
+            raise RuntimeError('FBX roundtrip lost skeleton or vertex weights')
+        files = {}
+        for file in output.rglob('*'):
+            if not file.is_file() or file.name == 'report.json':
+                continue
+            name = file.relative_to(output).as_posix()
+            name = {'prepared.glb': 'rigged.glb', 'prepared.fbx': 'rigged.fbx'}.get(name, name)
+            content = file.read_bytes()
+            if len(content) > 50 * 1024 * 1024:
+                raise ValueError('Output file exceeds size limit')
+            files[name] = base64.b64encode(content).decode('ascii')
+        report.update({'provider': 'skintokens', 'fbx_roundtrip': fbx_rig,
+                       'animation_status': 'not_generated', 'unity_ready': False,
+                       'timings_ms': {'startup': round((loaded-start)*1000),
+                                      'rigging': round((inferred-loaded)*1000),
+                                      'export_and_validation': round((time.perf_counter()-inferred)*1000),
+                                      'total': round((time.perf_counter()-start)*1000)}})
+        return {'files': files, 'report': report}
+
+
+if __name__ == '__main__':
+    runpod.serverless.start({'handler': handler})

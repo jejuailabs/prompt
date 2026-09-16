@@ -1,6 +1,6 @@
 """CPU Blender preparation and inspection, NOT automatic rigging/retopology.
 
-Run: python process.py input.glb output-directory [settings.json]
+Run: blender -b --python-exit-code 1 --python process.py -- input.glb output-directory [settings.json]
 Original GLB stays untouched. FBX is for geometry/rig interchange; GLB preserves
 PBR materials. Neither is labelled Unity Ready without an external Unity test.
 """
@@ -109,6 +109,26 @@ def process(source, destination, settings=None):
                              export_skins=True, export_animations=True, export_influence_nb=4)
     bpy.ops.export_scene.fbx(filepath=str(destination / "prepared.fbx"), object_types={"MESH", "ARMATURE", "EMPTY"},
                             add_leaf_bones=False, axis_forward="-Z", axis_up="Y", path_mode="COPY", embed_textures=True)
+    # FBX texture embedding is not reliable in Unity. Export explicit PNG assets
+    # and a stable manifest so the web app can ship a deterministic Unity bundle.
+    texture_dir = destination / "textures"
+    texture_dir.mkdir(exist_ok=True)
+    texture_map = {}
+    for index, image in enumerate(bpy.data.images):
+        if not image.size[0] or not image.size[1]:
+            continue
+        filename = f"texture_{index:02d}.png"
+        image.filepath_raw = str(texture_dir / filename)
+        image.file_format = "PNG"
+        image.save()
+        texture_map[image.name] = f"textures/{filename}"
+    (destination / "unity-materials.json").write_text(json.dumps({
+        "schema_version": 1,
+        "source": "prepared.glb",
+        "fbx": "prepared.fbx",
+        "textures": texture_map,
+        "note": "Assign the exported base-color PNG to a Unity URP/Lit Base Map."
+    }, indent=2), encoding="utf-8")
     report["timings_ms"]["export"] = round((time.perf_counter()-export_start)*1000)
     report["timings_ms"]["total"] = round((time.perf_counter()-start)*1000)
     (destination / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
