@@ -1,0 +1,4 @@
+# Verified sm80 runtime; add the driver compatibility fix tested on A100.
+FROM ghcr.io/jejuailabs/playlab-trellis-blackwell@sha256:cf14bff91491995c33f2fd48211f6418a3cd795c9213dd92289948f4df09d5ae
+RUN apt-get update && apt-get install -y --no-install-recommends cuda-compat-13-0 && rm -rf /var/lib/apt/lists/*
+ENV LD_LIBRARY_PATH=/usr/local/cuda-13.0/compat

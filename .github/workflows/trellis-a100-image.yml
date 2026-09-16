@@ -31,6 +31,7 @@ jobs:
         id: image
         with:
           context: runpod-workflows/trellis-worker
+          file: runpod-workflows/trellis-worker/Dockerfile.a100
           push: true
           build-args: GPU_ARCH=8.0
           tags: ghcr.io/jejuailabs/playlab-trellis-blackwell:a100-${{ github.sha }}
