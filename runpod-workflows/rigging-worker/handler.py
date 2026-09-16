@@ -40,6 +40,7 @@ def handler(job):
     settings = data.get('settings') or {}
     if not isinstance(settings, dict):
         raise ValueError('settings must be an object')
+    diagnostic = data.get('diagnostic') is True
     with tempfile.TemporaryDirectory(prefix='skintokens-') as folder:
         directory = Path(folder)
         source, rigged = directory / 'source.glb', directory / 'rigged.glb'
@@ -82,8 +83,25 @@ def handler(job):
         spec.loader.exec_module(module)
         output = directory / 'bundle'
         report = module.process(rigged, output, {'height_m': settings.get('height_meters', 1.7)})
-        if report.get('errors'):
+        if report.get('errors') and not diagnostic:
             raise RuntimeError('Rig validation failed: ' + ', '.join(report['errors']))
+        if report.get('errors') and diagnostic:
+            # A bounded, explicit diagnostic returns the generated assets and
+            # exact QC metrics for a failed sample.  It never marks the output
+            # Unity-ready and is not used by the production request path.
+            files = {}
+            for file in output.rglob('*'):
+                if not file.is_file() or file.name == 'report.json':
+                    continue
+                name = file.relative_to(output).as_posix()
+                name = {'prepared.glb': 'rigged.glb', 'prepared.fbx': 'rigged.fbx'}.get(name, name)
+                content = file.read_bytes()
+                if len(content) > 50 * 1024 * 1024:
+                    raise ValueError('Output file exceeds size limit')
+                files[name] = base64.b64encode(content).decode('ascii')
+            report.update({'provider': 'skintokens', 'diagnostic': True,
+                           'unity_ready': False, 'animation_status': 'not_generated'})
+            return {'files': files, 'report': report}
         # Verify the actual exported FBX, rather than trusting pre-export objects.
         import bpy
         bpy.ops.wm.read_factory_settings(use_empty=True)
