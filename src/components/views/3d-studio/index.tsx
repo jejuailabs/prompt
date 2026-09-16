@@ -351,6 +351,9 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
       )}
 
       {/* Display the generated mesh, not the input thumbnail. */}
+      {project.generationTiming?.executionTimeMs !== undefined && (
+        <p className="mb-4 text-sm text-muted-foreground">3D 생성 처리 {Math.round(project.generationTiming.executionTimeMs / 1000)}초 · 워커 대기 {Math.round((project.generationTiming.delayTimeMs ?? 0) / 1000)}초</p>
+      )}
       {outputs.length > 0 && (
         <div className="space-y-4">
           {outputs.map((output) => (
@@ -366,6 +369,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
                 )}
               </div>
               <div className="space-y-3 p-4">
+                <p className="rounded-md bg-amber-500/10 p-3 text-sm">생성 메시 · 게임 캐릭터 준비 미완료. 형상 검토, 리깅·관절 변형 및 Unity 임포트 검증이 필요합니다.</p>
                 {output.polyCount && (
                   <p className="text-sm text-muted-foreground">
                     {t('polyCount')}: {output.polyCount.toLocaleString()}
@@ -379,8 +383,8 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
                 <div className="flex gap-2">
                   {output.glbUrl && <Button variant="outline" size="sm" asChild><a href={output.glbUrl} download target="_blank" rel="noreferrer"><Download className="size-3" /> {t('downloadGlb')}</a></Button>}
                   {output.fbxUrl && (
-                    <Button variant="outline" size="sm">
-                      <Download className="size-3" /> {t('downloadFbx')}
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={output.fbxUrl} download target="_blank" rel="noreferrer"><Download className="size-3" /> {t('downloadFbx')}</a>
                     </Button>
                   )}
                 </div>

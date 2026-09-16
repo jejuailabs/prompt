@@ -11,7 +11,7 @@ interface ProjectMeta {
   subtrack?: Asset3dSubtrack;
   inputImageUrls?: string[];
   styleOptions?: Record<string, unknown>;
-  blender?: { engine?: 'trellis'; jobId?: string; accountingJobId?: string; creditCharged?: number; status?: string; error?: string; queuedAt?: string };
+  blender?: { engine?: 'trellis'; jobId?: string; accountingJobId?: string; creditCharged?: number; status?: string; error?: string; queuedAt?: string; completedAt?: string; delayTimeMs?: number; executionTimeMs?: number };
   outputs?: Asset3dProjectDTO['outputs'];
 }
 
@@ -54,6 +54,7 @@ function toProject(row: { id: string; ownerId: string; title: string; status: st
     outputs: meta.outputs ?? [],
     creditCharged: 0,
     error: userFacingBlenderError(meta.blender?.error),
+    generationTiming: { queuedAt: meta.blender?.queuedAt, completedAt: meta.blender?.completedAt, delayTimeMs: meta.blender?.delayTimeMs, executionTimeMs: meta.blender?.executionTimeMs },
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.createdAt.toISOString(),
   };

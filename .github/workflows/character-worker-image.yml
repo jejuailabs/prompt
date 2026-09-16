@@ -1,0 +1,37 @@
+name: Character Blender worker image
+on:
+  push:
+    branches: [codex/3d-unity-pipeline]
+    paths:
+      - runpod-workflows/character-worker/**
+      - .github/workflows/character-worker-image.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: character-worker-image
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        id: image
+        with:
+          context: runpod-workflows/character-worker
+          push: true
+          tags: ghcr.io/jejuailabs/playlab-character-blender:${{ github.sha }}
+          provenance: false
+      - name: Record immutable image reference
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: echo "ghcr.io/jejuailabs/playlab-character-blender@$DIGEST" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,11 @@
+Library/
+Logs/
+Temp/
+Obj/
+UserSettings/
+*.csproj
+*.sln
+*.meta
+Packages/
+ProjectSettings/*
+!ProjectSettings/ProjectVersion.txt
