@@ -1,0 +1,45 @@
+name: H3 optimized worker image
+on:
+  push:
+    branches: [codex/h3-cu130]
+    paths:
+      - runpod-workflows/h3-worker/**
+      - .github/workflows/h3-worker-image.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: h3-worker-image
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release hosted runner space for H3 weights
+        run: |
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache
+          docker system prune -af
+          df -h /
+      - name: Test video output adapter
+        run: python3 runpod-workflows/h3-worker/test_worker.py
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        id: image
+        with:
+          context: runpod-workflows/h3-worker
+          push: true
+          tags: ghcr.io/jejuailabs/playlab-h3-cu130:${{ github.sha }}
+          provenance: false
+      - name: Record immutable image reference
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: echo "ghcr.io/jejuailabs/playlab-h3-cu130@$DIGEST" >> "$GITHUB_STEP_SUMMARY"
