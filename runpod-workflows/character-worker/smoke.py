@@ -18,4 +18,6 @@ with tempfile.TemporaryDirectory() as folder:
     assert abs(report["after"]["dimensions"][2] - 1.7) < 0.001
     assert (directory / "out/prepared.fbx").stat().st_size > 100
     assert (directory / "out/prepared.glb").stat().st_size > 100
-    print("Blender GLB/FBX smoke passed (synthetic fixture, NOT game-ready validation)")
+    assert (directory / "out/unity-materials.json").stat().st_size > 20
+    assert list((directory / "out/textures").glob("*.png"))
+    print("Blender GLB/FBX/texture-bundle smoke passed (synthetic fixture, NOT game-ready validation)")

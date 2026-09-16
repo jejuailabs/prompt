@@ -1,1 +1,5 @@
 **
+!runpod-workflows/
+!runpod-workflows/rigging-worker/
+!runpod-workflows/rigging-worker/handler.py
+!runpod-workflows/rigging-worker/retarget.py

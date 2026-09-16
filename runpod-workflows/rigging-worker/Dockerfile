@@ -7,5 +7,5 @@ RUN git init && git remote add origin https://github.com/VAST-AI-Research/SkinTo
 RUN python -m pip install -r requirements.txt runpod ninja packaging && MAX_JOBS=2 python -m pip install flash-attn --no-build-isolation
 RUN python download.py --model
 COPY runpod-workflows/character-worker/process.py runpod-workflows/character-worker/policy.py /opt/character/
-COPY runpod-workflows/rigging-worker/handler.py /opt/worker/handler.py
+COPY runpod-workflows/rigging-worker/handler.py runpod-workflows/rigging-worker/retarget.py /opt/worker/
 CMD ["python", "-u", "/opt/worker/handler.py"]

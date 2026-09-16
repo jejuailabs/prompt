@@ -31,11 +31,16 @@ def handler(job):
         if report["status"] == "rejected":
             return {"report": report}
         files = {}
-        for name in ("prepared.glb", "prepared.fbx"):
+        for name in ("prepared.glb", "prepared.fbx", "unity-materials.json"):
             content = (directory / "out" / name).read_bytes()
             if len(content) > 50 * 1024 * 1024:
                 raise ValueError("Output exceeds size limit")
             files[name] = base64.b64encode(content).decode("ascii")
+        for texture in (directory / "out" / "textures").glob("*.png"):
+            content = texture.read_bytes()
+            if len(content) > 50 * 1024 * 1024:
+                raise ValueError("Texture output exceeds size limit")
+            files[f"textures/{texture.name}"] = base64.b64encode(content).decode("ascii")
         return {"report": report, "files": files}
 
 

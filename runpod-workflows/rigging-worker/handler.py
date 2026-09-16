@@ -44,6 +44,30 @@ def handler(job):
         directory = Path(folder)
         source, rigged = directory / 'source.glb', directory / 'rigged.glb'
         source.write_bytes(model)
+        if data.get('operation') == 'retarget':
+            from retarget import bake
+            motion_encoded = data.get('motion_base64')
+            if not isinstance(motion_encoded, str) or not 1 <= len(motion_encoded) <= 40_000_000:
+                raise ValueError('Motion FBX payload missing or too large')
+            motion = directory / 'motion.fbx'
+            motion.write_bytes(base64.b64decode(motion_encoded, validate=True))
+            output = directory / 'animation'
+            report = bake(source, motion, output, data.get('bone_mapping'),
+                          str(data.get('clip_name', 'Motion'))[:100], data.get('in_place', True) is True)
+            # Check the exported FBX contains skin and an actual action.
+            import bpy
+            bpy.ops.wm.read_factory_settings(use_empty=True)
+            bpy.ops.import_scene.fbx(filepath=str(output / 'character.fbx'))
+            if not any(o.type == 'ARMATURE' and o.animation_data and o.animation_data.action for o in bpy.context.scene.objects):
+                raise RuntimeError('FBX roundtrip lost animation')
+            if not any(o.type == 'MESH' and any(m.type == 'ARMATURE' and m.object for m in o.modifiers) and len(o.vertex_groups) for o in bpy.context.scene.objects):
+                raise RuntimeError('FBX roundtrip lost skin')
+            files = {}
+            for file in output.iterdir():
+                if file.stat().st_size > 50 * 1024 * 1024: raise ValueError('Output too large')
+                files[file.name] = base64.b64encode(file.read_bytes()).decode('ascii')
+            report['total_ms'] = round((time.perf_counter()-start)*1000)
+            return {'files': files, 'report': report}
         demo = runtime()
         loaded = time.perf_counter()
         demo.run_rig([source], 5, 0.95, 1.0, 2.0, 10,
