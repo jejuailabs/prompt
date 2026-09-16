@@ -6,6 +6,8 @@ ENV PATH="/opt/venv/bin:/usr/local/cuda-13.0/bin:${PATH}"
 RUN pip install uv && uv pip install torch==2.11.0+cu130 torchvision==0.26.0+cu130 --index-url https://download.pytorch.org/whl/cu130
 RUN curl -fL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb -o /tmp/cuda-keyring.deb && dpkg -i /tmp/cuda-keyring.deb && apt-get update && apt-get install -y --no-install-recommends cuda-nvcc-13-0 cuda-cudart-dev-13-0 cuda-cccl-13-0 cuda-libraries-dev-13-0 && rm -rf /var/lib/apt/lists/*
 ENV CUDA_HOME=/usr/local/cuda-13.0 TORCH_CUDA_ARCH_LIST=12.0 MAX_JOBS=2 NVCC_APPEND_FLAGS=--threads=2
+# Link CUDA driver symbols during GPU-less CI builds; never put stubs on LD_LIBRARY_PATH.
+ENV LIBRARY_PATH=/usr/local/cuda-13.0/lib64/stubs
 RUN uv pip install --no-deps xformers==0.0.35 --index-url https://download.pytorch.org/whl/cu130
 RUN pip install runpod==1.7.13 'transformers==4.57.6' 'huggingface-hub<1' 'numpy==1.26.4' 'opencv-python-headless==4.11.0.86' pillow safetensors imageio imageio-ffmpeg trimesh easydict einops kornia timm omegaconf tqdm lpips plyfile pymeshlab open3d zstandard ninja packaging wheel setuptools accelerate 'torch==2.11.0+cu130' 'torchvision==0.26.0+cu130'
 RUN uv pip install --no-deps git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8
