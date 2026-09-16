@@ -90,6 +90,7 @@ export interface YoutubeAnalysisDTO {
   reportSummary: string;
   chapters: YoutubeChapter[];
   keywords: string[];
+  studyContent: string;
   commentsSummary: string;
   contextSummary: string;
   status: 'queued' | 'running' | 'done' | 'failed';
@@ -544,6 +545,7 @@ export interface Asset3dProjectDTO {
   /** Safe, user-facing failure reason from the Blender worker, if any. */
   error?: string | null;
   outputs?: Asset3dOutputDTO[];
+  generationTiming?: { queuedAt?: string; completedAt?: string; delayTimeMs?: number; executionTimeMs?: number };
   createdAt: string;
   updatedAt: string;
 }

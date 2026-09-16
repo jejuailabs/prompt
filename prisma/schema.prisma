@@ -92,6 +92,7 @@ model YoutubeAnalysis {
   reportSummary   String   @default("")
   chapterJson     String   @default("[]")
   keywordsJson    String   @default("[]")
+  studyContent    String   @default("")
   commentsSummary String   @default("")
   contextSummary  String   @default("")
   status          String   @default("queued") // queued | running | done | failed

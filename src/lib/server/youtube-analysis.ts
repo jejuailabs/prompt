@@ -22,7 +22,7 @@ export function toYoutubeAnalysisDTO(a: {
   id: string; videoId: string; sourceUrl: string; title: string; channelTitle: string; description: string;
   thumbnailUrl: string | null; transcript: string; transcriptLanguage: string | null; transcriptSource: string | null;
   qualityWarning: string | null; category: string | null; summary: string; reportSummary: string;
-  chapterJson: string; keywordsJson: string; commentsSummary: string; contextSummary: string; status: string; error: string | null;
+  chapterJson: string; keywordsJson: string; studyContent: string; commentsSummary: string; contextSummary: string; status: string; error: string | null;
 }): YoutubeAnalysisDTO {
   return {
     ...a,
@@ -33,6 +33,7 @@ export function toYoutubeAnalysisDTO(a: {
     category: a.category,
     chapters: asJson<YoutubeChapter[]>(a.chapterJson, []),
     keywords: asJson<string[]>(a.keywordsJson, []),
+    studyContent: a.studyContent,
     status: a.status as YoutubeAnalysisDTO['status'],
     error: a.error,
   };
@@ -59,32 +60,16 @@ async function fetchYoutubeData(videoId: string) {
 }
 
 async function fetchTranscriptFromProvider(videoId: string): Promise<{ text: string; language?: string; source?: string } | null> {
-  // ssoktube-compatible priority: SocialKit → Supadata. Provider response shapes
-  // are intentionally normalized here so vendor changes stay isolated.
   const socialKitKey = process.env.SOCIALKIT_API_KEY;
-  if (socialKitKey) {
-    const res = await fetch(`https://api.socialkit.dev/youtube/transcript?video_id=${encodeURIComponent(videoId)}`, {
-      headers: { Authorization: `Bearer ${socialKitKey}` }, cache: 'no-store',
-    }).catch(() => null);
-    if (res?.ok) {
-      const data = await res.json() as { transcript?: string; text?: string; language?: string };
-      const text = data.transcript ?? data.text ?? '';
-      if (isTranscriptQualityAcceptable(text)) return { text, language: data.language, source: 'socialkit' };
-    }
+  if (!socialKitKey) return null;
+  const res = await fetch(`https://api.socialkit.dev/youtube/transcript?video_id=${encodeURIComponent(videoId)}`, {
+    headers: { Authorization: `Bearer ${socialKitKey}` }, cache: 'no-store',
+  }).catch(() => null);
+  if (res?.ok) {
+    const data = await res.json() as { transcript?: string; text?: string; language?: string };
+    const text = data.transcript ?? data.text ?? '';
+    if (isTranscriptQualityAcceptable(text)) return { text, language: data.language, source: 'socialkit' };
   }
-  const supadataKey = process.env.SUPADATA_API_KEY;
-  if (supadataKey) {
-    const res = await fetch(`https://api.supadata.ai/v1/youtube/transcript?videoId=${encodeURIComponent(videoId)}`, {
-      headers: { 'x-api-key': supadataKey }, cache: 'no-store',
-    }).catch(() => null);
-    if (res?.ok) {
-      const data = await res.json() as { transcript?: string; content?: string; language?: string };
-      const text = data.transcript ?? data.content ?? '';
-      if (isTranscriptQualityAcceptable(text)) return { text, language: data.language, source: 'supadata' };
-    }
-  }
-  // Gemini STT and local youtube-transcript are worker integrations. They are
-  // deliberately not invoked in a Vercel request without an audio source/runtime.
   return null;
 }
 
@@ -102,16 +87,28 @@ async function makeSummary(input: { title: string; channel: string; description:
       category: 'YouTube', summary: input.description || `${input.title}에 대한 영상입니다.`,
       reportSummary: input.description || '자막을 확보하지 못해 제목 중심으로 정리했습니다.',
       chapters: [] as YoutubeChapter[], keywords: input.title.split(/\s+/).filter(Boolean).slice(0, 5),
-      commentsSummary: '', contextSummary: input.description || input.title,
+      studyContent: '', commentsSummary: '', contextSummary: input.description || input.title,
     };
   }
   return chatJson<{
     category: string; summary: string; reportSummary: string; chapters: YoutubeChapter[];
-    keywords: string[]; commentsSummary: string; contextSummary: string;
+    keywords: string[]; studyContent: string; commentsSummary: string; contextSummary: string;
   }>(
-    'You summarize Korean/English YouTube learning content. Return JSON only. Do not invent facts.',
+    `You are an expert educational content designer. Analyze YouTube learning content and create comprehensive study materials in Korean.
+Return JSON only. Do not invent facts — only use information present in the transcript/description.`,
     `제목: ${input.title}\n채널: ${input.channel}\n설명: ${input.description}\n자막: ${source.slice(0, 50000)}\n\n` +
-      `상위 댓글: ${input.comments.slice(0, 10000)}\n\nJSON {category, summary, reportSummary, chapters:[{title,summary,timestamp?}], keywords, commentsSummary, contextSummary}.`,
+      `상위 댓글: ${input.comments.slice(0, 10000)}\n\n` +
+      `JSON 형식으로 반환:
+{
+  "category": "콘텐츠 카테고리 (예: IT/AI 교육, 프로그래밍, 디자인 등)",
+  "summary": "핵심 요약 (3-5문장)",
+  "reportSummary": "상세 학습 노트 (자막 내용을 체계적으로 정리)",
+  "chapters": [{"title": "섹션 제목", "summary": "해당 섹션 요약", "timestamp": "00:00 (있으면)"}],
+  "keywords": ["핵심 키워드 5-10개"],
+  "studyContent": "## 학습 가이드\\n\\n### 1. 핵심 개념 정리\\n- 영상에서 다루는 핵심 개념을 불릿 포인트로 정리\\n- 각 개념에 대한 간결한 설명 포함\\n\\n### 2. 단계별 학습 내용\\n영상의 흐름을 따라 단계별로 정리. 각 단계마다:\\n- 무엇을 배우는지\\n- 핵심 포인트\\n- 예시나 실습 내용\\n\\n### 3. 실습/적용 포인트\\n- 직접 따라해볼 수 있는 실습 항목\\n- 적용 가능한 팁\\n\\n### 4. 핵심 요약 & 복습 체크리스트\\n- [ ] 체크리스트 형태로 복습 포인트 정리\\n\\n(자막 내용을 기반으로 위 구조에 맞게 상세하게 작성. 마크다운 형식. 최소 1000자 이상.)",
+  "commentsSummary": "시청자 반응 요약",
+  "contextSummary": "영상 맥락 한 줄 요약"
+}`,
   );
 }
 
@@ -140,7 +137,7 @@ export async function processYoutubeAnalysis(jobId: string) {
       transcriptSource: transcript?.source ?? null, qualityWarning: warning,
       category: summary.category, summary: summary.summary, reportSummary: summary.reportSummary,
       chapterJson: JSON.stringify(summary.chapters ?? []), keywordsJson: JSON.stringify(summary.keywords ?? []),
-      commentsSummary: summary.commentsSummary ?? '', contextSummary: summary.contextSummary,
+      studyContent: summary.studyContent ?? '', commentsSummary: summary.commentsSummary ?? '', contextSummary: summary.contextSummary,
       status: 'done', error: null,
     } });
     await db.youtubeAnalysisJob.update({ where: { id: job.id }, data: { status: 'done', completedAt: new Date() } });
