@@ -13,6 +13,8 @@ export interface VideoRenderInput {
   h3Preset?: H3Preset;
   preview?: boolean;
   seed?: number;
+  /** Server-owned administrator comparison, never an arbitrary client size. */
+  comparison?: boolean;
 }
 
 /** Compatibility export: all LTX callers use the verified 2B workflow. */

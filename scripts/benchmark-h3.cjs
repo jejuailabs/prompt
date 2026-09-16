@@ -40,7 +40,7 @@ async function main() {
           const event = JSON.parse(line.slice(5).trim());
           event.line = String(event.line || '').replace(/\x1b\[[0-9;]*m/g, '').replace(/hf_[A-Za-z0-9]+|rpa_[A-Za-z0-9_-]+/g, '[REDACTED]');
           // Keep only performance evidence, never full handler request payloads.
-          if (/pytorch version|backend cuda|Using .*attention|CUDA operations|vram state|offloading|Model .*prepared|loaded completely|loaded partially|First sampler step|Prompt executed|s\/it|it\/s|VAE .*device|Requested to load|Sampler: model|Actual Resident VRAM|Installing|Installed|Uninstalled|error:|Traceback|ERROR/.test(event.line)) entries.push(event);
+          if (/Device:|H3 runtime verified|pytorch version|backend cuda|Using .*attention|CUDA operations|vram state|offloading|Model .*prepared|loaded completely|loaded partially|First sampler step|Prompt executed|s\/it|it\/s|VAE .*device|Requested to load|Sampler: model|Actual Resident VRAM|Installing|Installed|Uninstalled|error:|Traceback|ERROR/.test(event.line)) entries.push(event);
         }
       }
     } catch (e) { if (e.name !== 'TimeoutError') throw e; }
@@ -50,11 +50,22 @@ async function main() {
     const health = await request(`${base}/health`);
     if (health.jobs?.inProgress || health.jobs?.inQueue) throw Error('Endpoint busy; refusing to add a benchmark');
     const presets = load('src/lib/h3-presets.ts');
+    const engine = job || 'h3';
+    if (!['h3', 'ltx', 'wan'].includes(engine)) throw Error('Unsupported benchmark engine');
     const { buildH3TextToVideoWorkflow } = load('src/lib/server/video-workflows.ts', { '@/lib/h3-presets': presets });
     const input = { prompt: 'Cinematic close-up of an adult woman aged 25 beside a swimming pool in summer shade. Natural skin texture, detailed eyelashes, tiny water droplets on her cheek, damp strands of hair. Opaque white cotton T-shirt. Soft side lighting, turquoise background bokeh. A very slow straight camera push-in, one natural blink. Stable face, no cuts, no text, no speech.', durationSec: 6, aspectRatio: '16:9', h3Preset: 'standard20', seed: 12345 };
-    const workflow = buildH3TextToVideoWorkflow(input);
+    input.comparison = true;
+    const turboI2v = engine === 'h3' && process.argv[5] === '--turbo-i2v';
+    let images;
+    if (turboI2v) {
+      input.h3Preset = 'turbo8';
+      input.firstFrameName = 'h3-cu130-frame.png';
+      images = [{ name: input.firstFrameName, image: 'data:image/png;base64,' + fs.readFileSync(path.join(outputDir, input.firstFrameName)).toString('base64') }];
+    }
+    const workflow = engine === 'ltx' ? load('src/lib/server/ltx-2b-workflow.ts').buildLtx2bWorkflow(input)
+      : engine === 'wan' ? load('src/lib/server/wan-workflow.ts').buildWanWorkflow(input) : buildH3TextToVideoWorkflow(input);
     const startedAt = new Date().toISOString();
-    const queued = await request(`${base}/run`, { input: { workflow }, policy: { executionTimeout: 600000, ttl: 900000 } });
+    const queued = await request(`${base}/run`, { input: { workflow, ...(images ? { images } : {}) }, policy: { executionTimeout: 600000, ttl: 900000 } });
     if (!/^[a-zA-Z0-9-]+$/.test(queued.id || '')) throw Error('Unexpected job id; inspect endpoint before resubmitting');
     const record = { endpoint, startedAt, input, workflow, queued };
     fs.writeFileSync(path.join(outputDir, `${queued.id}.json`), JSON.stringify(record, null, 2));

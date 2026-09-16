@@ -10,6 +10,7 @@ import { buildLtx2bWorkflow } from '@/lib/server/ltx-2b-workflow';
 import { buildWanWorkflow } from '@/lib/server/wan-workflow';
 import { beginMeteredOperation, failMeteredOperation } from '@/lib/server/operation-ledger';
 import { buildVideoModelPrompt, compileVideoIntent } from '@/lib/server/video-intent';
+import type { ComparisonInfo } from '@/lib/video-comparison';
 
 function metadata(raw: string): Record<string, unknown> {
   try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
@@ -39,6 +40,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!project) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
 
     const meta = metadata(project.metadata);
+    const comparison = meta.comparison as ComparisonInfo | undefined;
+    if (comparison && user.role !== 'admin') throw new HttpError('관리자 비교 테스트입니다', 403);
+    if (comparison && body.engine && body.engine !== meta.engine) throw new HttpError('비교 모델은 변경할 수 없습니다', 400);
     const current = meta.render as { engine?: string; h3Gpu?: '5090' | 'blackwell'; runpodJobId?: string; status?: string } | undefined;
     if (current?.runpodJobId && ['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING'].includes(current.status ?? '')) {
       try {
@@ -64,10 +68,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const config = engine === 'h3' ? await getH3Config() : null;
     if (body.h3Preset !== undefined && (user.role !== 'admin' || !isH3Preset(body.h3Preset))) throw new HttpError('관리자 프리셋 권한 또는 값이 올바르지 않습니다', 403);
     if (body.seed !== undefined && (user.role !== 'admin' || !Number.isSafeInteger(body.seed) || body.seed < 0 || body.seed > 2147483647)) throw new HttpError('시드 값을 확인해주세요', 400);
-    const h3Gpu = user.role === 'admin' ? body.h3Gpu ?? current?.h3Gpu ?? config?.gpu ?? '5090' : config?.gpu ?? '5090';
-    const h3Preset = isH3Preset(body.h3Preset) ? body.h3Preset : quality === 'standard' ? config?.quality : config?.speed;
+    const h3Gpu = comparison ? 'blackwell' : user.role === 'admin' ? body.h3Gpu ?? current?.h3Gpu ?? config?.gpu ?? '5090' : config?.gpu ?? '5090';
+    const h3Preset = comparison?.preset ?? (isH3Preset(body.h3Preset) ? body.h3Preset : quality === 'standard' ? config?.quality : config?.speed);
     const preview = engine === 'h3' && meta.preview === true;
-    const seed = body.seed ?? Math.floor(Math.random() * 2147483647);
+    const seed = comparison?.seed ?? body.seed ?? Math.floor(Math.random() * 2147483647);
     const prompt = typeof meta.prompt === 'string' ? meta.prompt.trim() : '';
     if (prompt.length < 3) throw new HttpError('렌더할 프롬프트가 없습니다', 400);
     const duration = typeof meta.targetDurationSec === 'number' ? meta.targetDurationSec : 6;
@@ -75,9 +79,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const inputImageUrl = typeof meta.inputImageUrl === 'string' ? meta.inputImageUrl : null;
     if (inputMode === 'image' && !inputImageUrl) throw new HttpError('시작 이미지를 찾을 수 없습니다', 400);
     const firstFrame = inputImageUrl ? await getRunpodFirstFrame(inputImageUrl) : undefined;
-    const intent = await compileVideoIntent(prompt, { hasReferenceImage: Boolean(firstFrame), durationSec: duration });
-    const modelPrompt = buildVideoModelPrompt(intent, Boolean(firstFrame));
-    const renderInput = { h3Preset, preview, seed, prompt: modelPrompt, durationSec: duration, aspectRatio: aspect as VideoAspectRatio, quality: quality === 'standard' ? 'standard' as const : 'draft' as const, ...(firstFrame ? { firstFrameName: firstFrame.name } : {}) };
+    const intent = comparison ? undefined : await compileVideoIntent(prompt, { hasReferenceImage: Boolean(firstFrame), durationSec: duration });
+    const modelPrompt = comparison?.compiledPrompt ?? buildVideoModelPrompt(intent!, Boolean(firstFrame));
+    const renderInput = { comparison: Boolean(comparison), h3Preset, preview, seed, prompt: modelPrompt, durationSec: duration, aspectRatio: aspect as VideoAspectRatio, quality: quality === 'standard' ? 'standard' as const : 'draft' as const, ...(firstFrame ? { firstFrameName: firstFrame.name } : {}) };
     const workflow = engine === 'h3' ? buildH3TextToVideoWorkflow(renderInput)
       : engine === 'wan' ? buildWanWorkflow(renderInput) : buildLtx2bWorkflow(renderInput);
     const ledger = await beginMeteredOperation({ userId: user.id, engine, preview, prompt, aspect, style: typeof meta.style === 'string' ? meta.style : null });

@@ -35,6 +35,7 @@ yarn-error.log*
 
 # vercel
 .vercel
+/tmp/h3-benchmark/
 
 
 # typescript
