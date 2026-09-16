@@ -11,7 +11,7 @@ interface ProjectMeta {
   subtrack?: Asset3dSubtrack;
   inputImageUrls?: string[];
   styleOptions?: Record<string, unknown>;
-  blender?: { jobId?: string; accountingJobId?: string; creditCharged?: number; status?: string; error?: string; queuedAt?: string };
+  blender?: { engine?: 'trellis'; jobId?: string; accountingJobId?: string; creditCharged?: number; status?: string; error?: string; queuedAt?: string };
   outputs?: Asset3dProjectDTO['outputs'];
 }
 
@@ -59,15 +59,6 @@ function toProject(row: { id: string; ownerId: string; title: string; status: st
   };
 }
 
-function buildBlenderPrompt(title: string, subtrack: Asset3dSubtrack, quality: string, imageUrls: string[]) {
-  const role = subtrack === 'character' ? 'game-ready character asset' : subtrack === 'product' ? 'product asset' : 'architectural floorplan scene';
-  return `Create a ${role} in Blender named "${title}". Quality: ${quality}. Use the supplied reference images for silhouette, material, and composition. Return the rendered preview and, when available, the GLB asset. Reference images: ${imageUrls.join(', ')}`;
-}
-
-function requireImageTo3dWorker(): void {
-  throw new HttpError('이미지에서 3D 에셋을 만드는 전용 워커가 아직 연결되지 않았습니다. 크레딧은 차감되지 않습니다.', 503);
-}
-
 export async function GET() {
   try {
     const user = await getSessionUserFast();
@@ -85,37 +76,37 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const user = await requireUser();
-    // The deployed PLINT handler accepts parcel/scenario data, not images.
-    // Fail before creating an artifact or charging credits until an image-to-3D
-    // worker and its output adapter have been implemented and verified.
-    requireImageTo3dWorker();
+    if (process.env.TRELLIS_GENERATION_VERIFIED !== 'true') {
+      throw new HttpError('3D 생성 품질 검증 중입니다. 크레딧은 차감되지 않습니다.', 503);
+    }
     const body = await readJson<CreateProjectBody>(req);
     const subtrack = body.subtrack;
     if (!subtrack || !['character', 'product', 'floorplan'].includes(subtrack)) throw new HttpError('에셋 유형을 선택해주세요', 400);
+    if (subtrack === 'floorplan') throw new HttpError('치수가 필요한 도면 변환은 아직 지원하지 않습니다. 캐릭터 또는 제품 사진을 선택해주세요.', 400);
     const imageUrls = (body.inputImageUrls ?? []).filter((url) => typeof url === 'string').slice(0, 5);
-    if (!imageUrls.length) throw new HttpError('Blender 작업에 사용할 참조 이미지를 한 장 이상 선택해주세요', 400);
+    if (!imageUrls.length) throw new HttpError('3D 생성에 사용할 참조 이미지를 선택해주세요', 400);
+    if (imageUrls.length !== 1) throw new HttpError('현재 3D 생성은 대표 이미지 한 장을 지원합니다.', 400);
+    const reference = new URL(imageUrls[0]);
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || reference.origin !== new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin || !reference.pathname.startsWith('/storage/v1/object/public/uploads/')) throw new HttpError('업로드한 참조 이미지를 선택해주세요.', 400);
     const title = (body.title?.trim() || `3D ${subtrack}`).slice(0, 120);
     const styleOptions = body.styleOptions ?? {};
     const quality = typeof styleOptions.quality === 'string' ? styleOptions.quality : 'standard';
     const baseMeta: ProjectMeta = { kind: '3d-project', subtrack, inputImageUrls: imageUrls, styleOptions, outputs: [] };
     const project = await db.artifact.create({
-      data: { ownerId: user.id, type: '3d_asset', title, description: `${subtrack} Blender asset`, sourceModule: '3d-studio', fileUrl: imageUrls[0], metadata: JSON.stringify(baseMeta), visibility: 'private', status: 'generating' },
+      data: { ownerId: user.id, type: '3d_asset', title, description: `${subtrack} TRELLIS.2 asset`, sourceModule: '3d-studio', fileUrl: imageUrls[0], metadata: JSON.stringify(baseMeta), visibility: 'private', status: 'generating' },
     });
 
     let ledger: Awaited<ReturnType<typeof beginMeteredOperation>>;
     try {
-      ledger = await beginMeteredOperation({ userId: user.id, engine: 'blender', prompt: buildBlenderPrompt(title, subtrack, quality, imageUrls), aspect: '3d', style: quality });
+      ledger = await beginMeteredOperation({ userId: user.id, engine: 'trellis', prompt: `Image-to-3D: ${title}`, aspect: '3d', style: quality });
     } catch (error) {
       const meta = { ...baseMeta, blender: { status: 'FAILED', error: error instanceof Error ? error.message : '크레딧 차감에 실패했습니다' } };
       const failed = await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(meta), status: 'failed' } });
       return ok(toProject(failed));
     }
     try {
-      // The deployed Blender handler accepts its primary reference through the
-      // `address` field. Keep image_urls for handlers that consume a gallery,
-      // but always satisfy the required single-image contract as well.
-      const job = await queueRunpodJob('blender', { address: imageUrls[0], prompt: buildBlenderPrompt(title, subtrack, quality, imageUrls), image_urls: imageUrls, quality, subtrack });
-      const meta = { ...baseMeta, blender: { jobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString() } };
+      const job = await queueRunpodJob('trellis', { input_image: imageUrls[0], resolution: 512, texture_size: 1024, output_format: 'glb' });
+      const meta = { ...baseMeta, blender: { engine: 'trellis' as const, jobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString() } };
       const queued = await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(meta), status: 'generating' } });
       return ok(toProject(queued));
     } catch (error) {

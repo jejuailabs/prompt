@@ -1,0 +1,97 @@
+[
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x7347a4eca490: Actual Resident VRAM = 13888 MB",
+    "ts": "2026-09-16T01:42:43.578233454Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x73398057f790: Actual Resident VRAM = 20000 MB",
+    "ts": "2026-09-16T01:42:43.578304194Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x7347a4eca490: Actual Resident VRAM = 13888 MB",
+    "ts": "2026-09-16T01:42:50.867854863Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x73398057f790: Actual Resident VRAM = 20000 MB",
+    "ts": "2026-09-16T01:42:50.867882073Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x7347a4eca490: Actual Resident VRAM = 13888 MB",
+    "ts": "2026-09-16T01:42:58.156384694Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x73398057f790: Actual Resident VRAM = 20000 MB",
+    "ts": "2026-09-16T01:42:58.156399474Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x7347a4eca490: Actual Resident VRAM = 13888 MB",
+    "ts": "2026-09-16T01:43:05.448693683Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x73398057f790: Actual Resident VRAM = 20000 MB",
+    "ts": "2026-09-16T01:43:05.448715133Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x7347a4eca490: Actual Resident VRAM = 13888 MB",
+    "ts": "2026-09-16T01:43:12.744201745Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x73398057f790: Actual Resident VRAM = 20000 MB",
+    "ts": "2026-09-16T01:43:12.744234135Z"
+  },
+  {
+    "source": "container",
+    "line": "[INFO] Requested to load MiniMaxH3VideoVAE",
+    "ts": "2026-09-16T01:43:12.772010138Z"
+  },
+  {
+    "source": "container",
+    "line": "[INFO] Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 4965MB Staged. 0 patches attached. Force pre-loaded 128 weights: 348 KB.",
+    "ts": "2026-09-16T01:43:12.795368632Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x7347a4eca490: Actual Resident VRAM = 13888 MB",
+    "ts": "2026-09-16T01:43:12.795506751Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x73398057f790: Actual Resident VRAM = 20000 MB",
+    "ts": "2026-09-16T01:43:12.795515741Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x732aa81d88f0: Actual Resident VRAM = 0 MB",
+    "ts": "2026-09-16T01:43:12.795530600Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x7347a4eca490: Actual Resident VRAM = 13888 MB",
+    "ts": "2026-09-16T01:43:19.077480638Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x73398057f790: Actual Resident VRAM = 20000 MB",
+    "ts": "2026-09-16T01:43:19.077510958Z"
+  },
+  {
+    "source": "container",
+    "line": "[DEBUG] aimdo: /project/src/model-vbar.c:86:DEBUG:VBAR 0x732aa81d88f0: Actual Resident VRAM = 4736 MB",
+    "ts": "2026-09-16T01:43:19.077534008Z"
+  },
+  {
+    "source": "container",
+    "line": "[INFO] Prompt executed in 158.60 seconds",
+    "ts": "2026-09-16T01:43:20.384987313Z"
+  }
+]

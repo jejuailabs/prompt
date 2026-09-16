@@ -1,0 +1,356 @@
+{
+  "endpoint": "pnskne8mgep2vw",
+  "startedAt": "2026-09-16T01:35:40.098Z",
+  "input": {
+    "prompt": "Cinematic close-up of an adult woman aged 25 beside a swimming pool in summer shade. Natural skin texture, detailed eyelashes, tiny water droplets on her cheek, damp strands of hair. Opaque white cotton T-shirt. Soft side lighting, turquoise background bokeh. A very slow straight camera push-in, one natural blink. Stable face, no cuts, no text, no speech.",
+    "durationSec": 6,
+    "aspectRatio": "16:9",
+    "h3Preset": "standard20",
+    "seed": 12345
+  },
+  "workflow": {
+    "92": {
+      "inputs": {
+        "video": [
+          "152",
+          0
+        ],
+        "filename_prefix": "video/MiniMax_H3",
+        "format": "auto",
+        "format.codec": "auto"
+      },
+      "class_type": "SaveVideo",
+      "_meta": {
+        "title": "SaveVideo"
+      }
+    },
+    "141": {
+      "inputs": {
+        "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "VAELoader"
+      }
+    },
+    "142": {
+      "inputs": {
+        "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "VAELoader"
+      }
+    },
+    "143": {
+      "inputs": {
+        "samples": [
+          "147",
+          0
+        ],
+        "vae": [
+          "142",
+          0
+        ]
+      },
+      "class_type": "VAEDecodeAudio",
+      "_meta": {
+        "title": "VAEDecodeAudio"
+      }
+    },
+    "144": {
+      "inputs": {
+        "samples": [
+          "147",
+          0
+        ],
+        "vae": [
+          "141",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAEDecode"
+      }
+    },
+    "145": {
+      "inputs": {
+        "sampler_name": "res_multistep"
+      },
+      "class_type": "KSamplerSelect",
+      "_meta": {
+        "title": "KSamplerSelect"
+      }
+    },
+    "146": {
+      "inputs": {
+        "model": [
+          "157",
+          0
+        ],
+        "steps": [
+          "158",
+          0
+        ],
+        "scheduler": "simple",
+        "denoise": 1
+      },
+      "class_type": "BasicScheduler",
+      "_meta": {
+        "title": "BasicScheduler"
+      }
+    },
+    "147": {
+      "inputs": {
+        "noise": [
+          "151",
+          0
+        ],
+        "guider": [
+          "148",
+          0
+        ],
+        "sampler": [
+          "145",
+          0
+        ],
+        "sigmas": [
+          "146",
+          0
+        ],
+        "latent_image": [
+          "153",
+          1
+        ]
+      },
+      "class_type": "SamplerCustomAdvanced",
+      "_meta": {
+        "title": "SamplerCustomAdvanced"
+      }
+    },
+    "148": {
+      "inputs": {
+        "model": [
+          "157",
+          0
+        ],
+        "conditioning": [
+          "153",
+          0
+        ]
+      },
+      "class_type": "BasicGuider",
+      "_meta": {
+        "title": "BasicGuider"
+      }
+    },
+    "149": {
+      "inputs": {
+        "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+        "weight_dtype": "default"
+      },
+      "class_type": "UNETLoader",
+      "_meta": {
+        "title": "UNETLoader"
+      }
+    },
+    "150": {
+      "inputs": {
+        "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "type": "minimax",
+        "device": "default"
+      },
+      "class_type": "CLIPLoader",
+      "_meta": {
+        "title": "CLIPLoader"
+      }
+    },
+    "151": {
+      "inputs": {
+        "noise_seed": 12345
+      },
+      "class_type": "RandomNoise",
+      "_meta": {
+        "title": "RandomNoise"
+      }
+    },
+    "152": {
+      "inputs": {
+        "images": [
+          "144",
+          0
+        ],
+        "fps": 24,
+        "bit_depth": 8,
+        "color_space": "sRGB"
+      },
+      "class_type": "CreateVideo",
+      "_meta": {
+        "title": "CreateVideo"
+      }
+    },
+    "153": {
+      "inputs": {
+        "clip": [
+          "150",
+          0
+        ],
+        "vae": [
+          "141",
+          0
+        ],
+        "width": [
+          "162",
+          0
+        ],
+        "height": [
+          "163",
+          0
+        ],
+        "length": [
+          "154",
+          1
+        ],
+        "prompt": "Cinematic close-up of an adult woman aged 25 beside a swimming pool in summer shade. Natural skin texture, detailed eyelashes, tiny water droplets on her cheek, damp strands of hair. Opaque white cotton T-shirt. Soft side lighting, turquoise background bokeh. A very slow straight camera push-in, one natural blink. Stable face, no cuts, no text, no speech."
+      },
+      "class_type": "MiniMaxH3ImageToVideo",
+      "_meta": {
+        "title": "MiniMaxH3ImageToVideo"
+      }
+    },
+    "154": {
+      "inputs": {
+        "values.a": [
+          "155",
+          0
+        ],
+        "expression": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17"
+      },
+      "class_type": "ComfyMathExpression",
+      "_meta": {
+        "title": "Frame Count"
+      }
+    },
+    "155": {
+      "inputs": {
+        "value": 6
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "Duration"
+      }
+    },
+    "156": {
+      "inputs": {
+        "model": [
+          "149",
+          0
+        ],
+        "lora_name": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+        "strength_model": 1
+      },
+      "class_type": "LoraLoaderModelOnly",
+      "_meta": {
+        "title": "LoraLoaderModelOnly"
+      }
+    },
+    "157": {
+      "inputs": {
+        "on_false": [
+          "149",
+          0
+        ],
+        "on_true": [
+          "156",
+          0
+        ],
+        "switch": [
+          "161",
+          0
+        ]
+      },
+      "class_type": "ComfySwitchNode",
+      "_meta": {
+        "title": "If/Else Switch (Model)"
+      }
+    },
+    "158": {
+      "inputs": {
+        "on_false": [
+          "159",
+          0
+        ],
+        "on_true": [
+          "160",
+          0
+        ],
+        "switch": [
+          "161",
+          0
+        ]
+      },
+      "class_type": "ComfySwitchNode",
+      "_meta": {
+        "title": "If/Else Switch (Steps)"
+      }
+    },
+    "159": {
+      "inputs": {
+        "value": 20
+      },
+      "class_type": "PrimitiveInt",
+      "_meta": {
+        "title": "Standard steps"
+      }
+    },
+    "160": {
+      "inputs": {
+        "value": 8
+      },
+      "class_type": "PrimitiveInt",
+      "_meta": {
+        "title": "Turbo steps"
+      }
+    },
+    "161": {
+      "inputs": {
+        "value": false
+      },
+      "class_type": "PrimitiveBoolean",
+      "_meta": {
+        "title": "Enable Lightning LoRA"
+      }
+    },
+    "162": {
+      "inputs": {
+        "value": 832
+      },
+      "class_type": "PrimitiveInt",
+      "_meta": {
+        "title": "Width"
+      }
+    },
+    "163": {
+      "inputs": {
+        "value": 480
+      },
+      "class_type": "PrimitiveInt",
+      "_meta": {
+        "title": "Height"
+      }
+    }
+  },
+  "queued": {
+    "id": "f58ee563-4830-4f00-ab3d-2109a3c17213-e2",
+    "status": "IN_QUEUE"
+  },
+  "lastCheckedAt": "2026-09-16T01:47:06.983Z",
+  "status": {
+    "delayTime": 300095,
+    "executionTime": 160308,
+    "id": "f58ee563-4830-4f00-ab3d-2109a3c17213-e2",
+    "status": "COMPLETED",
+    "workerId": "2ga31rky4lpadg"
+  }
+}

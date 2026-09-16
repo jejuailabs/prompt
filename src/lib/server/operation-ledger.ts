@@ -2,12 +2,13 @@ import { db } from '@/lib/db';
 import { logEvent } from '@/lib/events';
 import { chargeCredits, refundCredits } from '@/lib/server/credits';
 
-export type MeteredEngine = 'h3' | 'wan' | 'ltx' | 'flux' | 'blender' | 'whisper';
+export type MeteredEngine = 'h3' | 'wan' | 'ltx' | 'flux' | 'blender' | 'whisper' | 'trellis';
 
 // All values are internal KRW estimates. They are deliberately stored with the
 // operation so a future invoice import can replace the estimate without losing
 // the original user charge.
 const CATALOG: Record<MeteredEngine, { providerId: string; label: string; category: string; creditCharge: number; gpuKrwPerMinute: number }> = {
+  trellis: { providerId: 'runpod-trellis', label: 'TRELLIS.2 · Runpod', category: '3d', creditCharge: 70, gpuKrwPerMinute: 24 },
   h3: { providerId: 'runpod-h3', label: 'MiniMax H3 · Runpod', category: 'video', creditCharge: 80, gpuKrwPerMinute: 42 },
   wan: { providerId: 'runpod-wan', label: 'Wan · Runpod', category: 'video', creditCharge: 55, gpuKrwPerMinute: 30 },
   ltx: { providerId: 'runpod-ltx', label: 'LTX · Runpod', category: 'video', creditCharge: 50, gpuKrwPerMinute: 28 },

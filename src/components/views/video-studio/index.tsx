@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { FluxFirstFrame } from './flux-first-frame';
+import { ProjectCard } from './project-card';
 
 type StudioMode = 'gallery' | 'quick' | 'workspace';
 type GalleryTab = 'video' | 'asset' | 'projects';
@@ -163,7 +164,7 @@ function ProjectShelf({ session, projects, loading, onNewProject, onOpenProject 
   if (!session) return <EmptyShelf title="내 프로젝트를 이어서 작업하세요" description="로그인하면 생성한 영상, 에셋, 바이블을 프로젝트 단위로 안전하게 보관합니다." action="로그인하고 시작" />;
   if (loading) return <div className="grid grid-cols-3 gap-4 py-6">{[1, 2, 3].map((key) => <div key={key} className="h-48 animate-pulse rounded-2xl bg-muted" />)}</div>;
   if (!projects.length) return <EmptyShelf title="아직 영상 프로젝트가 없습니다" description="프롬프트 한 줄이나 이미지 한 장으로 첫 샷을 바로 시작해보세요." action="첫 영상 만들기" onAction={onNewProject} />;
-  return <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{projects.map((project) => { const meta = asStudioMetadata(project); return <button key={project.id} type="button" onClick={() => onOpenProject(project.id)} className="group rounded-2xl border p-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/[.03]"><div className="flex items-start justify-between"><span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Clapperboard className="size-5" /></span><Badge variant="outline">편집 중</Badge></div><h3 className="mt-5 line-clamp-2 font-semibold">{project.title}</h3><p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{meta.prompt ?? project.description}</p><div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground"><span>{meta.targetDurationSec ?? 6}초</span><span>{meta.aspectRatio ?? '9:16'}</span><span>{meta.shots?.length ?? 1} 샷</span></div></button>; })}</div>;
+  return <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{projects.map(project => <ProjectCard key={project.id} project={project} onOpen={() => onOpenProject(project.id)} />)}</div>;
 }
 
 function EmptyShelf({ title, description, action, onAction }: { title: string; description: string; action: string; onAction?: () => void }) {

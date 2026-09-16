@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import {
   ArrowLeft,
   Box,
-  Check,
   ChevronRight,
   Download,
   ImagePlus,
@@ -29,6 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ViewHeader } from '@/components/shared/view-header';
 import { EmptyState } from '@/components/shared/empty-state';
 import { StepForm } from '@/components/shared/step-form';
+import { ModelPreview } from './model-preview';
 
 function errMsg(e: unknown): string {
   if (e instanceof ApiError) return e.message;
@@ -165,7 +165,7 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const uploadImages = async (files: FileList | null) => {
-    const selected = Array.from(files ?? []).slice(0, 5 - imageUrls.length);
+    const selected = Array.from(files ?? []).slice(0, 1 - imageUrls.length);
     if (!selected.length) return;
     setUploading(true);
     try {
@@ -180,6 +180,7 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
   };
 
   const submit = async () => {
+    if (submitting || uploading || imageUrls.length !== 1) return;
     setSubmitting(true);
     try {
       const res = await api.post<Asset3dProjectDTO>('/api/3d-studio/projects', {
@@ -212,7 +213,7 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
               title: t('stepSubtrack'),
               content: (
                 <div className="grid gap-3 sm:grid-cols-3">
-                  {(['character', 'product', 'floorplan'] as const).map((st) => (
+                  {(['character', 'product'] as const).map((st) => (
                     <Card
                       key={st}
                       className={`cursor-pointer p-4 transition-colors ${subtrack === st ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
@@ -234,15 +235,15 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
               title: t('stepUpload'),
               content: (
                 <div className="space-y-3">
-                  <Label>{t('uploadHint')}</Label>
-                  <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" onChange={(event) => void uploadImages(event.target.files)} />
+                  <Label>대표 이미지 한 장을 업로드해주세요. 단일 대상이 잘 보이는 사진을 권장합니다.</Label>
+                  <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(event) => void uploadImages(event.target.files)} />
                   <div className="flex min-h-32 flex-col items-center justify-center rounded-xl border-2 border-dashed p-4">
                     {imageUrls.length ? <div className="flex w-full flex-wrap justify-center gap-2">{imageUrls.map((url) => <div key={url} className="relative size-20 overflow-hidden rounded-lg border bg-muted"><img src={url} alt="업로드한 참조 이미지" className="size-full object-cover" /><button type="button" onClick={() => setImageUrls((current) => current.filter((item) => item !== url))} className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white">×</button></div>)}{imageUrls.length < 5 && <Button type="button" variant="outline" size="sm" onClick={() => imageInputRef.current?.click()} disabled={uploading}>{uploading ? <Loader2 className="animate-spin" /> : <ImagePlus />} {t('uploadBtn')}</Button>}</div> : <Button type="button" variant="ghost" className="text-muted-foreground" onClick={() => imageInputRef.current?.click()} disabled={uploading}>
                       {uploading ? <Loader2 className="animate-spin" /> : <ImagePlus className="size-5" />} {uploading ? '업로드 중…' : t('uploadBtn')}
                     </Button>
                     }
                   </div>
-                  <p className="text-xs text-muted-foreground">{imageUrls.length ? `${imageUrls.length}/5 이미지 선택됨` : 'PNG, JPG, WebP · 이미지 선택 후 미리보기가 표시됩니다.'}</p>
+                  <p className="text-xs text-muted-foreground">{imageUrls.length ? '대표 이미지 선택됨 · 변경하려면 ×로 제거 후 선택하세요.' : 'PNG, JPG, WebP · 이미지 선택 후 미리보기가 표시됩니다.'}</p>
                 </div>
               ),
             },
@@ -255,9 +256,7 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
                     <Select value={quality} onValueChange={setQuality}>
                       <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="draft">{t('qualityDraft')}</SelectItem>
                         <SelectItem value="standard">{t('qualityStandard')}</SelectItem>
-                        <SelectItem value="high">{t('qualityHigh')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -267,8 +266,8 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
           ]}
           footer={
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">{t('estimatedCredits')}</p>
-              <Button disabled={submitting} onClick={() => void submit()}>
+              <p className="text-sm text-muted-foreground">70 크레딧 · 실패 시 환불 · GLB 출력</p>
+              <Button disabled={submitting || uploading || imageUrls.length !== 1} onClick={() => void submit()}>
                 {submitting ? <Loader2 className="animate-spin" /> : <Wand2 />} {t('createProject')}
               </Button>
             </div>
@@ -339,7 +338,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
       {isWorking && (
         <Card className="mb-6 flex items-center gap-3 p-4">
           <Loader2 className="size-5 animate-spin text-primary" />
-          <span className="text-sm font-medium">{t('creating')}</span>
+          <span className="text-sm font-medium">{project.status === 'generating' ? '3D 생성 워커 준비·대기 중입니다. 첫 실행은 모델 로딩에 시간이 걸립니다.' : '이미지를 3D 모델로 변환하고 있습니다. 완료되면 뷰어가 표시됩니다.'}</span>
         </Card>
       )}
 
@@ -351,13 +350,13 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
         </Card>
       )}
 
-      {/* 3D viewer placeholder */}
+      {/* Display the generated mesh, not the input thumbnail. */}
       {outputs.length > 0 && (
         <div className="space-y-4">
           {outputs.map((output) => (
             <Card key={output.id} className="overflow-hidden">
-              <div className="flex h-80 items-center justify-center bg-muted">
-                {output.thumbnailUrl ? (
+              <div className="flex min-h-80 items-center justify-center bg-muted">
+                {output.glbUrl ? <ModelPreview src={output.glbUrl} /> : output.thumbnailUrl ? (
                   <img src={output.thumbnailUrl} alt="" className="h-full object-contain" />
                 ) : (
                   <div className="text-center text-muted-foreground">
@@ -378,9 +377,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
                   </p>
                 )}
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Download className="size-3" /> {t('downloadGlb')}
-                  </Button>
+                  {output.glbUrl && <Button variant="outline" size="sm" asChild><a href={output.glbUrl} download target="_blank" rel="noreferrer"><Download className="size-3" /> {t('downloadGlb')}</a></Button>}
                   {output.fbxUrl && (
                     <Button variant="outline" size="sm">
                       <Download className="size-3" /> {t('downloadFbx')}
@@ -393,13 +390,6 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
         </div>
       )}
 
-      {project.status === 'done' && (
-        <div className="mt-4 flex gap-2">
-          <Button>
-            <Check className="size-4" /> {t('publish')}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
