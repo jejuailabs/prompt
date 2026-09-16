@@ -1,6 +1,8 @@
 """Container build smoke test, synthetic geometry only, not character quality proof."""
 import tempfile
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import bpy
 from process import process
 

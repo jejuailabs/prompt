@@ -9,6 +9,7 @@ import math
 import sys
 import time
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import bpy
 from mathutils import Vector
@@ -115,5 +116,6 @@ def process(source, destination, settings=None):
 
 
 if __name__ == "__main__":
-    settings = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8")) if len(sys.argv) > 3 else {}
-    print(json.dumps(process(sys.argv[1], sys.argv[2], settings)))
+    args = sys.argv[sys.argv.index("--") + 1:]
+    settings = json.loads(Path(args[2]).read_text(encoding="utf-8")) if len(args) > 2 else {}
+    print(json.dumps(process(args[0], args[1], settings)))

@@ -23,7 +23,8 @@ def handler(job):
         directory = Path(folder)
         (directory / "input.glb").write_bytes(model)
         (directory / "settings.json").write_text(json.dumps(config), encoding="utf-8")
-        subprocess.run([sys.executable, str(Path(__file__).with_name("process.py")),
+        subprocess.run(["blender", "-b", "--factory-startup", "--disable-autoexec", "--python-exit-code", "1",
+                        "--python", str(Path(__file__).with_name("process.py")), "--",
                         str(directory / "input.glb"), str(directory / "out"), str(directory / "settings.json")],
                        check=True, timeout=240, stdout=subprocess.DEVNULL)
         report = json.loads((directory / "out/report.json").read_text(encoding="utf-8"))
