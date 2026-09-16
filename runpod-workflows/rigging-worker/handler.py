@@ -40,6 +40,7 @@ def handler(job):
     settings = data.get('settings') or {}
     if not isinstance(settings, dict):
         raise ValueError('settings must be an object')
+    diagnostic = data.get('diagnostic') is True
     with tempfile.TemporaryDirectory(prefix='skintokens-') as folder:
         directory = Path(folder)
         source, rigged = directory / 'source.glb', directory / 'rigged.glb'
@@ -82,6 +83,13 @@ def handler(job):
         spec.loader.exec_module(module)
         output = directory / 'bundle'
         report = module.process(rigged, output, {'height_m': settings.get('height_meters', 1.7)})
+        if diagnostic:
+            # Keep diagnostics under RunPod's response limit.  The normal
+            # pipeline will move binary assets via signed storage uploads,
+            # never by putting GLB+FBX base64 in the result body.
+            report.update({'provider': 'skintokens', 'diagnostic': True,
+                           'unity_ready': False, 'animation_status': 'not_generated'})
+            return {'report': report}
         if report.get('errors'):
             raise RuntimeError('Rig validation failed: ' + ', '.join(report['errors']))
         # Verify the actual exported FBX, rather than trusting pre-export objects.

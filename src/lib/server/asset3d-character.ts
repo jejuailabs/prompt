@@ -1,4 +1,4 @@
-import { queueRunpodJob } from '@/lib/server/runpod';
+import { getRunpodEndpointId, queueRunpodJob } from '@/lib/server/runpod';
 import type { Asset3dWorkflowStageDTO } from '@/lib/types';
 
 /** Character Blender is deliberately separate from the older architectural worker. */
@@ -31,7 +31,7 @@ export async function queueSkinTokensRigging(input: {
   orientationConfirmed?: boolean;
   jointNotes?: string;
 }) {
-  if (!process.env.RUNPOD_RIGGING_ENDPOINT_ID?.trim()) {
+  if (!getRunpodEndpointId('rigging')) {
     throw new Error('자가호스팅 SkinTokens 리깅 워커가 아직 연결되지 않았습니다. 외부 유료 리깅 API로 대체 호출하지 않습니다.');
   }
   return queueRunpodJob('rigging', {

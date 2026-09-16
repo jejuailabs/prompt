@@ -53,7 +53,12 @@ export function getRunpodEndpointId(engine: RunpodEngine, h3Gpu?: H3Gpu): string
   if (engine === 'blender') return 'i15xzduszzdwmo';
   // Never fall back to the legacy architectural Blender endpoint here. Character
   // preparation has a different, strict base64-GLB contract.
-  if (engine === 'character_blender' || engine === 'rigging') return null;
+  if (engine === 'character_blender') return null;
+  // This dedicated self-hosted SkinTokens endpoint is not a credential. Keep the
+  // deployment usable when a hosting environment lacks the optional variable;
+  // requests still require server-only RUNPOD_API_KEY. Do not substitute the
+  // older architectural Blender worker or any paid third-party rigging API.
+  if (engine === 'rigging') return 'jwvz3iksqwm6mb';
   if (engine === 'flux') return '903tt7vd8o46yp';
   if (engine === 'trellis') return 'fmxxi8wa0gxkcm';
   return null;
