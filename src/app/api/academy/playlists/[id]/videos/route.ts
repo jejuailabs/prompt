@@ -18,6 +18,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (analysis.status !== 'done') {
       const job = await db.youtubeAnalysisJob.create({ data: { userId: admin.id, analysisId: analysis.id } });
       await processYoutubeAnalysis(job.id);
+      const updated = await db.youtubeAnalysis.findUnique({ where: { id: analysis.id }, select: { title: true, thumbnailUrl: true, description: true } });
+      if (updated?.title) {
+        await db.academyVideo.update({ where: { id: video.id }, data: { title: updated.title, ...(updated.thumbnailUrl ? { thumbnailUrl: updated.thumbnailUrl } : {}), ...(updated.description ? { description: updated.description.slice(0, 500) } : {}) } });
+        video.title = updated.title;
+      }
     }
     return ok(video, 201);
   } catch (e) { return fail(e); }
