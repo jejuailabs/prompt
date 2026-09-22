@@ -11,6 +11,7 @@ from typing import Any
 import runpod
 import soundfile as sf
 import torch
+from huggingface_hub import snapshot_download
 from qwen_tts import Qwen3TTSModel
 
 MAX_REFERENCE_BYTES = 25 * 1024 * 1024
@@ -54,7 +55,14 @@ def get_model() -> Qwen3TTSModel:
             kwargs["attn_implementation"] = "flash_attention_2"
         except ImportError:
             kwargs["attn_implementation"] = "sdpa"
-        _model = Qwen3TTSModel.from_pretrained(os.environ["QWEN3_TTS_MODEL"], **kwargs)
+        # AutoModel may initially fetch only root-level files. Qwen3-TTS Base
+        # also contains the nested speech_tokenizer directory, so materialize
+        # the complete snapshot before handing it to the official wrapper.
+        model_path = snapshot_download(
+            os.environ["QWEN3_TTS_MODEL"],
+            local_dir="/tmp/qwen3-tts-model",
+        )
+        _model = Qwen3TTSModel.from_pretrained(model_path, **kwargs)
         return _model
 
 
