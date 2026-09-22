@@ -1,0 +1,49 @@
+name: Qwen media worker images
+
+on:
+  push:
+    branches: [codex/qwen-media-workers]
+    paths:
+      - runpod-workflows/qwen3-tts-worker/**
+      - runpod-workflows/cosyvoice-worker/**
+      - runpod-workflows/qwen-image-worker/**
+      - .github/workflows/qwen-media-workers-image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: qwen3-tts
+            dockerfile: runpod-workflows/qwen3-tts-worker/Dockerfile
+            image: ghcr.io/jejuailabs/playlab-qwen3-tts
+          - name: cosyvoice3
+            dockerfile: runpod-workflows/cosyvoice-worker/Dockerfile
+            image: ghcr.io/jejuailabs/playlab-cosyvoice3
+          - name: qwen-image-21
+            dockerfile: runpod-workflows/qwen-image-worker/Dockerfile
+            image: ghcr.io/jejuailabs/playlab-qwen-image-21
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ matrix.image }}:${{ github.sha }}
+          provenance: false
