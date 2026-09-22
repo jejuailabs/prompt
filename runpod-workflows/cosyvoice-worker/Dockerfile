@@ -19,8 +19,8 @@ RUN wget --quiet https://github.com/conda-forge/miniforge/releases/latest/downlo
     conda config --add channels conda-forge && conda config --set channel_priority strict && \
     conda create -y -n cosyvoice python=3.10 pynini==2.1.5
 RUN git clone --recursive --depth 1 https://github.com/QwenAudio/CosyVoice.git /opt/CosyVoice && \
-    /opt/conda/envs/cosyvoice/bin/pip install --upgrade pip && \
-    /opt/conda/envs/cosyvoice/bin/pip install -r /opt/CosyVoice/requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host=mirrors.aliyun.com --no-cache-dir && \
+    /opt/conda/envs/cosyvoice/bin/pip install --upgrade "pip<26" "setuptools<81" wheel && \
+    /opt/conda/envs/cosyvoice/bin/pip install --no-build-isolation -r /opt/CosyVoice/requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host=mirrors.aliyun.com --no-cache-dir && \
     /opt/conda/envs/cosyvoice/bin/pip install runpod
 
 COPY runpod-workflows/cosyvoice-worker/handler.py /opt/worker/handler.py
