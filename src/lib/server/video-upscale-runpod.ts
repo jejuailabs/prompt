@@ -7,10 +7,13 @@ export interface VideoUpscaleJob {
   error?: string;
 }
 
+// This endpoint ID is intentionally not secret. The deployment still requires
+// RUNPOD_API_KEY, while an environment override keeps later worker migrations
+// from requiring a code release.
+const DEFAULT_UPSCALE_ENDPOINT_ID = '5ac3hl7jhqcu1s';
+
 function endpoint() {
-  const value = process.env.RUNPOD_UPSCALE_ENDPOINT_ID?.trim();
-  if (!value) throw new Error('RUNPOD_UPSCALE_ENDPOINT_ID is not configured');
-  return value;
+  return process.env.RUNPOD_UPSCALE_ENDPOINT_ID?.trim() || DEFAULT_UPSCALE_ENDPOINT_ID;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -26,7 +29,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function isVideoUpscaleConfigured() {
-  return Boolean(process.env.RUNPOD_UPSCALE_ENDPOINT_ID?.trim() && process.env.RUNPOD_API_KEY);
+  return Boolean(process.env.RUNPOD_API_KEY);
 }
 
 export function queueVideoUpscale(input: Record<string, unknown>) {
