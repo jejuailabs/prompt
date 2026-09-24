@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     const lyrics = instrumental ? '' : asText(body.lyrics, '가사', 8_000);
     const vocalLanguage = asText(body.vocalLanguage, '보컬 언어', 20) || 'ko';
     if (!ALLOWED_LANGUAGES.has(vocalLanguage)) throw new HttpError('지원하지 않는 보컬 언어입니다.', 400);
-    const durationSec = integer(body.durationSec, 30, 10, 120, '길이');
+    const durationSec = integer(body.durationSec, 30, 10, 240, '길이');
     const bpm = body.bpm === null || body.bpm === undefined || body.bpm === '' ? null : integer(body.bpm, 120, 30, 300, 'BPM');
     const title = (asText(body.title, '제목', 120) || prompt).slice(0, 120);
 

@@ -21,7 +21,7 @@ import runpod
 
 BASE_URL = 'http://127.0.0.1:8001'
 MAX_AUDIO_BYTES = 60 * 1024 * 1024
-MAX_DURATION_SECONDS = 120
+MAX_DURATION_SECONDS = 240
 MAX_WAIT_SECONDS = 25 * 60
 server: subprocess.Popen | None = None
 server_lock = threading.Lock()
