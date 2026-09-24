@@ -62,9 +62,9 @@ export function AceMusicTool() {
 
   useEffect(() => {
     if (!job?.artifactId || TERMINAL.has(job.status)) return;
-    void refresh(job.artifactId);
+    const initial = window.setTimeout(() => void refresh(job.artifactId), 0);
     const timer = window.setInterval(() => void refresh(job.artifactId), 3500);
-    return () => window.clearInterval(timer);
+    return () => { window.clearTimeout(initial); window.clearInterval(timer); };
   }, [job?.artifactId, job?.status, refresh]);
 
   async function generate() {

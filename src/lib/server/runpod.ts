@@ -2,7 +2,7 @@
 // API keys stay in RUNPOD_API_KEY and must never be exposed to the browser.
 
 export type RunpodVideoEngine = 'h3' | 'wan' | 'ltx';
-export type RunpodEngine = RunpodVideoEngine | 'flux' | 'blender' | 'character_blender' | 'rigging' | 'whisper' | 'trellis';
+export type RunpodEngine = RunpodVideoEngine | 'flux' | 'blender' | 'character_blender' | 'rigging' | 'whisper' | 'trellis' | 'ace_music';
 
 export interface RunpodQueuedJob {
   id: string;
@@ -31,7 +31,12 @@ const endpointEnv: Record<RunpodEngine, string> = {
   rigging: 'RUNPOD_RIGGING_ENDPOINT_ID',
   whisper: 'RUNPOD_WHISPER_ENDPOINT_ID',
   trellis: 'RUNPOD_TRELLIS_ENDPOINT_ID',
+  ace_music: 'RUNPOD_ACE_STEP_ENDPOINT_ID',
 };
+
+// Endpoint IDs are not credentials. Keep the deployed music worker usable
+// while allowing an environment override for a later worker migration.
+const DEFAULT_ACE_STEP_ENDPOINT_ID = 'uw755pa2qvi8uo';
 
 function getApiKey(): string {
   const key = process.env.RUNPOD_API_KEY;
@@ -61,6 +66,7 @@ export function getRunpodEndpointId(engine: RunpodEngine, h3Gpu?: H3Gpu): string
   if (engine === 'rigging') return 'jwvz3iksqwm6mb';
   if (engine === 'flux') return '903tt7vd8o46yp';
   if (engine === 'trellis') return 'fmxxi8wa0gxkcm';
+  if (engine === 'ace_music') return DEFAULT_ACE_STEP_ENDPOINT_ID;
   return null;
 }
 
