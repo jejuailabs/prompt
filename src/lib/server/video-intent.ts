@@ -14,6 +14,31 @@ export interface VideoIntent {
   nonDiegeticMusic: string;
 }
 
+/**
+ * A versioned, persisted contract between PLAYLAB's intent compiler and a
+ * video model.  The model only receives the final H3 prompt, while this
+ * object preserves the reasoning-relevant production decisions needed to
+ * reproduce, review, or later extend the shot with Ref2VA inputs.
+ */
+export const H3_CONTEXT_IR_VERSION = 'h3-context-ir/v1';
+
+export interface H3ContextIR {
+  schemaVersion: typeof H3_CONTEXT_IR_VERSION;
+  sourcePrompt: string;
+  durationSec: number;
+  mode: 'text-to-video' | 'first-frame-to-video';
+  reference: {
+    firstFrame: 'none' | 'opening-frame-anchor';
+    suppliedImageCount: number;
+    preservation: string[];
+  };
+  shot: VideoIntent;
+  validation: {
+    passed: boolean;
+    warnings: string[];
+  };
+}
+
 function text(value: unknown, fallback: string, maxLength = 700) {
   if (typeof value !== 'string') return fallback;
   const normalized = value.replace(/\s+/g, ' ').trim();
@@ -60,6 +85,43 @@ function fallbackIntent(prompt: string, hasReferenceImage: boolean): VideoIntent
       : ['Keep the scene visually coherent and physically plausible across the full shot.'],
     overallSoundscape: 'N/A',
     nonDiegeticMusic: 'N/A',
+  };
+}
+
+/**
+ * Creates an auditable canonical shot record after either the model compiler
+ * or the deterministic fallback has produced a VideoIntent. This deliberately
+ * does not invent an extra "negative prompt" because H3's prompt guidance
+ * favors positive, explicit continuity constraints.
+ */
+export function createH3ContextIR(
+  sourcePrompt: string,
+  intent: VideoIntent,
+  options: { hasReferenceImage: boolean; durationSec: number },
+): H3ContextIR {
+  const normalizedPrompt = sourcePrompt.replace(/\s+/g, ' ').trim().slice(0, 4000);
+  const warnings: string[] = [];
+  const asksForward = /(앞으로|전진|다가가|접근|forward|dolly\s*in|push\s*in)/i.test(normalizedPrompt);
+  const asksBackward = /(뒤로|후진|멀어지|backward|dolly\s*out|pull\s*back)/i.test(normalizedPrompt);
+  const asksOrbit = /(오빗|orbit|빙글|돌아|회전|rotate)/i.test(normalizedPrompt);
+  if (asksForward && asksBackward) warnings.push('카메라 전진과 후진이 함께 요청되었습니다. 하나의 주 동작으로 정리해 확인하세요.');
+  if ((asksForward || asksBackward) && asksOrbit) warnings.push('직선 이동과 오빗/회전이 함께 요청되었습니다. 의도한 카메라 동작인지 확인하세요.');
+  if (!normalizedPrompt) warnings.push('원본 프롬프트가 비어 있습니다.');
+
+  return {
+    schemaVersion: H3_CONTEXT_IR_VERSION,
+    sourcePrompt: normalizedPrompt,
+    durationSec: Math.max(4, Math.min(15, Math.round(options.durationSec))),
+    mode: options.hasReferenceImage ? 'first-frame-to-video' : 'text-to-video',
+    reference: {
+      firstFrame: options.hasReferenceImage ? 'opening-frame-anchor' : 'none',
+      suppliedImageCount: options.hasReferenceImage ? 1 : 0,
+      preservation: options.hasReferenceImage
+        ? ['visible subject identity', 'spatial layout', 'materials and lighting', 'opening framing']
+        : [],
+    },
+    shot: intent,
+    validation: { passed: warnings.length === 0, warnings },
   };
 }
 
