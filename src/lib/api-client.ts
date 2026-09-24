@@ -39,3 +39,22 @@ export async function uploadFile(file: File): Promise<{ url: string }> {
   if (!json.ok) throw new ApiError(json.error || 'Upload failed');
   return json.data;
 }
+
+/**
+ * Prompt thumbnails also back a linked gallery artifact. Use the dedicated
+ * endpoint instead of generic Storage upload + a separate PATCH so edits and
+ * gallery cards cannot drift apart.
+ */
+export async function uploadPromptThumbnail(promptId: string, file: File): Promise<{ thumbnailUrl: string }> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`/api/prompts/${promptId}/thumbnail`, { method: 'POST', body: fd });
+  let json: { ok: boolean; data?: { thumbnailUrl: string }; error?: string };
+  try {
+    json = await res.json();
+  } catch {
+    throw new ApiError(`Invalid server response (${res.status})`, res.status);
+  }
+  if (!json.ok || !json.data?.thumbnailUrl) throw new ApiError(json.error || `Upload failed (${res.status})`, res.status);
+  return json.data;
+}
