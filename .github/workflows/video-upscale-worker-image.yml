@@ -1,0 +1,39 @@
+name: SeedVR2 video upscale worker image
+on:
+  push:
+    branches: [codex/video-upscale]
+    paths:
+      - runpod-workflows/upscale-worker/**
+      - .github/workflows/video-upscale-worker-image.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: seedvr2-video-upscale-image
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate worker input contract
+        run: python3 runpod-workflows/upscale-worker/test_handler.py
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        id: image
+        with:
+          context: runpod-workflows/upscale-worker
+          push: true
+          tags: ghcr.io/jejuailabs/playlab-seedvr2-upscale:${{ github.sha }}
+          provenance: false
+      - name: Record immutable image reference
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: echo "ghcr.io/jejuailabs/playlab-seedvr2-upscale@$DIGEST" >> "$GITHUB_STEP_SUMMARY"
