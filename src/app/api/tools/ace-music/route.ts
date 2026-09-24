@@ -22,6 +22,8 @@ type MusicMeta = {
   vocalLanguage?: string;
   durationSec?: number;
   bpm?: number | null;
+  mode?: 'song' | 'cover';
+  coverSourceUrl?: string;
   queuedAt?: string;
   completedAt?: string;
   executionTimeMs?: number;
@@ -52,6 +54,18 @@ function integer(value: unknown, fallback: number, min: number, max: number, nam
     throw new HttpError(`${name}은(는) ${min}~${max} 범위의 정수여야 합니다.`, 400);
   }
   return value as number;
+}
+
+function coverSourceUrl(value: unknown, userId: string): string {
+  const url = asText(value, '커버 원곡 파일', 2_000, true);
+  let parsed: URL;
+  try { parsed = new URL(url); } catch { throw new HttpError('커버 원곡 파일 주소가 올바르지 않습니다.', 400); }
+  const storageOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const expectedPrefix = `/storage/v1/object/public/uploads/music-cover/${userId}/`;
+  if (parsed.origin !== storageOrigin || !parsed.pathname.startsWith(expectedPrefix)) {
+    throw new HttpError('직접 업로드한 원곡 파일만 커버 생성에 사용할 수 있습니다.', 400);
+  }
+  return parsed.toString();
 }
 
 function responseFor(artifact: { id: string; fileUrl: string | null; metadata: string }) {
@@ -99,14 +113,16 @@ export async function POST(req: NextRequest) {
       throw new HttpError('ACE-Step RTX 4090 워커가 아직 연결되지 않았습니다. 관리자에게 RUNPOD_ACE_STEP_ENDPOINT_ID 설정을 요청해주세요.', 503);
     }
 
-    const prompt = asText(body.prompt, '음악 설명', 2_000, true);
+    const mode = body.mode === 'cover' ? 'cover' : 'song';
+    const prompt = asText(body.prompt, mode === 'cover' ? '커버 편곡 설명' : '음악 설명', 2_000, true);
     const instrumental = body.instrumental === true;
-    const lyrics = instrumental ? '' : asText(body.lyrics, '가사', 8_000);
+    const lyrics = mode === 'cover' || instrumental ? '' : asText(body.lyrics, '가사', 8_000);
     const vocalLanguage = asText(body.vocalLanguage, '보컬 언어', 20) || 'ko';
     if (!ALLOWED_LANGUAGES.has(vocalLanguage)) throw new HttpError('지원하지 않는 보컬 언어입니다.', 400);
     const durationSec = integer(body.durationSec, 30, 10, 240, '길이');
     const bpm = body.bpm === null || body.bpm === undefined || body.bpm === '' ? null : integer(body.bpm, 120, 30, 300, 'BPM');
     const title = (asText(body.title, '제목', 120) || prompt).slice(0, 120);
+    const sourceUrl = mode === 'cover' ? coverSourceUrl(body.coverSourceUrl, user.id) : undefined;
 
     const ledger = await beginMeteredOperation({ userId: user.id, engine: 'ace_music', prompt, aspect: 'audio', style: instrumental ? 'instrumental' : vocalLanguage, creditCharge: Math.ceil((durationSec / 30) * 40) });
     const queuedAt = new Date().toISOString();
@@ -121,7 +137,7 @@ export async function POST(req: NextRequest) {
           sourceModule: 'tool-ace-music',
           visibility: 'private',
           status: 'draft',
-          metadata: JSON.stringify({ engine: 'ace_music', model: 'acestep-v15-xl-turbo', status: 'QUEUED', prompt, lyrics, instrumental, vocalLanguage, durationSec, bpm, queuedAt, accountingJobId: ledger.operationId } satisfies MusicMeta),
+          metadata: JSON.stringify({ engine: 'ace_music', model: 'acestep-v15-xl-turbo', status: 'QUEUED', prompt, lyrics, instrumental, vocalLanguage, durationSec, bpm, mode, ...(sourceUrl ? { coverSourceUrl: sourceUrl } : {}), queuedAt, accountingJobId: ledger.operationId } satisfies MusicMeta),
         },
       });
       await db.generationJob.update({ where: { id: ledger.operationId }, data: { resultArtifactId: artifact.id } });
@@ -132,6 +148,8 @@ export async function POST(req: NextRequest) {
         vocal_language: vocalLanguage,
         duration_sec: durationSec,
         bpm,
+        task_type: mode === 'cover' ? 'cover' : 'text2music',
+        ...(sourceUrl ? { cover_audio_url: sourceUrl } : {}),
         model: 'acestep-v15-xl-turbo',
         inference_steps: 8,
         thinking: true,

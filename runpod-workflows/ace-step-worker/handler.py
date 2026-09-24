@@ -5,11 +5,13 @@ adapter validates the public job input, waits for completion, then returns a
 bounded MP3 payload for the PLAYLAB server to persist in Supabase Storage.
 """
 import base64
+import contextlib
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from typing import Any
@@ -88,6 +90,39 @@ def get_audio(path: str) -> bytes:
     return content
 
 
+def download_cover_audio(url: str) -> str:
+    """Fetch only a PLAYLAB Supabase public upload into this worker's temp dir.
+
+    ACE-Step's cover API needs a local absolute source path.  The validation
+    protects the worker from arbitrary internal URLs when it is invoked outside
+    of the PLAYLAB API.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme != 'https' or not parsed.hostname or not parsed.hostname.endswith('.supabase.co'):
+        raise ValueError('cover_audio_url must be a PLAYLAB Supabase HTTPS URL')
+    if not parsed.path.startswith('/storage/v1/object/public/uploads/music-cover/'):
+        raise ValueError('cover_audio_url must point to the music-cover upload path')
+    suffix = Path(parsed.path).suffix.lower()
+    if suffix not in {'.mp3', '.m4a', '.aac', '.wav', '.wave', '.flac', '.ogg'}:
+        raise ValueError('unsupported cover audio extension')
+    try:
+        with urlopen(Request(url), timeout=90) as response:
+            length = response.headers.get('Content-Length')
+            if length and int(length) > MAX_AUDIO_BYTES:
+                raise ValueError('cover audio exceeds 60 MB')
+            content = response.read(MAX_AUDIO_BYTES + 1)
+    except (HTTPError, URLError, TimeoutError) as error:
+        raise RuntimeError(f'could not download cover audio: {error}') from error
+    if not content or len(content) > MAX_AUDIO_BYTES:
+        raise ValueError('cover audio is empty or exceeds 60 MB')
+    handle = tempfile.NamedTemporaryFile(prefix='acestep-cover-', suffix=suffix, delete=False)
+    try:
+        handle.write(content)
+        return handle.name
+    finally:
+        handle.close()
+
+
 def as_string(value: Any, field: str, limit: int, required: bool = False) -> str:
     if value is None:
         if required:
@@ -126,59 +161,73 @@ def handler(job: dict[str, Any]) -> dict[str, Any]:
     bpm = payload.get('bpm')
     if bpm is not None:
         bpm = as_integer(bpm, 'bpm', 120, 30, 300)
+    task_type = as_string(payload.get('task_type'), 'task_type', 20) or 'text2music'
+    if task_type not in {'text2music', 'cover'}:
+        raise ValueError('unsupported task_type')
+    cover_audio_url = as_string(payload.get('cover_audio_url'), 'cover_audio_url', 2_000)
+    if task_type == 'cover' and not cover_audio_url:
+        raise ValueError('cover_audio_url is required for a cover task')
 
     # One GPU worker processes one song at a time. Serializing here protects
     # VRAM and preserves a truthful queue rather than starting overlapping jobs.
     with generation_lock:
         ensure_server()
-        task = request_json('/release_task', {
-            'prompt': prompt,
-            'lyrics': '' if instrumental else lyrics,
-            'thinking': payload.get('thinking') is not False,
-            'use_format': True,
-            'vocal_language': language,
-            'audio_duration': duration,
-            'audio_format': 'mp3',
-            'model': 'acestep-v15-xl-turbo',
-            'inference_steps': 8,
-            'shift': 3.0,
-            'lm_model_path': 'acestep-5Hz-lm-1.7B',
-            'lm_backend': 'vllm',
-            'bpm': bpm,
-        })
-        task_id = task.get('data', {}).get('task_id')
-        if not isinstance(task_id, str) or not task_id:
-            raise RuntimeError('ACE-Step did not return a task ID')
-        deadline = time.monotonic() + MAX_WAIT_SECONDS
-        while time.monotonic() < deadline:
-            result = request_json('/query_result', {'task_id_list': [task_id]})
-            entries = result.get('data') or []
-            entry = entries[0] if isinstance(entries, list) and entries else {}
-            status = entry.get('status') if isinstance(entry, dict) else None
-            if status == 1:
-                raw = entry.get('result')
-                try:
-                    files = json.loads(raw) if isinstance(raw, str) else raw
-                except json.JSONDecodeError as error:
-                    raise RuntimeError('ACE-Step returned invalid result JSON') from error
-                item = files[0] if isinstance(files, list) and files else {}
-                path = item.get('file') if isinstance(item, dict) else None
-                if not isinstance(path, str):
-                    raise RuntimeError('ACE-Step result contains no MP3 path')
-                audio = get_audio(path)
-                metadata = item.get('metas') if isinstance(item, dict) and isinstance(item.get('metas'), dict) else {}
-                return {
-                    'audio_base64': base64.b64encode(audio).decode('ascii'),
-                    'content_type': 'audio/mpeg',
-                    'seed': str(item.get('seed_value', '')) if isinstance(item, dict) else '',
-                    'metadata': metadata,
-                    'model': 'acestep-v15-xl-turbo',
-                    'duration_sec': duration,
-                    'elapsed_ms': round((time.perf_counter() - started) * 1000),
-                }
-            if status == 2:
-                raise RuntimeError(str(entry.get('error') or 'ACE-Step generation failed'))
-            time.sleep(2)
+        temporary_cover: str | None = download_cover_audio(cover_audio_url) if task_type == 'cover' else None
+        try:
+            task = request_json('/release_task', {
+                'prompt': prompt,
+                'lyrics': '' if instrumental or task_type == 'cover' else lyrics,
+                'thinking': task_type != 'cover' and payload.get('thinking') is not False,
+                'use_format': task_type != 'cover',
+                'vocal_language': language,
+                'audio_duration': duration,
+                'audio_format': 'mp3',
+                'model': 'acestep-v15-xl-turbo',
+                'inference_steps': 8,
+                'shift': 3.0,
+                'lm_model_path': 'acestep-5Hz-lm-1.7B',
+                'lm_backend': 'vllm',
+                'bpm': bpm,
+                'task_type': task_type,
+                **({'src_audio_path': temporary_cover, 'audio_cover_strength': 1.0} if temporary_cover else {}),
+            })
+            task_id = task.get('data', {}).get('task_id')
+            if not isinstance(task_id, str) or not task_id:
+                raise RuntimeError('ACE-Step did not return a task ID')
+            deadline = time.monotonic() + MAX_WAIT_SECONDS
+            while time.monotonic() < deadline:
+                result = request_json('/query_result', {'task_id_list': [task_id]})
+                entries = result.get('data') or []
+                entry = entries[0] if isinstance(entries, list) and entries else {}
+                status = entry.get('status') if isinstance(entry, dict) else None
+                if status == 1:
+                    raw = entry.get('result')
+                    try:
+                        files = json.loads(raw) if isinstance(raw, str) else raw
+                    except json.JSONDecodeError as error:
+                        raise RuntimeError('ACE-Step returned invalid result JSON') from error
+                    item = files[0] if isinstance(files, list) and files else {}
+                    path = item.get('file') if isinstance(item, dict) else None
+                    if not isinstance(path, str):
+                        raise RuntimeError('ACE-Step result contains no MP3 path')
+                    audio = get_audio(path)
+                    metadata = item.get('metas') if isinstance(item, dict) and isinstance(item.get('metas'), dict) else {}
+                    return {
+                        'audio_base64': base64.b64encode(audio).decode('ascii'),
+                        'content_type': 'audio/mpeg',
+                        'seed': str(item.get('seed_value', '')) if isinstance(item, dict) else '',
+                        'metadata': metadata,
+                        'model': 'acestep-v15-xl-turbo',
+                        'duration_sec': duration,
+                        'elapsed_ms': round((time.perf_counter() - started) * 1000),
+                    }
+                if status == 2:
+                    raise RuntimeError(str(entry.get('error') or 'ACE-Step generation failed'))
+                time.sleep(2)
+        finally:
+            if temporary_cover:
+                with contextlib.suppress(OSError):
+                    os.unlink(temporary_cover)
     raise TimeoutError(f'ACE-Step generation exceeded {MAX_WAIT_SECONDS // 60} minutes')
 
 
