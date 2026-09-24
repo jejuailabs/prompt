@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '@/lib/store';
-import { api, uploadFile } from '@/lib/api-client';
+import { api, uploadPromptThumbnail } from '@/lib/api-client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -82,16 +82,7 @@ export function CreatePromptDialog({ open, onOpenChange }: { open: boolean; onOp
       });
 
       if (file) {
-        const { url } = await uploadFile(file);
-        await api.patch(`/api/prompts/${prompt.id}`, { thumbnailUrl: url });
-        await api.post('/api/artifacts', {
-          title: title.trim(),
-          type: 'image',
-          fileUrl: url,
-          sourcePromptId: prompt.id,
-          sourceModule: 'prompt-wiki',
-          publish: true,
-        });
+        await uploadPromptThumbnail(prompt.id, file);
       }
 
       toast({ title: t('saved') });

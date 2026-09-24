@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft, Edit2, FlaskConical, GitFork, Heart, Loader2, MessageCircle, Send, Trash2 } from 'lucide-react';
-import { api, ApiError, uploadFile } from '@/lib/api-client';
+import { api, ApiError, uploadPromptThumbnail } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import type { CommentDTO, PromptDetailDTO } from '@/lib/types';
@@ -55,6 +55,7 @@ export default function PromptDetailView() {
   const [editBody, setEditBody] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editThumb, setEditThumb] = useState<string | null>(null);
+  const [editThumbFile, setEditThumbFile] = useState<File | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
@@ -67,6 +68,7 @@ export default function PromptDetailView() {
       setEditBody(prompt.body);
       setEditCategory(prompt.category);
       setEditThumb(prompt.thumbnailUrl ?? null);
+      setEditThumbFile(null);
       setEditOpen(true);
     }
   }, [prompt, isOwner, params.autoEdit]);
@@ -109,18 +111,20 @@ export default function PromptDetailView() {
     setEditBody(prompt.body);
     setEditCategory(prompt.category);
     setEditThumb(prompt.thumbnailUrl ?? null);
+    setEditThumbFile(null);
     setEditOpen(true);
   };
 
   const handleThumbUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const { url } = await uploadFile(file);
-      setEditThumb(url);
-    } catch (err) {
-      toast({ title: '업로드 실패', description: err instanceof ApiError ? err.message : '다시 시도해주세요', variant: 'destructive' });
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      toast({ title: '업로드 실패', description: 'PNG, JPEG, WebP 파일만 5MB 이하로 올릴 수 있습니다.', variant: 'destructive' });
+      e.target.value = '';
+      return;
     }
+    setEditThumbFile(file);
+    setEditThumb(URL.createObjectURL(file));
   };
 
   const saveEdit = async () => {
@@ -131,10 +135,18 @@ export default function PromptDetailView() {
         title: editTitle.trim(),
         body: editBody,
         category: editCategory,
-        thumbnailUrl: editThumb,
+        // A selected file is saved by the atomic thumbnail endpoint below.
+        // Removing an existing thumbnail remains an explicit PATCH.
+        thumbnailUrl: editThumbFile ? undefined : editThumb,
       });
+      if (editThumbFile) {
+        const { thumbnailUrl } = await uploadPromptThumbnail(promptId, editThumbFile);
+        setEditThumb(thumbnailUrl);
+        setEditThumbFile(null);
+      }
       qc.invalidateQueries({ queryKey: ['prompt', promptId] });
       qc.invalidateQueries({ queryKey: ['prompts'] });
+      qc.invalidateQueries({ queryKey: ['artifacts'] });
       toast({ title: '수정 완료' });
       setEditOpen(false);
     } catch (err) {
@@ -314,7 +326,7 @@ export default function PromptDetailView() {
               {editThumb && (
                 <div className="relative">
                   <img src={editThumb} alt="" className="h-32 w-full rounded-lg object-cover" />
-                  <Button variant="destructive" size="sm" className="absolute top-1 right-1 h-7 text-xs" onClick={() => setEditThumb(null)}>제거</Button>
+                  <Button variant="destructive" size="sm" className="absolute top-1 right-1 h-7 text-xs" onClick={() => { setEditThumb(null); setEditThumbFile(null); }}>제거</Button>
                 </div>
               )}
               <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleThumbUpload} />
