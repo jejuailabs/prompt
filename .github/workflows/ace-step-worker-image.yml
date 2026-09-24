@@ -1,7 +1,7 @@
 name: ACE-Step XL-Turbo worker image
 on:
   push:
-    branches: [codex/3d-unity-pipeline]
+    branches: [main, codex/3d-unity-pipeline]
     paths:
       - runpod-workflows/ace-step-worker/**
       - .github/workflows/ace-step-worker-image.yml
