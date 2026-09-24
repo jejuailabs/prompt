@@ -2,6 +2,7 @@ export const AI_STUDIO_TOOLS = [
   { id: 'tool-tts', titleKo: 'TTS 메이커', descKo: 'Gemini 음성으로 자연스러운 내레이션을 제작합니다', icon: 'mic', status: 'new', features: ['Gemini TTS 음성 생성', '10개 음성 미리듣기', '최대 10,000자 대본', 'MP3 다운로드'] },
   { id: 'tool-storyboard', titleKo: '스토리보드 제너레이터', descKo: '영상 기획부터 컷 분할과 퍼스트프레임까지', icon: 'clapperboard', status: 'active', features: ['AI 스토리보드 설계', '컷·비트보드 분해', '퍼스트프레임 생성', '영상 모델 프롬프트'] },
   { id: 'tool-suno', titleKo: '수노 뮤직 메이커', descKo: 'AI 음악 프롬프트와 가사를 만듭니다', icon: 'music', status: 'new', features: ['Suno 스타일 프롬프트', '가사·제목 생성', 'BPM·무드 설정', '퍼블리싱 노트'] },
+  { id: 'tool-ace-music', titleKo: 'ACE-Step 노래 생성', descKo: 'ACE-Step 1.5 XL-Turbo로 노래와 배경음악을 생성합니다', icon: 'music', status: 'new', features: ['XL-Turbo 8스텝', '가사·보컬 언어 지정', 'MP3 재생·다운로드', '생성 취소·처리시간 기록'] },
   { id: 'tool-metaprompt', titleKo: '메타 프롬프트', descKo: 'AI 인터뷰로 아이디어를 완성형 프롬프트로 만듭니다', icon: 'sparkles', status: 'new', features: ['대화형 요구사항 수집', '이미지·영상·음악 지원', '전문가 역할 프롬프트', '결과 복사·저장'] },
   { id: 'tool-detail', titleKo: '상세페이지 메이커', descKo: '상품 정보를 바탕으로 상세페이지를 설계합니다', icon: 'layout-panel-left', status: 'new', features: ['Style DNA', '리서치·카피 생성', '섹션별 이미지 프롬프트', '쇼핑몰 최적화'] },
   { id: 'tool-detail2', titleKo: '상세페이지 메이커 2', descKo: '12장 설득 구조의 상세페이지 제작 도구', icon: 'boxes', status: 'new', features: ['12장 구조 설계', '브랜드·모델 입력', '장면별 이미지 생성', '롱 캔버스 출력'] },

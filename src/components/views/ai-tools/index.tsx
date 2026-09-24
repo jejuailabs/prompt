@@ -12,11 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAppStore } from '@/lib/store';
 
-const LIVE_TOOL_IDS = new Set(['tool-tts', 'tool-suno', 'tool-metaprompt', 'tool-qr', 'tool-thumbnail', 'tool-storyboard', 'tool-detail', 'tool-detail2', 'tool-converter', 'tool-srt', 'tool-autocut', 'tool-whisper']);
+const LIVE_TOOL_IDS = new Set(['tool-tts', 'tool-suno', 'tool-ace-music', 'tool-metaprompt', 'tool-qr', 'tool-thumbnail', 'tool-storyboard', 'tool-detail', 'tool-detail2', 'tool-converter', 'tool-srt', 'tool-autocut', 'tool-whisper']);
 const VISUALS: Record<string, { accent: string; soft: string; glow: string }> = {
   'tool-tts': { accent: 'from-cyan-500 to-blue-600', soft: 'bg-cyan-50 text-cyan-600', glow: 'group-hover:shadow-cyan-100' },
   'tool-storyboard': { accent: 'from-amber-400 to-orange-500', soft: 'bg-amber-50 text-amber-600', glow: 'group-hover:shadow-amber-100' },
   'tool-suno': { accent: 'from-fuchsia-500 to-pink-500', soft: 'bg-fuchsia-50 text-fuchsia-600', glow: 'group-hover:shadow-fuchsia-100' },
+  'tool-ace-music': { accent: 'from-violet-600 to-fuchsia-500', soft: 'bg-violet-50 text-violet-600', glow: 'group-hover:shadow-violet-100' },
   'tool-metaprompt': { accent: 'from-violet-500 to-indigo-600', soft: 'bg-violet-50 text-violet-600', glow: 'group-hover:shadow-violet-100' },
   'tool-detail': { accent: 'from-sky-500 to-blue-600', soft: 'bg-sky-50 text-sky-600', glow: 'group-hover:shadow-sky-100' },
   'tool-detail2': { accent: 'from-orange-500 to-rose-500', soft: 'bg-orange-50 text-orange-600', glow: 'group-hover:shadow-orange-100' },
