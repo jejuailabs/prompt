@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { AlertTriangle, ArrowDown, ArrowUp, BarChart3, CheckCircle, Circle, Clock, Coins, Film, Info, Loader2, Radar, ReceiptText, RotateCcw, Shield, Trash2, Users, Wallet, Wrench, Zap } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, BarChart3, CheckCircle, Circle, Clock, Coins, Film, Info, Loader2, Radar, ReceiptText, RotateCcw, ServerCog, Shield, Trash2, Users, Wallet, Wrench, Zap } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { CreditRequests } from './credit-requests';
 import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
@@ -13,6 +13,7 @@ import { useSession } from '@/hooks/use-session';
 import { H3Tests } from './h3-tests';
 import { VideoComparison } from './video-comparison';
 import { MotionUpload } from './motion-upload';
+import { RunpodWorkers } from './runpod-workers';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -171,12 +172,14 @@ export default function AdminView() {
               <Film className="mr-1 size-3.5" />
               {t('tabVideoEngine')}
             </TabsTrigger>
+            <TabsTrigger value="runpod-workers"><ServerCog className="mr-1 size-3.5" />RunPod 워커</TabsTrigger>
             <TabsTrigger value="motion-upload">애니메이션 업로드</TabsTrigger>
             <TabsTrigger value="users">{t('tabUsers')}</TabsTrigger>
             <TabsTrigger value="logs">{t('tabLogs')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="motion-upload" className="mt-4"><MotionUpload /></TabsContent>
+          <TabsContent value="runpod-workers" className="mt-4"><RunpodWorkers /></TabsContent>
           <TabsContent value="dashboard" className="mt-4">
             <CreditRequests />
             <DashboardTab />

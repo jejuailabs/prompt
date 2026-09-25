@@ -2,7 +2,7 @@
 // API keys stay in RUNPOD_API_KEY and must never be exposed to the browser.
 
 export type RunpodVideoEngine = 'h3' | 'wan' | 'ltx';
-export type RunpodEngine = RunpodVideoEngine | 'flux' | 'blender' | 'character_blender' | 'rigging' | 'whisper' | 'trellis' | 'ace_music';
+export type RunpodEngine = RunpodVideoEngine | 'flux' | 'qwen_image' | 'blender' | 'character_blender' | 'rigging' | 'whisper' | 'trellis' | 'ace_music' | 'qwen3_tts';
 
 export interface RunpodQueuedJob {
   id: string;
@@ -26,16 +26,18 @@ const endpointEnv: Record<RunpodEngine, string> = {
   wan: 'RUNPOD_WAN_ENDPOINT_ID',
   ltx: 'RUNPOD_LTX_ENDPOINT_ID',
   flux: 'RUNPOD_FLUX_ENDPOINT_ID',
+  qwen_image: 'RUNPOD_QWEN_IMAGE_ENDPOINT_ID',
   blender: 'RUNPOD_BLENDER_ENDPOINT_ID',
   character_blender: 'RUNPOD_CHARACTER_BLENDER_ENDPOINT_ID',
   rigging: 'RUNPOD_RIGGING_ENDPOINT_ID',
   whisper: 'RUNPOD_WHISPER_ENDPOINT_ID',
   trellis: 'RUNPOD_TRELLIS_ENDPOINT_ID',
   ace_music: 'RUNPOD_ACE_STEP_ENDPOINT_ID',
+  qwen3_tts: 'RUNPOD_QWEN3_TTS_ENDPOINT_ID',
 };
 
-// Endpoint IDs are not credentials. Keep the deployed music worker usable
-// while allowing an environment override for a later worker migration.
+// Keep the production ACE-Step endpoint available when an environment value is
+// absent, while still allowing a managed endpoint assignment to override it.
 const DEFAULT_ACE_STEP_ENDPOINT_ID = 'uw755pa2qvi8uo';
 
 function getApiKey(): string {
@@ -65,6 +67,7 @@ export function getRunpodEndpointId(engine: RunpodEngine, h3Gpu?: H3Gpu): string
   // older architectural Blender worker or any paid third-party rigging API.
   if (engine === 'rigging') return 'jwvz3iksqwm6mb';
   if (engine === 'flux') return '903tt7vd8o46yp';
+  if (engine === 'qwen_image') return '50ix6zz1yiywxl';
   if (engine === 'trellis') return 'fmxxi8wa0gxkcm';
   if (engine === 'ace_music') return DEFAULT_ACE_STEP_ENDPOINT_ID;
   return null;
@@ -95,7 +98,14 @@ export async function queueRunpodWorkflow(
   images?: RunpodInputImage[],
   h3Gpu?: H3Gpu,
 ): Promise<RunpodQueuedJob> {
-  const endpointId = getRunpodEndpointId(engine, h3Gpu);
+  // Apply the same admin enablement and endpoint mapping policy to ComfyUI
+  // workflows as custom handlers. Without this, an "off" worker could still
+  // accept new jobs and leave users waiting in an unserviceable queue.
+  const { assertRunpodEngineEnabled, resolveManagedRunpodEndpointId } = await import('@/lib/server/runpod-admin');
+  await assertRunpodEngineEnabled(engine);
+  const endpointId = h3Gpu
+    ? getRunpodEndpointId(engine, h3Gpu)
+    : ((await resolveManagedRunpodEndpointId(engine)) || getRunpodEndpointId(engine));
   if (!endpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
 
   return runpodFetch<RunpodQueuedJob>(`/v2/${endpointId}/run`, {
@@ -109,7 +119,12 @@ export async function queueRunpodJob(
   engine: RunpodEngine,
   input: Record<string, unknown>,
 ): Promise<RunpodQueuedJob> {
-  const endpointId = getRunpodEndpointId(engine);
+  // User-controlled endpoint assignments live in the protected Setting table.
+  // This is necessary for workers selected from the admin RunPod dashboard,
+  // notably Qwen3-TTS, whose endpoint ID is not a deploy-time constant.
+  const { assertRunpodEngineEnabled, resolveManagedRunpodEndpointId } = await import('@/lib/server/runpod-admin');
+  await assertRunpodEngineEnabled(engine);
+  const endpointId = (await resolveManagedRunpodEndpointId(engine)) || getRunpodEndpointId(engine);
   if (!endpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
   return runpodFetch<RunpodQueuedJob>(`/v2/${endpointId}/run`, {
     method: 'POST',
@@ -123,14 +138,16 @@ export async function getRunpodJobStatus(
   jobId: string,
   h3Gpu?: H3Gpu,
 ): Promise<RunpodJobStatus> {
-  const endpointId = getRunpodEndpointId(engine, h3Gpu);
-  if (!endpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
-  return runpodFetch<RunpodJobStatus>(`/v2/${endpointId}/status/${encodeURIComponent(jobId)}`);
+  const resolvedEndpointId = h3Gpu
+    ? getRunpodEndpointId(engine, h3Gpu)
+    : ((await (await import('@/lib/server/runpod-admin')).resolveManagedRunpodEndpointId(engine)) || getRunpodEndpointId(engine));
+  if (!resolvedEndpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
+  return runpodFetch<RunpodJobStatus>(`/v2/${resolvedEndpointId}/status/${encodeURIComponent(jobId)}`);
 }
 
 /** Request actual provider cancellation; hiding a spinner is not cancellation. */
 export async function cancelRunpodJob(engine: RunpodEngine, jobId: string) {
-  const endpointId = getRunpodEndpointId(engine);
+  const endpointId = await (await import('@/lib/server/runpod-admin')).resolveManagedRunpodEndpointId(engine) || getRunpodEndpointId(engine);
   if (!endpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
   return runpodFetch<RunpodQueuedJob>(`/v2/${endpointId}/cancel/${encodeURIComponent(jobId)}`, { method: 'POST' });
 }
