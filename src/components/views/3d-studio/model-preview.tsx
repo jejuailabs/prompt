@@ -28,7 +28,10 @@ export function ModelPreview({ src }: { src: string }) {
     setReady(false); setError(''); setClips([]); setBones(0); setClip(0);
     playback.current.clip = 0;
     try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); }
-    catch { setError('WebGL을 시작하지 못했습니다. 하드웨어 가속을 확인해주세요.'); return; }
+    catch {
+      const notice = window.setTimeout(() => setError('WebGL을 시작하지 못했습니다. 하드웨어 가속을 확인해주세요.'), 0);
+      return () => window.clearTimeout(notice);
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
