@@ -92,11 +92,19 @@ def handler(job):
                 raise RuntimeError('FBX roundtrip lost animation')
             if not any(o.type == 'MESH' and any(m.type == 'ARMATURE' and m.object for m in o.modifiers) and len(o.vertex_groups) for o in bpy.context.scene.objects):
                 raise RuntimeError('FBX roundtrip lost skin')
+            report['total_ms'] = round((time.perf_counter()-start)*1000)
+            upload_targets = data.get('output_uploads')
+            if isinstance(upload_targets, dict):
+                artifacts = {'preview.glb': output / 'preview.glb', 'character.fbx': output / 'character.fbx'}
+                uploaded = {}
+                for name, artifact in artifacts.items():
+                    upload_signed(upload_targets.get(name), artifact, name)
+                    uploaded[name] = {'bytes': artifact.stat().st_size}
+                return {'uploads': uploaded, 'report': report}
             files = {}
             for file in output.iterdir():
                 if file.stat().st_size > 50 * 1024 * 1024: raise ValueError('Output too large')
                 files[file.name] = base64.b64encode(file.read_bytes()).decode('ascii')
-            report['total_ms'] = round((time.perf_counter()-start)*1000)
             return {'files': files, 'report': report}
         demo = runtime()
         loaded = time.perf_counter()

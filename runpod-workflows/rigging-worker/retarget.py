@@ -13,11 +13,14 @@ ROLES = {
     'LeftUpperLeg': 'LeftUpLeg', 'LeftLowerLeg': 'LeftLeg', 'LeftFoot': 'LeftFoot',
     'RightUpperLeg': 'RightUpLeg', 'RightLowerLeg': 'RightLeg', 'RightFoot': 'RightFoot',
 }
+REQUIRED = {'Hips', 'Spine', 'Head', 'LeftUpperArm', 'LeftLowerArm',
+            'RightUpperArm', 'RightLowerArm', 'LeftUpperLeg',
+            'LeftLowerLeg', 'RightUpperLeg', 'RightLowerLeg'}
 
 
 def validate_mapping(mapping, target_names):
-    if not isinstance(mapping, dict) or set(mapping) != set(ROLES):
-        raise ValueError('Humanoid mapping requires all 15 standard roles')
+    if not isinstance(mapping, dict) or not REQUIRED.issubset(mapping) or not set(mapping).issubset(ROLES):
+        raise ValueError('Humanoid mapping requires the 11 core body roles')
     if any(not isinstance(name, str) or name not in target_names for name in mapping.values()):
         raise ValueError('Mapping contains a missing target bone')
     if len(set(mapping.values())) != len(mapping):
@@ -55,7 +58,7 @@ def bake(character, motion, destination, mapping, clip_name='Motion', in_place=T
         raise ValueError('Motion must be between 2 and 1801 frames')
     scene = bpy.context.scene
     scene.frame_start, scene.frame_end = start, end
-    source_rest = {role: source.matrix_world @ source.data.bones[lookup[name]].matrix_local for role, name in ROLES.items()}
+    source_rest = {role: source.matrix_world @ source.data.bones[lookup[ROLES[role]]].matrix_local for role in mapping}
     target_rest = {role: target.matrix_world @ target.data.bones[name].matrix_local for role, name in mapping.items()}
     # Scale root travel by leg length, not file units (FBX often uses centimetres).
     def leg_length(arm, upper, lower):
