@@ -1,8 +1,11 @@
 name: TRELLIS A100 worker image
 on:
   push:
-    branches: [codex/3d-unity-pipeline]
-    paths: [.github/workflows/trellis-a100-image.yml]
+    branches: [main]
+    paths:
+      - runpod-workflows/trellis-worker/handler.py
+      - runpod-workflows/trellis-worker/Dockerfile.a100
+      - .github/workflows/trellis-a100-image.yml
   workflow_dispatch:
 permissions:
   contents: read

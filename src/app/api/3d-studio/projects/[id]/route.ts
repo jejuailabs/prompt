@@ -7,6 +7,8 @@ import { finishMeteredOperation } from '@/lib/server/operation-ledger';
 import { uploadBuffer } from '@/lib/server/storage';
 import { inspectRiggedGlb, inspectTrellisGlb } from '@/lib/server/asset3d-qc';
 import { queueCharacterPreparation, queueSkinTokensRigging, updateWorkflowStage } from '@/lib/server/asset3d-character';
+import { finalizeTrellisProject } from '@/lib/server/trellis-finalize';
+import { downloadBuffer } from '@/lib/server/storage';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,6 +17,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     let project = await db.artifact.findFirst({ where: { id, ownerId: user.id, type: '3d_asset', sourceModule: '3d-studio' } });
     if (!project) throw new HttpError('3D 프로젝트를 찾을 수 없습니다', 404);
     const meta = parseMeta(project.metadata);
+    if (project.status === 'settling') return ok(toProject(project));
     if (meta.rigging && !['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'].includes(meta.rigging.status)) {
       const job = await getRunpodJobStatus('rigging', meta.rigging.jobId);
       const progress = job.status === 'COMPLETED' ? 100 : typeof (job.output as { progress?: unknown } | undefined)?.progress === 'number' ? (job.output as { progress: number }).progress : 0;
@@ -80,11 +83,25 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         const missingJob = failure instanceof Error && failure.message.includes('Runpod API 404:') && failure.message.includes('job not found');
         if (engine !== 'trellis' || !missingJob || !Number.isFinite(queuedAt) || Date.now() - queuedAt < 10 * 60_000) throw failure;
 
+        if (meta.blender?.outputPath) {
+          try {
+            const saved = await downloadBuffer(meta.blender.outputPath);
+            const recovered = await finalizeTrellisProject(id, user.id, { id: jobId, status: 'COMPLETED', output: { model_upload: { bytes: saved.length } } });
+            return ok(toProject(recovered));
+          } catch {
+            // No stored GLB exists; settle the missing job as failed below.
+          }
+        }
+
         const error = 'RunPod 작업 결과를 찾을 수 없어 생성을 완료하지 못했습니다. 사용한 크레딧은 환불됩니다.';
         await finishMeteredOperation({ operationId: meta.blender?.accountingJobId, engine, status: 'FAILED', error });
         const workflowStages = updateWorkflowStage(meta.workflowStages, 'trellis', { status: 'failed', error, completedAt: new Date().toISOString() });
         const nextMeta = { ...meta, workflowStages, blender: { ...meta.blender, status: 'FAILED', error, completedAt: new Date().toISOString() } };
         project = await db.artifact.update({ where: { id }, data: { metadata: JSON.stringify(nextMeta), status: 'failed' } });
+        return ok(toProject(project));
+      }
+      if (engine === 'trellis' && terminalStates.includes(job.status)) {
+        project = await finalizeTrellisProject(id, user.id, job);
         return ok(toProject(project));
       }
       let status = job.status;

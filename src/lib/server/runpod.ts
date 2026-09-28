@@ -118,6 +118,7 @@ export async function queueRunpodWorkflow(
 export async function queueRunpodJob(
   engine: RunpodEngine,
   input: Record<string, unknown>,
+  options?: { webhook?: string; policy?: { executionTimeout?: number; ttl?: number } },
 ): Promise<RunpodQueuedJob> {
   // User-controlled endpoint assignments live in the protected Setting table.
   // This is necessary for workers selected from the admin RunPod dashboard,
@@ -128,7 +129,7 @@ export async function queueRunpodJob(
   if (!endpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
   return runpodFetch<RunpodQueuedJob>(`/v2/${endpointId}/run`, {
     method: 'POST',
-    body: JSON.stringify({ input }),
+    body: JSON.stringify({ input, ...options }),
   });
 }
 

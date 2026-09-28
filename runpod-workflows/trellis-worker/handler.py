@@ -8,6 +8,8 @@ import os
 import tempfile
 import time
 import traceback
+import urllib.error
+import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 import requests
@@ -104,11 +106,31 @@ def handler(job):
             content = file.read_bytes()
         if len(content) > 50 * 1024 * 1024:
             raise ValueError('GLB output too large')
+        upload = data.get('output_upload')
+        if isinstance(upload, dict):
+            url = upload.get('signed_url')
+            if not isinstance(url, str) or not url.startswith('https://'):
+                raise ValueError('Missing signed GLB upload URL')
+            request = urllib.request.Request(url, data=content, method='PUT', headers={
+                'content-type': 'model/gltf-binary', 'x-upsert': 'false',
+            })
+            try:
+                with urllib.request.urlopen(request, timeout=120) as response:
+                    if response.status not in (200, 201):
+                        raise RuntimeError(f'GLB storage returned HTTP {response.status}')
+            except urllib.error.HTTPError as failure:
+                detail = failure.read(500).decode('utf-8', errors='replace')
+                raise RuntimeError(f'GLB storage upload failed: HTTP {failure.code} {detail}') from failure
         timings[stage] = round((time.perf_counter() - export_start) * 1000)
         timings['total'] = round((time.perf_counter() - started) * 1000)
-        return {'model': base64.b64encode(content).decode('ascii'), 'metadata': {
+        result = {'metadata': {
             'timings_ms': timings, 'diagnostics': diagnostics, 'resolution': resolution,
             'texture_size': texture, 'steps': steps, 'seed': seed, 'unity_ready': False}}
+        if isinstance(upload, dict):
+            result['model_upload'] = {'bytes': len(content)}
+        else:
+            result['model'] = base64.b64encode(content).decode('ascii')
+        return result
     except Exception as error:
         trace = traceback.format_exc()
         print(json.dumps({'stage': stage, 'traceback': trace}), flush=True)

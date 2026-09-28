@@ -4,14 +4,16 @@ import { getSessionUserFast, HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { queueRunpodJob } from '@/lib/server/runpod';
 import { beginMeteredOperation, failMeteredOperation } from '@/lib/server/operation-ledger';
+import { createSignedWorkerUploads } from '@/lib/server/storage';
+import { trellisWebhookUrl } from '@/lib/server/trellis-webhook';
 import type { Asset3dProjectDTO, Asset3dSubtrack, Asset3dWorkflowMode, Asset3dWorkflowStageDTO } from '@/lib/types';
 
-interface ProjectMeta {
+export interface ProjectMeta {
   kind?: string;
   subtrack?: Asset3dSubtrack;
   inputImageUrls?: string[];
   styleOptions?: Record<string, unknown>;
-  blender?: { engine?: 'trellis' | 'character_blender'; jobId?: string; accountingJobId?: string; creditCharged?: number; status?: string; error?: string; queuedAt?: string; completedAt?: string; delayTimeMs?: number; executionTimeMs?: number };
+  blender?: { engine?: 'trellis' | 'character_blender'; jobId?: string; accountingJobId?: string; outputPath?: string; creditCharged?: number; status?: string; error?: string; queuedAt?: string; completedAt?: string; delayTimeMs?: number; executionTimeMs?: number };
   /** Always self-hosted on RunPod; never a paid third-party rigging API. */
   rigging?: { provider: 'skintokens'; jobId: string; status: string; progress?: number; queuedAt: string; completedAt?: string; error?: string };
   riggingSettings?: { heightMeters?: number; orientationConfirmed?: boolean; jointNotes?: string };
@@ -78,7 +80,7 @@ function toProject(row: { id: string; ownerId: string; title: string; status: st
     ownerId: row.ownerId,
     title: row.title,
     subtrack: meta.subtrack ?? 'character',
-    status: (['draft', 'generating', 'processing', 'done', 'failed'].includes(row.status) ? row.status : 'draft') as Asset3dProjectDTO['status'],
+    status: (row.status === 'settling' ? 'processing' : ['draft', 'generating', 'processing', 'done', 'failed'].includes(row.status) ? row.status : 'draft') as Asset3dProjectDTO['status'],
     inputImageUrls: meta.inputImageUrls ?? [],
     styleOptions: meta.styleOptions,
     outputs: meta.outputs ?? [],
@@ -141,8 +143,16 @@ export async function POST(req: NextRequest) {
       return ok(toProject(failed));
     }
     try {
-      const job = await queueRunpodJob('trellis', { input_image: imageUrls[0], resolution: 512, texture_size: 1024, output_format: 'glb' });
-      const meta = { ...baseMeta, blender: { engine: 'trellis' as const, jobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString() } };
+      const outputPath = `3d/${user.id}/${project.id}/trellis.glb`;
+      const uploads = await createSignedWorkerUploads({ model: { path: outputPath, contentType: 'model/gltf-binary' } });
+      const job = await queueRunpodJob('trellis', {
+        input_image: imageUrls[0], resolution: 512, texture_size: 1024, output_format: 'glb',
+        output_upload: { signed_url: uploads.model.signedUrl },
+      }, {
+        webhook: trellisWebhookUrl(project.id, ledger.operationId),
+        policy: { executionTimeout: 900_000, ttl: 5_400_000 },
+      });
+      const meta = { ...baseMeta, blender: { engine: 'trellis' as const, jobId: job.id, accountingJobId: ledger.operationId, outputPath, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString() } };
       const queued = await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(meta), status: 'generating' } });
       return ok(toProject(queued));
     } catch (error) {
