@@ -7,6 +7,7 @@ import { queueRunpodJob, getRunpodJobStatus, cancelRunpodJob } from '@/lib/serve
 import { inspectRiggedGlb } from '@/lib/server/asset3d-qc';
 import { uploadBuffer } from '@/lib/server/storage';
 import { parseMeta } from '../../route';
+import { updateWorkflowStage } from '@/lib/server/asset3d-character';
 
 const roles = ['Hips', 'Spine', 'Head', 'LeftUpperArm', 'LeftLowerArm', 'LeftHand', 'RightUpperArm', 'RightLowerArm', 'RightHand', 'LeftUpperLeg', 'LeftLowerLeg', 'LeftFoot', 'RightUpperLeg', 'RightLowerLeg', 'RightFoot'] as const;
 const requestSchema = z.object({
@@ -19,7 +20,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     // Keep paid experiments admin-only until a real rig+motion passes QA and pricing is set.
     const user = await requireAdmin();
-    if (process.env.RUNPOD_RETARGET_ENABLED !== 'true') throw new HttpError('모션 워커 배포·검증 후 관리자가 테스트를 활성화해야 합니다.', 503);
     const { id } = await params;
     const body = requestSchema.safeParse(await readJson(req));
     if (!body.success) throw new HttpError('모션과 15개 관절 매핑을 확인해주세요.', 400);
@@ -84,6 +84,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
             meta.previewGlbUrl = await uploadBuffer(`${root}/preview.glb`, glb, 'model/gltf-binary');
             meta.fbxUrl = await uploadBuffer(`${root}/character.fbx`, Buffer.from(files['character.fbx'], 'base64'), 'application/octet-stream');
             meta.executionTimeMs = job.executionTime; status = 'done';
+            const projectMeta = parseMeta(project.metadata);
+            const outputs = (projectMeta.outputs ?? []).map((output) => ({
+              ...output,
+              animationUrls: { ...(output.animationUrls ?? {}), [`${row.id}.glb`]: meta.previewGlbUrl!, [`${row.id}.fbx`]: meta.fbxUrl! },
+            }));
+            const completedAt = new Date().toISOString();
+            const animatedStages = updateWorkflowStage(projectMeta.workflowStages, 'animation', { status: 'completed', completedAt, previewGlbUrl: meta.previewGlbUrl, fbxUrl: meta.fbxUrl });
+            const finalStages = updateWorkflowStage(animatedStages, 'unity_bundle', { status: 'completed', completedAt, previewGlbUrl: meta.previewGlbUrl, fbxUrl: meta.fbxUrl });
+            await db.artifact.update({ where: { id }, data: { metadata: JSON.stringify({ ...projectMeta, outputs, workflowStages: finalStages }) } });
           } catch (error) { status = 'failed'; meta.error = error instanceof Error ? error.message : '모션 출력 검증 실패'; }
         } else if (['FAILED', 'CANCELLED', 'TIMED_OUT'].includes(job.status)) { status = 'failed'; meta.error = '모션 적용 실패: 관절 매핑과 워커 로그를 확인해주세요.'; }
         if (status !== 'processing') await db.artifact.update({ where: { id: row.id }, data: { status, metadata: JSON.stringify(meta) } });

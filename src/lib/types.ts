@@ -541,7 +541,7 @@ export type Asset3dWorkflowMode = 'automatic' | 'guided';
 export type Asset3dStageStatus = 'pending' | 'running' | 'awaiting_approval' | 'completed' | 'failed';
 
 export interface Asset3dWorkflowStageDTO {
-  id: 'trellis' | 'blender' | 'rigging_animation' | 'unity_bundle';
+  id: 'trellis' | 'blender' | 'rigging_animation' | 'animation' | 'unity_bundle';
   title: string;
   description: string;
   status: Asset3dStageStatus;

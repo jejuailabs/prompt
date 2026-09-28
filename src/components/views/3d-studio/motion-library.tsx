@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { ModelPreview } from './model-preview';
@@ -11,8 +11,10 @@ interface Motion { id: string; name: string; category: string; thumbnailUrl?: st
 interface Result { id: string; name: string; status: string; error?: string; previewGlbUrl?: string; fbxUrl?: string; executionTimeMs?: number; }
 
 export function MotionLibrary({ projectId, riggedGlbUrl }: { projectId: string; riggedGlbUrl?: string | null }) {
+  const queryClient = useQueryClient();
   const admin = useAppStore(s => s.session?.role === 'admin');
   const [category, setCategory] = useState('All');
+  const [search, setSearch] = useState('');
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [bones, setBones] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -22,8 +24,10 @@ export function MotionLibrary({ projectId, riggedGlbUrl }: { projectId: string; 
   const [selected, setSelected] = useState<string>();
   const library = useQuery({ queryKey: ['character-motions'], queryFn: () => api.get<Motion[]>('/api/3d-studio/motions'), retry: false });
   const results = useQuery({ queryKey: ['character-motion-results', projectId], queryFn: () => api.get<Result[]>(`/api/3d-studio/projects/${projectId}/motions`), refetchInterval: query => query.state.data?.some(r => r.status === 'processing') ? 5000 : false });
+  const hasCompletedMotion = results.data?.some((item) => item.status === 'done') ?? false;
+  useEffect(() => { if (hasCompletedMotion) void queryClient.invalidateQueries({ queryKey: ['3d-project', projectId] }); }, [hasCompletedMotion, projectId, queryClient]);
   useEffect(() => {
-    const controller = new AbortController(); setBones([]); setMapping({});
+    const controller = new AbortController();
     if (riggedGlbUrl) fetch(riggedGlbUrl, { signal: controller.signal }).then(r => {
       if (!r.ok) throw new Error('리그 파일을 읽지 못했습니다.'); return r.arrayBuffer();
     }).then(buffer => {
@@ -50,9 +54,12 @@ export function MotionLibrary({ projectId, riggedGlbUrl }: { projectId: string; 
   const result = results.data?.find(r => r.id === selected) ?? results.data?.find(r => r.status === 'done');
   const active = results.data?.some(r => ['processing', 'submitting'].includes(r.status));
   const complete = roles.every(role => mapping[role]) && new Set(Object.values(mapping)).size === roles.length;
+  const visibleMotions = (library.data ?? []).filter(motion =>
+    (category === 'All' || motion.category === category) && motion.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
+  );
   return <section className="space-y-3 rounded-lg border p-4">
-    <h3 className="font-semibold">애니메이션 라이브러리 · 웹 검수</h3>
-    <p className="text-sm text-muted-foreground">원본 모션을 캐릭터에 맞춰 Bake한 GLB를 재생합니다. 같은 작업에서 내보낸 FBX를 다운로드합니다.</p>
+    <h3 className="font-semibold">애니메이션 선택·웹 검수</h3>
+    <p className="text-sm text-muted-foreground">동작을 선택하면 리깅된 캐릭터에 적용합니다. 완료 후 웹에서 재생하고 Unity용 FBX·GLB를 받으세요.</p>
     {!riggedGlbUrl && <p className="text-sm">먼저 자동 리깅을 완료해주세요. 정적 메시에는 동작을 붙일 수 없습니다.</p>}
     {admin && riggedGlbUrl && <details className="rounded border p-3">
       <summary>Humanoid 관절 매핑 · {complete ? '입력 완료 (변형 검수 필요)' : '15개 관절 지정 필요'}</summary>
@@ -64,9 +71,10 @@ export function MotionLibrary({ projectId, riggedGlbUrl }: { projectId: string; 
     {library.isPending && <p role="status">모션 목록 불러오는 중…</p>}
     {library.error && <p role="alert" className="text-sm">{library.error.message}</p>}
     {library.data && <>
-      <select aria-label="모션 카테고리" value={category} onChange={e => setCategory(e.target.value)} className="rounded border p-2"><option value="All">전체</option>{[...new Set(library.data.map(m => m.category))].map(c => <option key={c}>{c}</option>)}</select>
+      <div className="flex flex-wrap gap-2"><select aria-label="모션 카테고리" value={category} onChange={e => setCategory(e.target.value)} className="rounded border p-2"><option value="All">전체</option>{[...new Set(library.data.map(m => m.category))].map(c => <option key={c}>{c}</option>)}</select><input aria-label="모션 검색" value={search} onChange={event => setSearch(event.target.value)} placeholder="걷기, 대기, 춤 등 검색" className="min-w-48 rounded border p-2 text-sm" /></div>
+      <p className="text-xs text-muted-foreground">검색 결과 {visibleMotions.length.toLocaleString()}개 · 한 번에 24개 표시</p>
       {!library.data.length && <p>등록된 모션이 없습니다. 실제 업로드 후 목록이 표시됩니다.</p>}
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">{library.data.filter(m => category === 'All' || m.category === category).map(m => <div key={m.id} className="space-y-2 rounded border p-2">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">{visibleMotions.slice(0, 24).map(m => <div key={m.id} className="space-y-2 rounded border p-2">
         {m.thumbnailUrl ? <img src={m.thumbnailUrl} alt={m.name} className="aspect-video w-full object-cover" /> : <div className="flex aspect-video items-center justify-center bg-muted text-xs">{m.category}</div>}
         <p className="text-sm">{m.name}</p>
         <button type="button" className="rounded border px-2 py-1 text-sm disabled:opacity-40" disabled={!admin || !riggedGlbUrl || !complete || busy || active} onClick={() => apply(m.id)}>이 동작 적용 (관리자 테스트)</button>

@@ -47,10 +47,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const response = await fetch(source, { cache: 'no-store' });
     if (!response.ok) throw new HttpError('Blender 결과 GLB를 가져오지 못했습니다. 다시 시도해주세요.', 502);
     const model = Buffer.from(await response.arrayBuffer());
-    const job = await queueSkinTokensRigging({ model, heightMeters, orientationConfirmed: body.orientationConfirmed === true, jointNotes: body.jointNotes });
+    const job = await queueSkinTokensRigging({ model, ownerId: user.id, projectId: id, heightMeters, orientationConfirmed: body.orientationConfirmed === true, jointNotes: body.jointNotes });
     const queuedAt = new Date().toISOString();
     const nextStages = updateWorkflowStage(stages, 'rigging_animation', { status: 'running', startedAt: queuedAt, progress: 0, error: undefined });
-    const next = await db.artifact.update({ where: { id }, data: { status: 'processing', metadata: JSON.stringify({ ...meta, workflowStages: nextStages, riggingSettings: { heightMeters, orientationConfirmed: body.orientationConfirmed === true, jointNotes: typeof body.jointNotes === 'string' ? body.jointNotes.slice(0, 1000) : undefined }, rigging: { provider: 'skintokens', jobId: job.id, status: job.status, progress: 0, queuedAt } }) } });
+    const next = await db.artifact.update({ where: { id }, data: { status: 'processing', metadata: JSON.stringify({ ...meta, workflowStages: nextStages, riggingSettings: { heightMeters, orientationConfirmed: body.orientationConfirmed === true, jointNotes: typeof body.jointNotes === 'string' ? body.jointNotes.slice(0, 1000) : undefined }, rigging: { provider: 'skintokens', jobId: job.id, status: job.status, progress: 0, queuedAt, outputPaths: job.outputPaths, outputUrls: job.outputUrls } }) } });
     return ok(toProject(next));
   } catch (error) {
     return fail(error);

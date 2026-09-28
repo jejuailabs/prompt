@@ -68,9 +68,9 @@ export async function finalizeTrellisProject(projectId: string, ownerId: string,
     let status = 'done';
     if (meta.workflowMode === 'automatic') {
       try {
-        const next = await queueSkinTokensRigging({ model, heightMeters: meta.riggingSettings?.heightMeters });
+        const next = await queueSkinTokensRigging({ model, ownerId, projectId, heightMeters: meta.riggingSettings?.heightMeters });
         workflowStages = updateWorkflowStage(completedStages, 'rigging_animation', { status: 'running', startedAt: completedAt });
-        rigging = { provider: 'skintokens', jobId: next.id, status: next.status, queuedAt: completedAt };
+        rigging = { provider: 'skintokens', jobId: next.id, status: next.status, queuedAt: completedAt, outputPaths: next.outputPaths, outputUrls: next.outputUrls };
         status = 'processing';
       } catch (failure) {
         workflowStages = updateWorkflowStage(completedStages, 'rigging_animation', { status: 'awaiting_approval', error: failure instanceof Error ? failure.message : '자동 리깅을 시작하지 못했습니다.' });
