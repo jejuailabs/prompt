@@ -298,6 +298,7 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
 function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const t = useTranslations('studio3d');
   const tc = useTranslations('core');
+  const { toast } = useToast();
 
   const q = useQuery({
     queryKey: ['3d-project', projectId],
@@ -308,6 +309,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
     },
   });
   const [advancing, setAdvancing] = useState(false);
+  const [downloadingUnity, setDownloadingUnity] = useState(false);
   const [heightMeters, setHeightMeters] = useState('1.70');
   const [orientationConfirmed, setOrientationConfirmed] = useState(false);
   const [jointNotes, setJointNotes] = useState('');
@@ -316,6 +318,30 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
     setAdvancing(true);
     try { await api.post(`/api/3d-studio/projects/${projectId}/advance`, stage === 'rigging_animation' ? { stage, heightMeters: Number(heightMeters), orientationConfirmed, jointNotes } : { stage }); await q.refetch(); }
     finally { setAdvancing(false); }
+  };
+  const downloadUnityPackage = async () => {
+    setDownloadingUnity(true);
+    try {
+      const response = await fetch(`/api/3d-studio/projects/${projectId}/unity-package`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(error?.error || `다운로드 실패 (${response.status})`);
+      }
+      const blob = await response.blob();
+      if (!blob.size || !response.headers.get('content-type')?.includes('zip')) throw new Error('ZIP 파일 응답이 올바르지 않습니다.');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `playlab-${projectId}-unity.zip`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      toast({ title: 'Unity 파일 다운로드 실패', description: errMsg(error), variant: 'destructive' });
+    } finally {
+      setDownloadingUnity(false);
+    }
   };
 
   if (q.isLoading) {
@@ -444,7 +470,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
                   </p>
                 )}
                 <div className="flex gap-2">
-                  {screen === 'unity' && animationReady && <Button size="sm" asChild><a href={`/api/3d-studio/projects/${projectId}/unity-package`} download><Download className="size-3" /> Unity 개발 파일 ZIP</a></Button>}
+                  {screen === 'unity' && animationReady && <Button size="sm" onClick={() => void downloadUnityPackage()} disabled={downloadingUnity}>{downloadingUnity ? <Loader2 className="size-3 animate-spin" /> : <Download className="size-3" />} {downloadingUnity ? 'Unity 파일 준비 중…' : 'Unity 개발 파일 ZIP'}</Button>}
                   {output.glbUrl && <Button variant="outline" size="sm" asChild><a href={output.glbUrl} download target="_blank" rel="noreferrer"><Download className="size-3" /> {t('downloadGlb')}</a></Button>}
                   {output.fbxUrl && (
                     <Button variant="outline" size="sm" asChild>
