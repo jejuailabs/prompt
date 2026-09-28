@@ -82,7 +82,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         let animationStages = updateWorkflowStage(exportedStages, 'animation', { status: 'awaiting_approval', previewGlbUrl: riggedGlbUrl });
         if (meta.workflowMode === 'automatic') {
           try {
-            await queueAutomaticCharacterMotion({ ownerId: user.id, projectId: id, riggingJobId: meta.rigging.jobId, riggedGlb });
+            await queueAutomaticCharacterMotion({ ownerId: user.id, projectId: id, riggingJobId: meta.rigging.jobId, riggedGlb, riggedGlbUrl });
             animationStages = updateWorkflowStage(animationStages, 'animation', { status: 'running', startedAt: new Date().toISOString(), error: undefined });
           } catch (failure) {
             const error = failure instanceof Error ? failure.message : '자동 애니메이션을 시작하지 못했습니다.';

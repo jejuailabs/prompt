@@ -9,7 +9,7 @@ import { createSignedWorkerUploads } from '@/lib/server/storage';
 const required = ['Hips', 'Spine', 'Head', 'LeftUpperArm', 'LeftLowerArm', 'RightUpperArm', 'RightLowerArm', 'LeftUpperLeg', 'LeftLowerLeg', 'RightUpperLeg', 'RightLowerLeg'];
 
 /** Queue one neutral motion after automatic rigging. Users can choose others in the UI. */
-export async function queueAutomaticCharacterMotion(input: { ownerId: string; projectId: string; riggingJobId: string; riggedGlb: Buffer }) {
+export async function queueAutomaticCharacterMotion(input: { ownerId: string; projectId: string; riggingJobId: string; riggedGlb: Buffer; riggedGlbUrl: string }) {
   const model = input.riggedGlb;
   const scene = JSON.parse(model.toString('utf8', 20, 20 + model.readUInt32LE(12)));
   const mapping = suggestBoneMapping(scene);
@@ -19,6 +19,8 @@ export async function queueAutomaticCharacterMotion(input: { ownerId: string; pr
   if (!motion) throw new Error('자동 적용할 대기 동작이 모션 라이브러리에 없습니다.');
   const { data: fbx, error } = await storage.download(motion.file);
   if (error || !fbx || fbx.size > 28_000_000) throw new Error('자동 적용할 모션 FBX를 읽지 못했습니다.');
+  const { data: motionAccess, error: accessError } = await storage.createSignedUrl(motion.file, 3600);
+  if (accessError || !motionAccess?.signedUrl) throw new Error('자동 적용할 모션 접근 주소를 만들지 못했습니다.');
   const hash = createHash('sha256').update(`${input.projectId}:${input.riggingJobId}:auto-motion`).digest('hex');
   const requestId = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
   const existing = await db.artifact.findUnique({ where: { id: requestId } });
@@ -33,7 +35,7 @@ export async function queueAutomaticCharacterMotion(input: { ownerId: string; pr
   await db.artifact.create({ data: { id: requestId, ownerId: input.ownerId, type: '3d_motion', sourceModule: '3d-studio', title: motion.name, status: 'submitting', visibility: 'private', metadata: JSON.stringify(metadata) } });
   try {
     const job = await queueRunpodJob('rigging', {
-      operation: 'retarget', model_base64: model.toString('base64'), motion_base64: Buffer.from(await fbx.arrayBuffer()).toString('base64'),
+      operation: 'retarget', model_url: input.riggedGlbUrl, motion_url: motionAccess.signedUrl,
       bone_mapping: mapping, clip_name: motion.name, in_place: true,
       output_uploads: Object.fromEntries(Object.entries(uploads).map(([name, upload]) => [name, { signed_url: upload.signedUrl, content_type: upload.contentType }])),
     });

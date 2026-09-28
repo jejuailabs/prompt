@@ -48,6 +48,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { data: fbx, error } = await storage.download(motion.file);
     if (error || !fbx) throw new HttpError('모션 FBX를 읽지 못했습니다.', 502);
     if (fbx.size > 28_000_000) throw new HttpError('모션 FBX는 28MB 이하여야 합니다.', 400);
+    const { data: motionAccess, error: accessError } = await storage.createSignedUrl(motion.file, 3600);
+    if (accessError || !motionAccess?.signedUrl) throw new HttpError('모션 파일 접근 주소를 만들지 못했습니다.', 502);
     const response = await fetch(sourceUrl, { redirect: 'error', signal: AbortSignal.timeout(30000) });
     if (!response.ok) throw new HttpError('캐릭터 파일을 읽지 못했습니다.', 502);
     const model = Buffer.from(await response.arrayBuffer());
@@ -63,7 +65,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Unique request ID is acquired before submitting any paid operation.
     await db.artifact.create({ data: { id: body.data.requestId, ownerId: user.id, type: '3d_motion', sourceModule: '3d-studio', title: motion.name, status: 'submitting', visibility: 'private', metadata: JSON.stringify(meta) } });
     try {
-      const job = await queueRunpodJob('rigging', { operation: 'retarget', model_base64: model.toString('base64'), motion_base64: Buffer.from(await fbx.arrayBuffer()).toString('base64'), bone_mapping: body.data.boneMapping, clip_name: motion.name, in_place: body.data.inPlace,
+      const job = await queueRunpodJob('rigging', { operation: 'retarget', model_url: sourceUrl.toString(), motion_url: motionAccess.signedUrl, bone_mapping: body.data.boneMapping, clip_name: motion.name, in_place: body.data.inPlace,
         output_uploads: Object.fromEntries(Object.entries(uploads).map(([name, upload]) => [name, { signed_url: upload.signedUrl, content_type: upload.contentType }])) });
       meta.jobId = job.id;
       await db.artifact.update({ where: { id: body.data.requestId }, data: { status: 'processing', metadata: JSON.stringify(meta) } });
