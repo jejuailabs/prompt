@@ -30,7 +30,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       const job = await getRunpodJobStatus('rigging', meta.rigging.jobId);
       const progress = job.status === 'COMPLETED' ? 100 : typeof (job.output as { progress?: unknown } | undefined)?.progress === 'number' ? (job.output as { progress: number }).progress : 0;
       if (job.status === 'COMPLETED') {
-        const output = job.output as { files?: Record<string, unknown>; uploads?: Record<string, unknown>; error?: unknown } | undefined;
+        const output = job.output as { files?: Record<string, unknown>; uploads?: Record<string, unknown>; error?: unknown; worker_error?: unknown } | undefined;
         const files = output?.files;
         let riggedGlb: Buffer | null = null;
         let riggedFbx: Buffer | null = null;
@@ -45,7 +45,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           riggedFbx = Buffer.from(files['rigged.fbx'], 'base64');
         }
         if (!riggedGlb || !riggedFbx) {
-          const error = 'SkinTokens 리깅 워커가 rigged.glb와 rigged.fbx를 모두 반환하지 않았습니다.';
+          const error = typeof output?.worker_error === 'string'
+            ? riggingError(output.worker_error)
+            : 'SkinTokens 리깅 워커가 rigged.glb와 rigged.fbx를 모두 반환하지 않았습니다.';
           const stages = updateWorkflowStage(meta.workflowStages, 'rigging_animation', { status: 'awaiting_approval', progress, error });
           project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, workflowStages: stages, rigging: { ...meta.rigging, status: 'FAILED', progress, error } }) } });
           return ok(toProject(project));

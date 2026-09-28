@@ -3,16 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
-import { useAppStore } from '@/lib/store';
 import { ModelPreview } from './model-preview';
+import { suggestBoneMapping } from '@/lib/asset3d-bone-mapping';
 
 const roles = ['Hips', 'Spine', 'Head', 'LeftUpperArm', 'LeftLowerArm', 'LeftHand', 'RightUpperArm', 'RightLowerArm', 'RightHand', 'LeftUpperLeg', 'LeftLowerLeg', 'LeftFoot', 'RightUpperLeg', 'RightLowerLeg', 'RightFoot'];
+const optionalRoles = new Set(['LeftHand', 'RightHand', 'LeftFoot', 'RightFoot']);
 interface Motion { id: string; name: string; category: string; thumbnailUrl?: string; }
 interface Result { id: string; name: string; status: string; error?: string; previewGlbUrl?: string; fbxUrl?: string; executionTimeMs?: number; }
 
 export function MotionLibrary({ projectId, riggedGlbUrl }: { projectId: string; riggedGlbUrl?: string | null }) {
   const queryClient = useQueryClient();
-  const admin = useAppStore(s => s.session?.role === 'admin');
   const [category, setCategory] = useState('All');
   const [search, setSearch] = useState('');
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -37,7 +37,8 @@ export function MotionLibrary({ projectId, riggedGlbUrl }: { projectId: string; 
       const names: string[] = [...new Set<string>((json.skins ?? []).flatMap((skin: { joints: number[] }) => skin.joints.map(i => json.nodes[i]?.name).filter(Boolean)))];
       if (!controller.signal.aborted) {
         setBones(names);
-        setMapping(Object.fromEntries(roles.map(role => [role, names.find(name => name === role) ?? ''])));
+        const suggested = suggestBoneMapping(json);
+        setMapping(Object.fromEntries(roles.map(role => [role, suggested[role] ?? names.find(name => name === role) ?? ''])));
       }
     }).catch(e => { if (!controller.signal.aborted) setError(String(e)); });
     return () => controller.abort();
@@ -46,14 +47,15 @@ export function MotionLibrary({ projectId, riggedGlbUrl }: { projectId: string; 
     if (pending.current) return;
     pending.current = true; setBusy(true); setError('');
     try {
-      await api.post(`/api/3d-studio/projects/${projectId}/motions`, { requestId: crypto.randomUUID(), motionId, boneMapping: mapping, inPlace });
+      await api.post(`/api/3d-studio/projects/${projectId}/motions`, { requestId: crypto.randomUUID(), motionId, boneMapping: Object.fromEntries(Object.entries(mapping).filter(([, bone]) => Boolean(bone))), inPlace });
       await results.refetch();
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { pending.current = false; setBusy(false); }
   };
   const result = results.data?.find(r => r.id === selected) ?? results.data?.find(r => r.status === 'done');
   const active = results.data?.some(r => ['processing', 'submitting'].includes(r.status));
-  const complete = roles.every(role => mapping[role]) && new Set(Object.values(mapping)).size === roles.length;
+  const complete = roles.filter(role => !optionalRoles.has(role)).every(role => mapping[role]) &&
+    new Set(Object.values(mapping).filter(Boolean)).size === Object.values(mapping).filter(Boolean).length;
   const visibleMotions = (library.data ?? []).filter(motion =>
     (category === 'All' || motion.category === category) && motion.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
   );
@@ -61,13 +63,12 @@ export function MotionLibrary({ projectId, riggedGlbUrl }: { projectId: string; 
     <h3 className="font-semibold">애니메이션 선택·웹 검수</h3>
     <p className="text-sm text-muted-foreground">동작을 선택하면 리깅된 캐릭터에 적용합니다. 완료 후 웹에서 재생하고 Unity용 FBX·GLB를 받으세요.</p>
     {!riggedGlbUrl && <p className="text-sm">먼저 자동 리깅을 완료해주세요. 정적 메시에는 동작을 붙일 수 없습니다.</p>}
-    {admin && riggedGlbUrl && <details className="rounded border p-3">
-      <summary>Humanoid 관절 매핑 · {complete ? '입력 완료 (변형 검수 필요)' : '15개 관절 지정 필요'}</summary>
-      <p className="my-2 text-xs">이름이 다른 뼈를 임의로 추측하지 않습니다. 뼈대 표시로 확인하고 각 역할을 지정하세요. T/A 자세 차이는 실제 결과로 검수해야 합니다.</p>
+    {riggedGlbUrl && <details className="rounded border p-3">
+      <summary>Humanoid 관절 매핑 · {complete ? '기본 매핑 입력 완료 (변형 검수 필요)' : '몸통·팔·다리 관절 11개 지정 필요'}</summary>
+      <p className="my-2 text-xs">뼈대 구조와 좌우 위치로 매핑을 제안합니다. 결과를 확인하고 수정할 수 있습니다. 손·발 뼈가 생성되지 않았으면 비워 두세요. T/A 자세 차이는 결과로 검수해야 합니다.</p>
       <div className="grid grid-cols-2 gap-2">{roles.map(role => <label key={role} className="text-xs">{role}<select className="block w-full rounded border p-1" value={mapping[role] ?? ''} onChange={e => setMapping({ ...mapping, [role]: e.target.value })}><option value="">뼈 선택</option>{bones.map(name => <option key={name} value={name}>{name}</option>)}</select></label>)}</div>
       <label className="mt-3 block text-sm"><input type="checkbox" checked={inPlace} onChange={e => setInPlace(e.target.checked)} /> 제자리 동작 (수평 이동 제거)</label>
     </details>}
-    {!admin && <p className="text-sm text-muted-foreground">모션 적용은 현재 관리자 검증 단계입니다. 검증된 결과는 아래에서 재생·다운로드할 수 있습니다.</p>}
     {library.isPending && <p role="status">모션 목록 불러오는 중…</p>}
     {library.error && <p role="alert" className="text-sm">{library.error.message}</p>}
     {library.data && <>
@@ -77,7 +78,7 @@ export function MotionLibrary({ projectId, riggedGlbUrl }: { projectId: string; 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">{visibleMotions.slice(0, 24).map(m => <div key={m.id} className="space-y-2 rounded border p-2">
         {m.thumbnailUrl ? <img src={m.thumbnailUrl} alt={m.name} className="aspect-video w-full object-cover" /> : <div className="flex aspect-video items-center justify-center bg-muted text-xs">{m.category}</div>}
         <p className="text-sm">{m.name}</p>
-        <button type="button" className="rounded border px-2 py-1 text-sm disabled:opacity-40" disabled={!admin || !riggedGlbUrl || !complete || busy || active} onClick={() => apply(m.id)}>이 동작 적용 (관리자 테스트)</button>
+        <button type="button" className="rounded border px-2 py-1 text-sm disabled:opacity-40" disabled={!riggedGlbUrl || !complete || busy || active} onClick={() => apply(m.id)}>이 동작 적용</button>
       </div>)}</div>
     </>}
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

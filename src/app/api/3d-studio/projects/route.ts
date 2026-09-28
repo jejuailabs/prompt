@@ -41,7 +41,7 @@ export function initialWorkflowStages(): Asset3dWorkflowStageDTO[] {
 }
 
 function workflowStagesFor(meta: ProjectMeta, row: { status: string }): Asset3dWorkflowStageDTO[] {
-  if (meta.workflowStages?.length) return meta.workflowStages;
+  if (meta.workflowStages?.length) return meta.workflowStages.map((stage) => ({ ...stage, error: userFacingBlenderError(stage.error) ?? undefined }));
   const stages = initialWorkflowStages();
   const output = meta.outputs?.[0];
   if (output?.glbUrl) {

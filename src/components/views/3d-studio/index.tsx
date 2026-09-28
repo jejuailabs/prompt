@@ -372,7 +372,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
       {isWorking && (
         <Card className="mb-6 flex items-center gap-3 p-4">
           <Loader2 className="size-5 animate-spin text-primary" />
-          <span className="text-sm font-medium">{project.status === 'generating' ? '3D 생성 워커 준비·대기 중입니다. 첫 실행은 모델 로딩에 시간이 걸립니다.' : '이미지를 3D 모델로 변환하고 있습니다. 완료되면 뷰어가 표시됩니다.'}</span>
+          <span className="text-sm font-medium">{project.status === 'generating' ? '3D 생성 워커 준비·대기 중입니다. 첫 실행은 모델 로딩에 시간이 걸립니다.' : stage('rigging_animation')?.status === 'running' ? '캐릭터의 뼈대와 스킨 웨이트를 생성하고 FBX를 검증 중입니다.' : stage('animation')?.status === 'running' ? '선택한 동작을 적용하고 애니메이션 파일을 검증 중입니다.' : '이미지를 3D 모델로 변환하고 있습니다. 완료되면 뷰어가 표시됩니다.'}</span>
         </Card>
       )}
 

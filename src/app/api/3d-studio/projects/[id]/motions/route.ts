@@ -1,28 +1,32 @@
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { HttpError, requireAdmin, requireUser } from '@/lib/auth';
+import { HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { loadMotionLibrary } from '@/lib/server/motion-library';
 import { queueRunpodJob, getRunpodJobStatus, cancelRunpodJob } from '@/lib/server/runpod';
 import { inspectRiggedGlb } from '@/lib/server/asset3d-qc';
-import { uploadBuffer } from '@/lib/server/storage';
+import { createSignedWorkerUploads, downloadBuffer, publicStorageUrl, uploadBuffer } from '@/lib/server/storage';
 import { parseMeta } from '../../route';
 import { updateWorkflowStage } from '@/lib/server/asset3d-character';
 
 const roles = ['Hips', 'Spine', 'Head', 'LeftUpperArm', 'LeftLowerArm', 'LeftHand', 'RightUpperArm', 'RightLowerArm', 'RightHand', 'LeftUpperLeg', 'LeftLowerLeg', 'LeftFoot', 'RightUpperLeg', 'RightLowerLeg', 'RightFoot'] as const;
+const requiredRoles = roles.filter(role => !['LeftHand', 'RightHand', 'LeftFoot', 'RightFoot'].includes(role));
 const requestSchema = z.object({
   requestId: z.string().uuid(), motionId: z.string().regex(/^[a-z0-9_-]{1,64}$/),
-  boneMapping: z.record(z.enum(roles), z.string().min(1).max(120)), inPlace: z.boolean().default(true),
+  boneMapping: z.record(z.string(), z.string().min(1).max(120)).refine(mapping =>
+    requiredRoles.every(role => Boolean(mapping[role])) &&
+    Object.keys(mapping).every(role => roles.includes(role as typeof roles[number])) &&
+    new Set(Object.values(mapping)).size === Object.values(mapping).length,
+  ), inPlace: z.boolean().default(true),
 });
-interface MotionJob { projectId: string; motionId: string; jobId?: string; queuedAt: string; error?: string; previewGlbUrl?: string; fbxUrl?: string; executionTimeMs?: number; }
+interface MotionJob { projectId: string; motionId: string; jobId?: string; queuedAt: string; error?: string; previewGlbUrl?: string; fbxUrl?: string; executionTimeMs?: number; outputPaths?: Record<string, string>; }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Keep paid experiments admin-only until a real rig+motion passes QA and pricing is set.
-    const user = await requireAdmin();
+    const user = await requireUser();
     const { id } = await params;
     const body = requestSchema.safeParse(await readJson(req));
-    if (!body.success) throw new HttpError('모션과 15개 관절 매핑을 확인해주세요.', 400);
+    if (!body.success) throw new HttpError('모션과 몸통·팔·다리의 핵심 관절 매핑을 확인해주세요.', 400);
     const project = await db.artifact.findFirst({ where: { id, ownerId: user.id, type: '3d_asset' } });
     if (!project) throw new HttpError('프로젝트를 찾을 수 없습니다.', 404);
     const previous = await db.artifact.findUnique({ where: { id: body.data.requestId } });
@@ -30,6 +34,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (previous.ownerId !== user.id || previous.type !== '3d_motion' || JSON.parse(previous.metadata).projectId !== id) throw new HttpError('요청 ID가 이미 사용되었습니다.', 409);
       return ok({ id: previous.id, status: previous.status, ...JSON.parse(previous.metadata) });
     }
+    const existingMotions = await db.artifact.findMany({ where: { ownerId: user.id, type: '3d_motion', sourceModule: '3d-studio' }, select: { status: true, metadata: true } });
+    const projectMotions = existingMotions.filter(row => { try { return JSON.parse(row.metadata).projectId === id; } catch { return false; } });
+    if (projectMotions.some(row => ['submitting', 'processing'].includes(row.status))) throw new HttpError('진행 중인 애니메이션이 끝난 뒤 다음 동작을 적용해주세요.', 409);
+    if (user.role !== 'admin' && projectMotions.filter(row => row.status === 'done').length >= 3) throw new HttpError('한 캐릭터에는 애니메이션을 최대 3개까지 적용할 수 있습니다.', 409);
     const source = parseMeta(project.metadata).outputs?.[0]?.riggedGlbUrl;
     if (!source) throw new HttpError('먼저 스킨 웨이트가 포함된 리깅을 완료해주세요.', 409);
     const sourceUrl = new URL(source);
@@ -45,11 +53,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const model = Buffer.from(await response.arrayBuffer());
     if (model.length > 50_000_000) throw new HttpError('캐릭터가 너무 큽니다.', 400);
     inspectRiggedGlb(model);
-    const meta: MotionJob = { projectId: id, motionId: motion.id, queuedAt: new Date().toISOString() };
+    const root = `3d/${user.id}/${id}/motions/${body.data.requestId}`;
+    const uploads = await createSignedWorkerUploads({
+      'preview.glb': { path: `${root}/preview.glb`, contentType: 'model/gltf-binary' },
+      'character.fbx': { path: `${root}/character.fbx`, contentType: 'application/octet-stream' },
+    });
+    const meta: MotionJob = { projectId: id, motionId: motion.id, queuedAt: new Date().toISOString(),
+      outputPaths: Object.fromEntries(Object.entries(uploads).map(([name, upload]) => [name, upload.path])) };
     // Unique request ID is acquired before submitting any paid operation.
     await db.artifact.create({ data: { id: body.data.requestId, ownerId: user.id, type: '3d_motion', sourceModule: '3d-studio', title: motion.name, status: 'submitting', visibility: 'private', metadata: JSON.stringify(meta) } });
     try {
-      const job = await queueRunpodJob('rigging', { operation: 'retarget', model_base64: model.toString('base64'), motion_base64: Buffer.from(await fbx.arrayBuffer()).toString('base64'), bone_mapping: body.data.boneMapping, clip_name: motion.name, in_place: body.data.inPlace });
+      const job = await queueRunpodJob('rigging', { operation: 'retarget', model_base64: model.toString('base64'), motion_base64: Buffer.from(await fbx.arrayBuffer()).toString('base64'), bone_mapping: body.data.boneMapping, clip_name: motion.name, in_place: body.data.inPlace,
+        output_uploads: Object.fromEntries(Object.entries(uploads).map(([name, upload]) => [name, { signed_url: upload.signedUrl, content_type: upload.contentType }])) });
       meta.jobId = job.id;
       await db.artifact.update({ where: { id: body.data.requestId }, data: { status: 'processing', metadata: JSON.stringify(meta) } });
       return ok({ id: body.data.requestId, status: 'processing', ...meta });
@@ -76,13 +91,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         const job = await getRunpodJobStatus('rigging', meta.jobId);
         if (job.status === 'COMPLETED') {
           try {
-            const files = (job.output as { files?: Record<string, string> })?.files;
-            if (!files?.['preview.glb'] || !files?.['character.fbx']) throw new Error('GLB/FBX 결과가 누락되었습니다.');
-            const glb = Buffer.from(files['preview.glb'], 'base64');
+            const output = job.output as { files?: Record<string, string>; uploads?: Record<string, unknown>; worker_error?: string } | undefined;
+            if (output?.worker_error) throw new Error(output.worker_error);
+            const files = output?.files;
+            const signed = meta.outputPaths?.['preview.glb'] && meta.outputPaths?.['character.fbx'] && output?.uploads?.['preview.glb'] && output?.uploads?.['character.fbx'];
+            if (!signed && (!files?.['preview.glb'] || !files?.['character.fbx'])) throw new Error('GLB/FBX 결과가 누락되었습니다.');
+            const [glb, fbx] = signed ? await Promise.all([downloadBuffer(meta.outputPaths!['preview.glb']), downloadBuffer(meta.outputPaths!['character.fbx'])])
+              : [Buffer.from(files!['preview.glb'], 'base64'), Buffer.from(files!['character.fbx'], 'base64')];
             if (!inspectRiggedGlb(glb).animations) throw new Error('결과에 실제 애니메이션 클립이 없습니다.');
             const root = `3d/${user.id}/${id}/motions/${row.id}`;
-            meta.previewGlbUrl = await uploadBuffer(`${root}/preview.glb`, glb, 'model/gltf-binary');
-            meta.fbxUrl = await uploadBuffer(`${root}/character.fbx`, Buffer.from(files['character.fbx'], 'base64'), 'application/octet-stream');
+            meta.previewGlbUrl = signed ? publicStorageUrl(meta.outputPaths!['preview.glb']) : await uploadBuffer(`${root}/preview.glb`, glb, 'model/gltf-binary');
+            meta.fbxUrl = signed ? publicStorageUrl(meta.outputPaths!['character.fbx']) : await uploadBuffer(`${root}/character.fbx`, fbx, 'application/octet-stream');
             meta.executionTimeMs = job.executionTime; status = 'done';
             const projectMeta = parseMeta(project.metadata);
             const outputs = (projectMeta.outputs ?? []).map((output) => ({
