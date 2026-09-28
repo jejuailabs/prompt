@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { requireUser, HttpError } from '@/lib/auth';
 import { fail } from '@/lib/server/handler';
 import { parseMeta } from '../../route';
+import { uploadBuffer } from '@/lib/server/storage';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -48,10 +49,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       '', 'See manifest.json for motion names and file mapping.',
     ].join('\n'));
     const archive = zipSync(files, { level: 0 });
-    return new Response(new Uint8Array(archive), { headers: {
-      'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename="playlab-${id}-unity.zip"`,
-      'Cache-Control': 'private, no-store',
-    } });
+    if (archive.byteLength > 50 * 1024 * 1024) throw new HttpError('ZIP이 50MB를 넘습니다. 아래 FBX·GLB 파일을 개별 다운로드해주세요.', 413);
+    // Vercel function responses cannot reliably stream a multi-megabyte ZIP.
+    // Store the bundle and redirect the browser to Storage's download endpoint.
+    const archiveUrl = await uploadBuffer(`3d/${user.id}/${id}/playlab-unity-files.zip`, archive, 'application/zip');
+    return Response.redirect(archiveUrl, 302);
   } catch (error) { return fail(error); }
 }
