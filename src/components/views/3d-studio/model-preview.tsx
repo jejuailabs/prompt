@@ -72,6 +72,9 @@ export function ModelPreview({ src }: { src: string }) {
       setBones(joints.size);
       animations = gltf.animations;
       mixer = new THREE.AnimationMixer(model);
+      const preferredClip = Math.max(0, animations.findIndex(item => item.name && !item.name.includes('mixamo.com')));
+      playback.current.clip = preferredClip;
+      setClip(preferredClip);
       setClips(animations.map((item, i) => item.name || `동작 ${i + 1}`)); setReady(true);
     }, undefined, () => { if (!disposed) setError('3D 파일을 불러오지 못했습니다. 파일 주소·권한을 확인해주세요.'); });
     const observer = new ResizeObserver(() => {
