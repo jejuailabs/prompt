@@ -1,7 +1,7 @@
 name: SkinTokens rigging worker image
 on:
   push:
-    branches: [codex/3d-unity-pipeline]
+    branches: [main]
     paths:
       - runpod-workflows/rigging-worker/**
       - runpod-workflows/character-worker/**

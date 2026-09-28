@@ -57,8 +57,18 @@ def repair_unweighted_vertices(meshes):
     one weight of 1.0 on the nearest bone in world space.
     """
     repaired = 0
+    armatures = {modifier.object for obj in meshes for modifier in obj.modifiers
+                 if modifier.type == "ARMATURE" and modifier.object}
+    # SkinTokens may export accessories as separate meshes with no armature
+    # modifier.  Attach them to the one generated skeleton before assigning
+    # weights, otherwise they stay static and fail the Unity roundtrip check.
+    default_armature = next(iter(armatures)) if len(armatures) == 1 else None
     for obj in meshes:
         armature = next((m.object for m in obj.modifiers if m.type == "ARMATURE" and m.object), None)
+        if armature is None and default_armature is not None:
+            armature = default_armature
+            modifier = obj.modifiers.new("PLAYLAB Armature", "ARMATURE")
+            modifier.object = armature
         if armature is None:
             continue
         bones = [bone for bone in armature.pose.bones if bone.bone.use_deform]
