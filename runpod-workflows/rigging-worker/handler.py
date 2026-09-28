@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 import tempfile
 import time
+import traceback
 import urllib.error
 import urllib.request
 
@@ -117,6 +118,7 @@ def handler(job):
             # never by putting GLB+FBX base64 in the result body.
             report.update({'provider': 'skintokens', 'diagnostic': True,
                            'artifact_bytes': {file.name: file.stat().st_size for file in output.iterdir() if file.is_file()},
+                           'bone_names': [bone.name for obj in __import__('bpy').context.scene.objects if obj.type == 'ARMATURE' for bone in obj.data.bones],
                            'unity_ready': False, 'animation_status': 'not_generated'})
             return {'report': report}
         if report.get('errors'):
@@ -171,5 +173,14 @@ def handler(job):
         return {'files': files, 'report': report}
 
 
+def safe_handler(job):
+    try:
+        return handler(job)
+    except Exception as error:
+        # A raised exception has produced a RunPod COMPLETED job with no output
+        # on this endpoint. Preserve a bounded, serializable error instead.
+        return {'worker_error': str(error)[:500], 'traceback': traceback.format_exc()[-1800:]}
+
+
 if __name__ == '__main__':
-    runpod.serverless.start({'handler': handler})
+    runpod.serverless.start({'handler': safe_handler})
