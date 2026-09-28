@@ -422,7 +422,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
           {outputs.map((output) => (
             <Card key={output.id} className="overflow-hidden">
               <div className="flex min-h-80 items-center justify-center bg-muted">
-                {output.riggedGlbUrl || output.glbUrl ? <ModelPreview src={output.riggedGlbUrl ?? output.glbUrl} /> : output.thumbnailUrl ? (
+                {output.riggedGlbUrl || output.glbUrl ? <ModelPreview src={(screen === 'unity' ? Object.entries(output.animationUrls ?? {}).find(([name]) => name.endsWith('.glb'))?.[1] : undefined) ?? output.riggedGlbUrl ?? output.glbUrl} /> : output.thumbnailUrl ? (
                   <img src={output.thumbnailUrl} alt="" className="h-full object-contain" />
                 ) : (
                   <div className="text-center text-muted-foreground">
@@ -444,6 +444,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
                   </p>
                 )}
                 <div className="flex gap-2">
+                  {screen === 'unity' && animationReady && <Button size="sm" asChild><a href={`/api/3d-studio/projects/${projectId}/unity-package`} download><Download className="size-3" /> Unity 개발 파일 ZIP</a></Button>}
                   {output.glbUrl && <Button variant="outline" size="sm" asChild><a href={output.glbUrl} download target="_blank" rel="noreferrer"><Download className="size-3" /> {t('downloadGlb')}</a></Button>}
                   {output.fbxUrl && (
                     <Button variant="outline" size="sm" asChild>
@@ -455,6 +456,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
                 </div>
                 {output.textureUrls && Object.keys(output.textureUrls).length > 0 && <div><p className="mb-2 text-sm font-medium">생성 텍스처</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.entries(output.textureUrls).map(([name, url]) => <a key={name} href={url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-lg border"><img src={url} alt={name} className="aspect-square w-full object-cover" /><span className="block truncate p-2 text-xs text-muted-foreground">{name}</span></a>)}</div></div>}
                 {output.animationUrls && Object.keys(output.animationUrls).length > 0 && <div><p className="mb-2 text-sm font-medium">기본 애니메이션</p><div className="flex flex-wrap gap-2">{Object.entries(output.animationUrls).map(([name, url]) => <Button key={name} variant="outline" size="sm" asChild><a href={url} download target="_blank" rel="noreferrer"><Download className="size-3" /> {name.replace(/_url$/, '')}</a></Button>)}</div></div>}
+                {screen === 'unity' && animationReady && <p className="text-xs text-muted-foreground">ZIP의 FBX 파일은 Unity Assets 폴더에 넣을 수 있습니다. Rig 탭에서 Generic으로 설정하고 클립을 확인하세요. Humanoid Avatar와 머티리얼은 Unity에서 별도 검증이 필요합니다.</p>}
               </div>
             </Card>
           ))}

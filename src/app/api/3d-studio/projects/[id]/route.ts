@@ -7,6 +7,7 @@ import { finishMeteredOperation } from '@/lib/server/operation-ledger';
 import { downloadBuffer, publicStorageUrl, uploadBuffer } from '@/lib/server/storage';
 import { inspectRiggedGlb, inspectTrellisGlb } from '@/lib/server/asset3d-qc';
 import { queueCharacterPreparation, queueSkinTokensRigging, updateWorkflowStage } from '@/lib/server/asset3d-character';
+import { queueAutomaticCharacterMotion } from '@/lib/server/asset3d-animation';
 import { finalizeTrellisProject } from '@/lib/server/trellis-finalize';
 
 function riggingError(raw?: string): string {
@@ -78,7 +79,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         const completedAt = new Date().toISOString();
         const riggedStages = updateWorkflowStage(meta.workflowStages, 'rigging_animation', { status: 'completed', progress: 100, completedAt, previewGlbUrl: riggedGlbUrl, fbxUrl: riggedFbxUrl });
         const exportedStages = updateWorkflowStage(riggedStages, 'blender', { status: 'completed', completedAt, previewGlbUrl: riggedGlbUrl, fbxUrl: riggedFbxUrl });
-        const animationStages = updateWorkflowStage(exportedStages, 'animation', { status: 'awaiting_approval', previewGlbUrl: riggedGlbUrl });
+        let animationStages = updateWorkflowStage(exportedStages, 'animation', { status: 'awaiting_approval', previewGlbUrl: riggedGlbUrl });
+        if (meta.workflowMode === 'automatic') {
+          try {
+            await queueAutomaticCharacterMotion({ ownerId: user.id, projectId: id, riggingJobId: meta.rigging.jobId, riggedGlb });
+            animationStages = updateWorkflowStage(animationStages, 'animation', { status: 'running', startedAt: new Date().toISOString(), error: undefined });
+          } catch (failure) {
+            const error = failure instanceof Error ? failure.message : '자동 애니메이션을 시작하지 못했습니다.';
+            animationStages = updateWorkflowStage(animationStages, 'animation', { status: 'awaiting_approval', error });
+          }
+        }
         const finalStages = updateWorkflowStage(animationStages, 'unity_bundle', { status: 'pending', previewGlbUrl: riggedGlbUrl, fbxUrl: riggedFbxUrl });
         project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, outputs, workflowStages: finalStages, rigging: { ...meta.rigging, status: job.status, progress: 100, completedAt } }) } });
         return ok(toProject(project));
