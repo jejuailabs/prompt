@@ -53,6 +53,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     // Vercel function responses cannot reliably stream a multi-megabyte ZIP.
     // Store the bundle and redirect the browser to Storage's download endpoint.
     const archiveUrl = await uploadBuffer(`3d/${user.id}/${id}/playlab-unity-files.zip`, archive, 'application/zip');
-    return Response.redirect(archiveUrl, 302);
+    const downloadUrl = new URL(archiveUrl);
+    downloadUrl.searchParams.set('download', `playlab-${id}-unity.zip`);
+    return Response.redirect(downloadUrl, 302);
   } catch (error) { return fail(error); }
 }
