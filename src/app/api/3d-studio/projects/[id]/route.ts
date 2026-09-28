@@ -72,7 +72,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const terminalStates = ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'];
     if (jobId && !terminalStates.includes(meta.blender?.status ?? '')) {
       const engine = meta.blender?.engine === 'character_blender' ? 'character_blender' : 'trellis';
-      const job = await getRunpodJobStatus(engine, jobId);
+      let job;
+      try {
+        job = await getRunpodJobStatus(engine, jobId);
+      } catch (failure) {
+        const queuedAt = Date.parse(meta.blender?.queuedAt ?? '');
+        const missingJob = failure instanceof Error && failure.message.includes('Runpod API 404:') && failure.message.includes('job not found');
+        if (engine !== 'trellis' || !missingJob || !Number.isFinite(queuedAt) || Date.now() - queuedAt < 10 * 60_000) throw failure;
+
+        const error = 'RunPod 작업 결과를 찾을 수 없어 생성을 완료하지 못했습니다. 사용한 크레딧은 환불됩니다.';
+        await finishMeteredOperation({ operationId: meta.blender?.accountingJobId, engine, status: 'FAILED', error });
+        const workflowStages = updateWorkflowStage(meta.workflowStages, 'trellis', { status: 'failed', error, completedAt: new Date().toISOString() });
+        const nextMeta = { ...meta, workflowStages, blender: { ...meta.blender, status: 'FAILED', error, completedAt: new Date().toISOString() } };
+        project = await db.artifact.update({ where: { id }, data: { metadata: JSON.stringify(nextMeta), status: 'failed' } });
+        return ok(toProject(project));
+      }
       let status = job.status;
       let error = job.error;
       let outputs = meta.outputs ?? [];
