@@ -7,6 +7,8 @@ from pathlib import Path
 import sys
 import tempfile
 import time
+import urllib.error
+import urllib.request
 
 import runpod
 
@@ -26,6 +28,32 @@ def runtime():
         _server = _demo.start_bpy_server()
         _demo.wait_for_bpy_server(timeout=90)
     return _demo
+
+
+def upload_signed(target, source, label):
+    """Store a binary through one server-issued, expiring upload URL.
+
+    The worker never receives Supabase credentials.  This avoids returning
+    multi-megabyte GLB/FBX blobs through RunPod's limited result channel.
+    """
+    if not isinstance(target, dict) or not isinstance(target.get('signed_url'), str):
+        raise ValueError(f'Missing signed upload target for {label}')
+    url = target['signed_url']
+    if not url.startswith('https://'):
+        raise ValueError(f'Invalid signed upload URL for {label}')
+    content_type = target.get('content_type') if isinstance(target.get('content_type'), str) else 'application/octet-stream'
+    request = urllib.request.Request(url, data=source.read_bytes(), method='PUT', headers={
+        'content-type': content_type,
+        'cache-control': 'max-age=3600',
+        'x-upsert': 'false',
+    })
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            if response.status not in (200, 201):
+                raise RuntimeError(f'Storage returned HTTP {response.status} for {label}')
+    except urllib.error.HTTPError as error:
+        detail = error.read(500).decode('utf-8', errors='replace')
+        raise RuntimeError(f'Storage upload failed for {label}: HTTP {error.code} {detail}') from error
 
 
 def handler(job):
@@ -88,6 +116,7 @@ def handler(job):
             # pipeline will move binary assets via signed storage uploads,
             # never by putting GLB+FBX base64 in the result body.
             report.update({'provider': 'skintokens', 'diagnostic': True,
+                           'artifact_bytes': {file.name: file.stat().st_size for file in output.iterdir() if file.is_file()},
                            'unity_ready': False, 'animation_status': 'not_generated'})
             return {'report': report}
         if report.get('errors'):
@@ -99,6 +128,30 @@ def handler(job):
         fbx_rig = module.inspect_rig([o for o in bpy.context.scene.objects if o.type == 'MESH'])
         if module.rig_errors(fbx_rig):
             raise RuntimeError('FBX roundtrip lost skeleton or vertex weights')
+        upload_targets = data.get('output_uploads')
+        if isinstance(upload_targets, dict):
+            artifacts = {'rigged.glb': output / 'prepared.glb', 'rigged.fbx': output / 'prepared.fbx'}
+            if any(not artifact.is_file() for artifact in artifacts.values()):
+                raise RuntimeError('Rigging export did not produce both GLB and FBX')
+            uploaded = {}
+            for name, artifact in artifacts.items():
+                try:
+                    upload_signed(upload_targets.get(name), artifact, name)
+                except Exception as error:
+                    # RunPod can discard exception payloads when its job-done
+                    # callback rejects them. A compact result preserves the
+                    # storage failure so the API can show the real cause.
+                    return {'upload_error': str(error)[:500], 'artifact': name,
+                            'artifact_bytes': artifact.stat().st_size,
+                            'uploaded': uploaded}
+                uploaded[name] = {'bytes': artifact.stat().st_size}
+            report.update({'provider': 'skintokens', 'fbx_roundtrip': fbx_rig,
+                           'animation_status': 'not_generated', 'unity_ready': False,
+                           'timings_ms': {'startup': round((loaded-start)*1000),
+                                          'rigging': round((inferred-loaded)*1000),
+                                          'export_and_validation': round((time.perf_counter()-inferred)*1000),
+                                          'total': round((time.perf_counter()-start)*1000)}})
+            return {'uploads': uploaded, 'report': report}
         files = {}
         for file in output.rglob('*'):
             if not file.is_file() or file.name == 'report.json':
