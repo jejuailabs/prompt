@@ -109,7 +109,9 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const user = await requireUser();
-    if (process.env.TRELLIS_GENERATION_VERIFIED !== 'true') {
+    // Keep public generation gated until broader quality validation completes,
+    // while allowing administrators to run the verified A100 pipeline and review outputs.
+    if (process.env.TRELLIS_GENERATION_VERIFIED !== 'true' && user.role !== 'admin') {
       throw new HttpError('3D 생성 품질 검증 중입니다. 크레딧은 차감되지 않습니다.', 503);
     }
     const body = await readJson<CreateProjectBody>(req);
