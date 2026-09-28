@@ -9,6 +9,7 @@ import tempfile
 import time
 import traceback
 import urllib.error
+import urllib.parse
 import urllib.request
 
 import runpod
@@ -57,13 +58,27 @@ def upload_signed(target, source, label):
         raise RuntimeError(f'Storage upload failed for {label}: HTTP {error.code} {detail}') from error
 
 
+def download_storage(url, label, limit):
+    if not isinstance(url, str):
+        raise ValueError(f'Missing storage URL for {label}')
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != 'https' or not parsed.hostname or not parsed.hostname.endswith('.supabase.co') or not parsed.path.startswith('/storage/v1/object/'):
+        raise ValueError(f'Invalid storage URL for {label}')
+    with urllib.request.urlopen(url, timeout=120) as response:
+        content = response.read(limit + 1)
+    if len(content) > limit:
+        raise ValueError(f'{label} exceeds size limit')
+    return content
+
+
 def handler(job):
     start = time.perf_counter()
     data = job.get('input', {})
     encoded = data.get('model_base64')
-    if not isinstance(encoded, str) or not 1 <= len(encoded) <= 70_000_000:
-        raise ValueError('GLB payload missing or too large')
-    model = base64.b64decode(encoded, validate=True)
+    if isinstance(encoded, str) and 1 <= len(encoded) <= 70_000_000:
+        model = base64.b64decode(encoded, validate=True)
+    else:
+        model = download_storage(data.get('model_url'), 'GLB', 50_000_000)
     if len(model) < 20 or model[:4] != b'glTF' or int.from_bytes(model[4:8], 'little') != 2 or int.from_bytes(model[8:12], 'little') != len(model):
         raise ValueError('Invalid GLB 2.0')
     settings = data.get('settings') or {}
@@ -77,10 +92,11 @@ def handler(job):
         if data.get('operation') == 'retarget':
             from retarget import bake
             motion_encoded = data.get('motion_base64')
-            if not isinstance(motion_encoded, str) or not 1 <= len(motion_encoded) <= 40_000_000:
-                raise ValueError('Motion FBX payload missing or too large')
             motion = directory / 'motion.fbx'
-            motion.write_bytes(base64.b64decode(motion_encoded, validate=True))
+            if isinstance(motion_encoded, str) and 1 <= len(motion_encoded) <= 40_000_000:
+                motion.write_bytes(base64.b64decode(motion_encoded, validate=True))
+            else:
+                motion.write_bytes(download_storage(data.get('motion_url'), 'Motion FBX', 28_000_000))
             output = directory / 'animation'
             report = bake(source, motion, output, data.get('bone_mapping'),
                           str(data.get('clip_name', 'Motion'))[:100], data.get('in_place', True) is True)
