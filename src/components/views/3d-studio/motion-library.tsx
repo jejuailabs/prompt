@@ -28,9 +28,9 @@ export function MotionLibrary({ projectId, riggedGlbUrl, onContinue }: { project
   const [selected, setSelected] = useState<string>();
   const library = useQuery({ queryKey: ['character-motions'], queryFn: () => api.get<Motion[]>('/api/3d-studio/motions'), retry: false });
   const results = useQuery({ queryKey: ['character-motion-results', projectId], queryFn: () => api.get<Result[]>(`/api/3d-studio/projects/${projectId}/motions`), refetchInterval: query => query.state.data?.some(r => r.status === 'processing') ? 5000 : false });
-  const hasCompletedMotion = results.data?.some((item) => item.status === 'done') ?? false;
   const completed = results.data?.filter(item => item.status === 'done') ?? [];
-  useEffect(() => { if (hasCompletedMotion) void queryClient.invalidateQueries({ queryKey: ['3d-project', projectId] }); }, [hasCompletedMotion, projectId, queryClient]);
+  const latestCompletedId = completed[0]?.id;
+  useEffect(() => { if (latestCompletedId) void queryClient.invalidateQueries({ queryKey: ['3d-project', projectId] }); }, [latestCompletedId, projectId, queryClient]);
   useEffect(() => {
     const controller = new AbortController();
     restored.current = false;
