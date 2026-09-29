@@ -1,31 +1,76 @@
-/** Suggest a humanoid mapping from a generated tree. The user can edit it. */
-export function suggestBoneMapping(scene: { nodes?: Array<{ name?: string; children?: number[]; translation?: number[] }>; skins?: Array<{ joints?: number[] }> }): Record<string, string> {
+import { Matrix4, Quaternion, Vector3 } from 'three';
+
+interface RigNode { name?: string; children?: number[]; translation?: number[]; rotation?: number[]; scale?: number[]; matrix?: number[] }
+interface RigScene { nodes?: RigNode[]; skins?: Array<{ joints?: number[] }> }
+
+/** Suggest an editable Humanoid mapping from a generated skeleton. */
+export function suggestBoneMapping(scene: RigScene): Record<string, string> {
   const nodes = scene.nodes ?? [];
   const joints = new Set((scene.skins ?? []).flatMap(skin => skin.joints ?? []));
   const children = (index: number) => (nodes[index]?.children ?? []).filter(child => joints.has(child));
-  const parents = new Set([...joints].flatMap(index => children(index)));
-  const roots = [...joints].filter(index => !parents.has(index));
+  const parent = new Map<number, number>();
+  for (const index of joints) for (const child of children(index)) parent.set(child, index);
+  const roots = [...joints].filter(index => !parent.has(index));
   if (roots.length !== 1) return {};
-  const length = (index: number): number => 1 + children(index).reduce((sum, child) => sum + length(child), 0);
-  const x = (index: number) => nodes[index]?.translation?.[0] ?? 0;
+  const sizes = new Map<number, number>();
+  const size = (index: number): number => {
+    if (sizes.has(index)) return sizes.get(index)!;
+    const count = 1 + children(index).reduce((sum, child) => sum + size(child), 0);
+    sizes.set(index, count);
+    return count;
+  };
+  const worlds = new Map<number, Matrix4>();
+  const world = (index: number): Matrix4 => {
+    if (worlds.has(index)) return worlds.get(index)!;
+    const node = nodes[index] ?? {};
+    const local = node.matrix?.length === 16 ? new Matrix4().fromArray(node.matrix) : new Matrix4().compose(
+      new Vector3().fromArray(node.translation?.length === 3 ? node.translation : [0, 0, 0]),
+      new Quaternion().fromArray(node.rotation?.length === 4 ? node.rotation : [0, 0, 0, 1]),
+      new Vector3().fromArray(node.scale?.length === 3 ? node.scale : [1, 1, 1]),
+    );
+    const matrix = parent.has(index) ? world(parent.get(index)!).clone().multiply(local) : local;
+    worlds.set(index, matrix);
+    return matrix;
+  };
+  const position = (index: number) => new Vector3().setFromMatrixPosition(world(index));
   const name = (index: number) => nodes[index]?.name ?? '';
   const hips = roots[0];
-  const hipsBranches = children(hips).sort((a, b) => length(b) - length(a));
-  if (hipsBranches.length !== 3) return {};
+  const hipsBranches = children(hips).sort((a, b) => size(b) - size(a));
+  if (hipsBranches.length < 3) return {};
   const spine = hipsBranches[0];
-  const legBranches = hipsBranches.slice(1).sort((a, b) => x(a) - x(b));
+  // The studio uses +Z as the character's forward direction: its left is +X.
+  const legBranches = hipsBranches.slice(1).filter(index => size(index) >= 2).sort((a, b) => position(b).x - position(a).x);
+  if (legBranches.length !== 2) return {};
+
+  // Generated chests can have extra face, wing, or accessory bones. The three
+  // substantial branches are the head and two arms; ignore tiny leaves.
   let chest = spine;
-  while (children(chest).length === 1) chest = children(chest)[0];
-  const chestBranches = children(chest);
-  if (chestBranches.length !== 3) return {};
-  const head = [...chestBranches].sort((a, b) => Math.abs(x(a)) - Math.abs(x(b)))[0];
-  const arms = chestBranches.filter(index => index !== head).sort((a, b) => x(a) - x(b));
-  const chain = (index: number) => {
-    const result = [index];
-    while (children(result.at(-1)!).length === 1 && result.length < 3) result.push(children(result.at(-1)!)[0]);
+  for (let depth = 0; depth < 8; depth++) {
+    const substantial = children(chest).filter(index => size(index) >= 3);
+    if (substantial.length >= 3) break;
+    if (substantial.length !== 1) return {};
+    chest = substantial[0];
+  }
+  const branches = children(chest).filter(index => size(index) >= 3).sort((a, b) => size(b) - size(a)).slice(0, 3);
+  if (branches.length !== 3) return {};
+  const centerX = position(hips).x;
+  const headStem = [...branches].sort((a, b) => Math.abs(position(a).x - centerX) - Math.abs(position(b).x - centerX))[0];
+  const arms = branches.filter(index => index !== headStem).sort((a, b) => position(b).x - position(a).x);
+  const headNext = children(headStem).filter(index => size(index) >= 3).sort((a, b) => size(b) - size(a));
+  const head = headNext.length === 1 ? headNext[0] : headStem;
+  const chain = (start: number) => {
+    const result = [start];
+    while (result.length < 8 && children(result.at(-1)!).length === 1) result.push(children(result.at(-1)!)[0]);
     return result;
   };
-  const leftArm = chain(arms[0]); const rightArm = chain(arms[1]);
+  const arm = (start: number) => {
+    const bones = chain(start);
+    // A short first link beside the chest is a clavicle, not the upper arm.
+    const clavicle = bones.length >= 4 && position(bones[0]).distanceTo(position(bones[1])) <
+      0.7 * position(bones[1]).distanceTo(position(bones[2]));
+    return bones.slice(clavicle ? 1 : 0);
+  };
+  const leftArm = arm(arms[0]); const rightArm = arm(arms[1]);
   const leftLeg = chain(legBranches[0]); const rightLeg = chain(legBranches[1]);
   if ([leftArm, rightArm, leftLeg, rightLeg].some(branch => branch.length < 2)) return {};
   const mapping: Record<string, string> = {
