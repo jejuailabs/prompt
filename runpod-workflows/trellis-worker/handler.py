@@ -65,7 +65,10 @@ def preview_payload(values, phase, grid=None, limit=6000):
     selected = values[np.linspace(0, len(values) - 1, min(len(values), limit), dtype=np.int64)]
     if not np.isfinite(selected).all():
         raise ValueError('Non-finite preview coordinates')
-    return json.dumps({'version': 1, 'phase': phase, 'points': np.round(selected, 4).reshape(-1).tolist()}, separators=(',', ':')).encode('utf-8')
+    # Round as float64: float32.tolist() re-expands values such as 0.1234 into
+    # 0.1234000027179718 and can push a 6,000-point mesh above the upload cap.
+    points = np.round(selected.astype(np.float64), 4).reshape(-1).tolist()
+    return json.dumps({'version': 1, 'phase': phase, 'points': points}, separators=(',', ':')).encode('utf-8')
 
 
 def upload_preview(job, urls, phase, values, grid=None):
