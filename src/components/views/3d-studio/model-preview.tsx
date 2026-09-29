@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-export function ModelPreview({ src }: { src: string }) {
+export function ModelPreview({ src, onReady }: { src: string; onReady?: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const playback = useRef({ clip: 0, speed: 1, playing: true, loop: true, skeleton: false });
   const [clips, setClips] = useState<string[]>([]);
@@ -78,7 +78,7 @@ export function ModelPreview({ src }: { src: string }) {
       const preferredClip = Math.max(0, animations.findIndex(item => item.name && !item.name.includes('mixamo.com')));
       playback.current.clip = preferredClip;
       setClip(preferredClip);
-      setClips(animations.map((item, i) => item.name || `동작 ${i + 1}`)); setReady(true);
+      setClips(animations.map((item, i) => item.name || `동작 ${i + 1}`)); setReady(true); onReady?.();
     }, undefined, () => { if (!disposed) setError('3D 파일을 불러오지 못했습니다. 파일 주소·권한을 확인해주세요.'); });
     const observer = new ResizeObserver(() => {
       const width = container.clientWidth, height = container.clientHeight;
@@ -106,10 +106,10 @@ export function ModelPreview({ src }: { src: string }) {
       mixer?.stopAllAction(); if (model) { mixer?.uncacheRoot(model); release(model); }
       helper?.dispose(); renderer.dispose(); renderer.domElement.remove();
     };
-  }, [src]);
+  }, [src, onReady]);
 
   return <div className="w-full space-y-2">
-    <div ref={host} className="h-80 w-full overflow-hidden rounded-lg" aria-label="3D 모델: 드래그로 회전, 휠로 확대·축소" />
+    <div ref={host} className="mx-auto aspect-square w-full max-w-[560px] overflow-hidden rounded-lg" aria-label="3D 모델: 드래그로 회전, 휠로 확대·축소" />
     {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : !ready ? <p role="status">3D 불러오는 중…</p> : <>
       <p className="text-xs text-muted-foreground">{bones ? `스킨에 연결된 뼈 ${bones}개` : '정적 메시 · 리깅 없음'} · 내장 동작 {clips.length}개</p>
       <div className="flex flex-wrap items-center gap-3 text-sm">

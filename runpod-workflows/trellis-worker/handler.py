@@ -12,6 +12,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
+import numpy as np
 import requests
 import runpod
 import torch
@@ -46,6 +47,45 @@ def image_from_input(value):
     if image.width * image.height > 20_000_000:
         raise ValueError('Image pixel count too large')
     return image.convert('RGBA')
+
+
+def preview_payload(values, phase, grid=None, limit=6000):
+    """Small, deterministic sample of genuine intermediate 3D coordinates."""
+    if hasattr(values, 'detach'):
+        values = values.detach().float().cpu().numpy()
+    else:
+        values = np.asarray(values, dtype=np.float32)
+    if values.ndim != 2 or values.shape[1] < 3:
+        raise ValueError('Invalid preview coordinates')
+    values = values[:, -3:].astype(np.float32, copy=False)
+    if not len(values):
+        raise ValueError('Empty preview coordinates')
+    if grid:
+        values = (values + 0.5) / float(grid) - 0.5
+    selected = values[np.linspace(0, len(values) - 1, min(len(values), limit), dtype=np.int64)]
+    if not np.isfinite(selected).all():
+        raise ValueError('Non-finite preview coordinates')
+    return json.dumps({'version': 1, 'phase': phase, 'points': np.round(selected, 4).reshape(-1).tolist()}, separators=(',', ':')).encode('utf-8')
+
+
+def upload_preview(job, urls, phase, values, grid=None):
+    """Preview failures never invalidate a successfully generated GLB."""
+    url = urls.get(phase) if isinstance(urls, dict) else None
+    if not isinstance(url, str) or not url.startswith('https://'):
+        return
+    try:
+        content = preview_payload(values, phase, grid)
+        if len(content) > 300_000:
+            raise ValueError('Preview exceeds 300 KB')
+        request = urllib.request.Request(url, data=content, method='PUT', headers={
+            'content-type': 'application/octet-stream', 'x-upsert': 'false',
+        })
+        with urllib.request.urlopen(request, timeout=20) as response:
+            if response.status not in (200, 201):
+                raise RuntimeError(f'Preview upload HTTP {response.status}')
+        runpod.serverless.progress_update(job, phase)
+    except Exception as error:
+        print(json.dumps({'preview_phase': phase, 'error': str(error)[:250]}), flush=True)
 
 
 def handler(job):
@@ -85,10 +125,62 @@ def handler(job):
         stage = 'inference'
         runpod.serverless.progress_update(job, stage)
         inference_start = time.perf_counter()
-        with torch.inference_mode():
-            mesh = pipeline.run(image, seed=seed, pipeline_type='512' if resolution == 512 else '1024_cascade',
-                sparse_structure_sampler_params={'steps': steps}, shape_slat_sampler_params={'steps': steps},
-                tex_slat_sampler_params={'steps': steps})[0]
+        preview_urls = data.get('preview_uploads')
+        original_structure = pipeline.sample_sparse_structure
+        original_shape = pipeline.sample_shape_slat
+        original_cascade = pipeline.sample_shape_slat_cascade
+        original_decode = pipeline.decode_shape_slat
+
+        def capture_structure(*args, **kwargs):
+            coords = original_structure(*args, **kwargs)
+            try:
+                grid = args[1] if len(args) > 1 else kwargs.get('resolution')
+                upload_preview(job, preview_urls, 'structure', coords, grid)
+            except Exception as error:
+                print(json.dumps({'preview_phase': 'structure', 'error': str(error)[:250]}), flush=True)
+            return coords
+
+        def capture_shape(*args, **kwargs):
+            slat = original_shape(*args, **kwargs)
+            try:
+                grid = int(slat.coords[:, 1:4].max().item()) + 1
+                upload_preview(job, preview_urls, 'shape', slat.coords, grid)
+            except Exception as error:
+                print(json.dumps({'preview_phase': 'shape', 'error': str(error)[:250]}), flush=True)
+            return slat
+
+        def capture_cascade(*args, **kwargs):
+            slat, actual_resolution = original_cascade(*args, **kwargs)
+            try:
+                grid = int(slat.coords[:, 1:4].max().item()) + 1
+                upload_preview(job, preview_urls, 'shape', slat.coords, grid)
+            except Exception as error:
+                print(json.dumps({'preview_phase': 'shape', 'error': str(error)[:250]}), flush=True)
+            return slat, actual_resolution
+
+        def capture_surface(*args, **kwargs):
+            meshes, subs = original_decode(*args, **kwargs)
+            try:
+                if meshes:
+                    upload_preview(job, preview_urls, 'surface', meshes[0].vertices)
+            except Exception as error:
+                print(json.dumps({'preview_phase': 'surface', 'error': str(error)[:250]}), flush=True)
+            return meshes, subs
+
+        pipeline.sample_sparse_structure = capture_structure
+        pipeline.sample_shape_slat = capture_shape
+        pipeline.sample_shape_slat_cascade = capture_cascade
+        pipeline.decode_shape_slat = capture_surface
+        try:
+            with torch.inference_mode():
+                mesh = pipeline.run(image, seed=seed, pipeline_type='512' if resolution == 512 else '1024_cascade',
+                    sparse_structure_sampler_params={'steps': steps}, shape_slat_sampler_params={'steps': steps},
+                    tex_slat_sampler_params={'steps': steps})[0]
+        finally:
+            pipeline.sample_sparse_structure = original_structure
+            pipeline.sample_shape_slat = original_shape
+            pipeline.sample_shape_slat_cascade = original_cascade
+            pipeline.decode_shape_slat = original_decode
         torch.cuda.synchronize()
         timings[stage] = round((time.perf_counter() - inference_start) * 1000)
         stage = 'mesh_export'

@@ -5,6 +5,7 @@ export type Locale = 'ko' | 'en';
 
 export type ArtifactType =
   | 'image'
+  | 'audio'
   | 'text'
   | 'video'
   | '3d_asset'
@@ -569,6 +570,8 @@ export interface Asset3dProjectDTO {
   error?: string | null;
   outputs?: Asset3dOutputDTO[];
   generationTiming?: { queuedAt?: string; completedAt?: string; delayTimeMs?: number; executionTimeMs?: number };
+  /** Authenticated, same-origin endpoints for genuine TRELLIS intermediate geometry. */
+  generationPreview?: { url: string };
   workflowMode?: Asset3dWorkflowMode;
   workflowStages?: Asset3dWorkflowStageDTO[];
   createdAt: string;
