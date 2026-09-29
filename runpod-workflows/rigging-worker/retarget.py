@@ -64,41 +64,6 @@ def neutral_leg_rotations(target, target_rest, mapping):
     return rotations, diagnostics
 
 
-def neutral_arm_rotations(target, source, target_rest, source_rest, mapping, lookup):
-    """Align a generated down/flying arm with the motion's shoulder rest pose.
-
-    A source Mixamo clip is authored on a T/A pose.  Applying its rotation
-    deltas directly to a downward generated arm pulls the forearm and attached
-    accessories across the chest.  Align both limb directions first while
-    retaining the target's bone lengths and skin.
-    """
-    rotations = {}
-    diagnostics = {}
-    for side in ('Left', 'Right'):
-        upper, lower, hand = (f'{side}{part}' for part in ('UpperArm', 'LowerArm', 'Hand'))
-        target_upper = target_rest[lower].translation - target_rest[upper].translation
-        source_upper = source_rest[lower].translation - source_rest[upper].translation
-        if target_upper.length < 0.02 or source_upper.length < 0.02:
-            raise ValueError(f'{side} upper arm is too short for motion retargeting')
-        upper_adjust = target_upper.rotation_difference(source_upper)
-        diagnostics[side] = round(degrees(target_upper.angle(source_upper)), 1)
-        if target_upper.angle(source_upper) > radians(15):
-            rotations[upper] = upper_adjust @ target_rest[upper].to_quaternion()
-
-        target_lower = (target_rest[hand].translation - target_rest[lower].translation if hand in mapping else
-                        (target.matrix_world @ target.data.bones[mapping[lower]].tail_local) - target_rest[lower].translation)
-        source_lower = (source_rest[hand].translation - source_rest[lower].translation if hand in mapping else
-                        (source.matrix_world @ source.data.bones[lookup[ROLES[lower]]].tail_local) - source_rest[lower].translation)
-        if target_lower.length < 0.02 or source_lower.length < 0.02:
-            raise ValueError(f'{side} forearm is too short for motion retargeting')
-        lower_adjust = target_lower.rotation_difference(source_lower)
-        if target_lower.angle(source_lower) > radians(15):
-            rotations[lower] = lower_adjust @ target_rest[lower].to_quaternion()
-            if hand in mapping:
-                rotations[hand] = lower_adjust @ target_rest[hand].to_quaternion()
-    return rotations, diagnostics
-
-
 def bake(character, motion, destination, mapping, clip_name='Motion', in_place=True, grounded=False):
     import bpy
     from mathutils import Matrix
@@ -133,8 +98,6 @@ def bake(character, motion, destination, mapping, clip_name='Motion', in_place=T
     source_rest = {role: source.matrix_world @ source.data.bones[lookup[ROLES[role]]].matrix_local for role in mapping}
     target_rest = {role: target.matrix_world @ target.data.bones[name].matrix_local for role, name in mapping.items()}
     neutral_rotations, rest_knee_bend = neutral_leg_rotations(target, target_rest, mapping) if grounded else ({}, {})
-    neutral_arms, rest_arm_mismatch = neutral_arm_rotations(target, source, target_rest, source_rest, mapping, lookup) if grounded else ({}, {})
-    neutral_rotations.update(neutral_arms)
     # Scale root travel by leg length, not file units (FBX often uses centimetres).
     def leg_length(arm, upper, lower):
         return sum((arm.matrix_world.to_3x3() @ arm.data.bones[n].vector).length for n in (upper, lower))
@@ -173,6 +136,5 @@ def bake(character, motion, destination, mapping, clip_name='Motion', in_place=T
     bpy.ops.export_scene.fbx(filepath=str(destination / 'character.fbx'), object_types={'MESH', 'ARMATURE', 'EMPTY'}, add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=False, bake_anim_use_nla_strips=False, bake_anim_simplify_factor=0, path_mode='COPY', embed_textures=True, axis_forward='-Z', axis_up='Y')
     return {'clip': clip_name, 'frames': end-start+1, 'fps': scene.render.fps / scene.render.fps_base,
             'mapping': mapping, 'in_place': in_place, 'grounded': grounded,
-            'rest_knee_bend_degrees': rest_knee_bend, 'rest_arm_mismatch_degrees': rest_arm_mismatch,
-            'neutralized_roles': sorted(neutral_rotations),
+            'rest_knee_bend_degrees': rest_knee_bend, 'neutralized_roles': sorted(neutral_rotations),
             'unity_ready': False, 'requires_visual_review': True}
