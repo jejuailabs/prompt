@@ -27,6 +27,7 @@ function isPreviewData(value: unknown): value is PreviewData {
 export function GenerationPreview({ previewUrl, finalGlbUrl }: { previewUrl: string; finalGlbUrl?: string }) {
   const host = useRef<HTMLDivElement>(null);
   const updatePoints = useRef<(data: PreviewData) => void>(() => undefined);
+  const stopParticles = useRef<() => void>(() => undefined);
   const [phase, setPhase] = useState<Phase>('waiting');
   const [modelReady, setModelReady] = useState(false);
   const handleModelReady = useCallback(() => setModelReady(true), []);
@@ -119,7 +120,10 @@ export function GenerationPreview({ previewUrl, finalGlbUrl }: { previewUrl: str
       controls.update();
       renderer.render(scene, camera);
     });
-    return () => {
+    let stopped = false;
+    const stop = () => {
+      if (stopped) return;
+      stopped = true;
       updatePoints.current = () => undefined;
       resize.disconnect();
       renderer.setAnimationLoop(null);
@@ -129,7 +133,15 @@ export function GenerationPreview({ previewUrl, finalGlbUrl }: { previewUrl: str
       renderer.dispose();
       renderer.domElement.remove();
     };
+    stopParticles.current = stop;
+    return stop;
   }, []);
+
+  useEffect(() => {
+    if (!modelReady) return;
+    const timer = window.setTimeout(() => stopParticles.current(), 1000);
+    return () => window.clearTimeout(timer);
+  }, [modelReady]);
 
   return <div className="mx-auto w-full max-w-[560px]">
     <div className="relative aspect-square overflow-hidden rounded-xl bg-[#f4f1fb]">

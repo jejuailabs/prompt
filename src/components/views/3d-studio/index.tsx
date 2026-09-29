@@ -429,7 +429,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
               <p className="mt-1 text-sm text-muted-foreground">{stage.description}</p>
               {stage.error && <p className="mt-2 text-sm text-destructive">{stage.error}</p>}
               {stage.id === 'trellis' && project.generationPreview ? <div className="mt-3"><GenerationPreview previewUrl={project.generationPreview.url} finalGlbUrl={stage.previewGlbUrl} /></div>
-                : stage.previewGlbUrl && <div className="mt-3 rounded-lg bg-muted"><ModelPreview src={stage.previewGlbUrl} /></div>}
+                : stage.previewGlbUrl && <div className="mx-auto mt-3 w-full max-w-[560px] rounded-lg bg-muted"><ModelPreview src={stage.previewGlbUrl} /></div>}
               {stage.id === 'blender' && stage.status === 'awaiting_approval' && (project.workflowMode === 'guided' || Boolean(stage.error)) && <Button className="mt-3" size="sm" onClick={() => void advance('blender')} disabled={advancing}><Play className="size-3.5" /> {advancing ? 'Blender 준비 요청 중…' : '이 3D 결과로 Blender 준비 진행'}</Button>}
               {stage.id === 'rigging_animation' && stage.status === 'awaiting_approval' && <div className="mt-3 space-y-3 rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">캐릭터의 크기와 방향을 확인하세요. 뼈대와 웨이트를 자동 생성한 뒤 FBX로 변환합니다. 아래 메모는 기록용이며 관절을 수정하지는 않습니다. 관절 직접 편집과 동작 클립 연결은 아직 지원하지 않습니다.</p><div className="grid gap-2 sm:grid-cols-2"><Label className="text-xs">캐릭터 키(m)<input className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm" type="number" min="0.5" max="3" step="0.01" value={heightMeters} onChange={(event) => setHeightMeters(event.target.value)} /></Label><Label className="flex items-end gap-2 pb-1 text-xs"><input type="checkbox" checked={orientationConfirmed} onChange={(event) => setOrientationConfirmed(event.target.checked)} /> 얼굴이 +Z 전방을 향함</Label></div><textarea value={jointNotes} onChange={(event) => setJointNotes(event.target.value)} placeholder="수동 보정 메모: 예) 팔이 몸통에 붙어 있음, 발 위치를 넓혀야 함" className="min-h-16 w-full rounded-md border bg-background p-2 text-sm" /><Button size="sm" onClick={() => void advance('rigging_animation')} disabled={advancing || !orientationConfirmed}><Play className="size-3.5" /> {advancing ? '리깅 요청 중…' : 'SkinTokens 자동 리깅 요청'}</Button></div>}
             </div>)}
@@ -449,7 +449,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
         <div className="space-y-4">
           {outputs.map((output) => (
             <Card key={output.id} className="overflow-hidden">
-              <div className="flex min-h-80 items-center justify-center bg-muted">
+              <div className="mx-auto flex aspect-square w-full max-w-[560px] items-center justify-center bg-muted">
                 {output.riggedGlbUrl || output.glbUrl ? <ModelPreview src={(screen === 'unity' ? Object.entries(output.animationUrls ?? {}).find(([name]) => name.endsWith('.glb'))?.[1] : undefined) ?? output.riggedGlbUrl ?? output.glbUrl} /> : output.thumbnailUrl ? (
                   <img src={output.thumbnailUrl} alt="" className="h-full object-contain" />
                 ) : (

@@ -61,10 +61,15 @@ export function ModelPreview({ src, onReady }: { src: string; onReady?: () => vo
       if (disposed) { release(gltf.scene); return; }
       model = gltf.scene; scene.add(model);
       const box = new THREE.Box3().setFromObject(model);
-      const size = box.getSize(new THREE.Vector3()).length() || 1;
+      const bounds = box.getSize(new THREE.Vector3());
+      const size = bounds.length() || 1;
       const center = box.getCenter(new THREE.Vector3());
       controls.target.copy(center);
-      camera.position.copy(center).add(new THREE.Vector3(size * 0.8, size * 0.35, size * 1.5));
+      const halfFov = THREE.MathUtils.degToRad(camera.fov) / 2;
+      const fitHeight = bounds.y / (2 * Math.tan(halfFov));
+      const fitWidth = bounds.x / (2 * Math.tan(halfFov) * Math.max(camera.aspect, 0.1));
+      const distance = Math.max(fitHeight, fitWidth, bounds.z * 2, 0.1) * 1.18;
+      camera.position.copy(center).add(new THREE.Vector3(0.25, 0.12, 1).normalize().multiplyScalar(distance));
       camera.near = size / 1000; camera.far = size * 100; camera.updateProjectionMatrix();
       controls.minDistance = size * 0.1; controls.maxDistance = size * 10;
       helper = new THREE.SkeletonHelper(model);
