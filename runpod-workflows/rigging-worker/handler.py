@@ -99,7 +99,8 @@ def handler(job):
                 motion.write_bytes(download_storage(data.get('motion_url'), 'Motion FBX', 28_000_000))
             output = directory / 'animation'
             report = bake(source, motion, output, data.get('bone_mapping'),
-                          str(data.get('clip_name', 'Motion'))[:100], data.get('in_place', True) is True)
+                          str(data.get('clip_name', 'Motion'))[:100], data.get('in_place', True) is True,
+                          data.get('grounded') is True)
             # Check the exported FBX contains skin and an actual action.
             import bpy
             bpy.ops.wm.read_factory_settings(use_empty=True)

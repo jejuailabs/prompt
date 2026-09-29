@@ -447,7 +447,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
           {outputs.map((output) => (
             <Card key={output.id} className="overflow-hidden">
               <div className="mx-auto flex aspect-square w-full max-w-[560px] items-center justify-center bg-muted">
-                {output.riggedGlbUrl || output.glbUrl ? <ModelPreview src={(screen === 'unity' ? Object.entries(output.animationUrls ?? {}).find(([name]) => name.endsWith('.glb'))?.[1] : undefined) ?? output.riggedGlbUrl ?? output.glbUrl} /> : output.thumbnailUrl ? (
+                {output.riggedGlbUrl || output.glbUrl ? <ModelPreview src={(screen === 'unity' ? stage('animation')?.previewGlbUrl ?? Object.entries(output.animationUrls ?? {}).find(([name]) => name.endsWith('.glb'))?.[1] : undefined) ?? output.riggedGlbUrl ?? output.glbUrl} /> : output.thumbnailUrl ? (
                   <img src={output.thumbnailUrl} alt="" className="h-full object-contain" />
                 ) : (
                   <div className="text-center text-muted-foreground">

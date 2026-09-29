@@ -66,6 +66,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await db.artifact.create({ data: { id: body.data.requestId, ownerId: user.id, type: '3d_motion', sourceModule: '3d-studio', title: motion.name, status: 'submitting', visibility: 'private', metadata: JSON.stringify(meta) } });
     try {
       const job = await queueRunpodJob('rigging', { operation: 'retarget', model_url: sourceUrl.toString(), motion_url: motionAccess.signedUrl, bone_mapping: body.data.boneMapping, clip_name: motion.name, in_place: body.data.inPlace,
+        grounded: ['Walk', 'Run', 'Idle'].includes(motion.category),
         output_uploads: Object.fromEntries(Object.entries(uploads).map(([name, upload]) => [name, { signed_url: upload.signedUrl, content_type: upload.contentType }])) });
       meta.jobId = job.id;
       await db.artifact.update({ where: { id: body.data.requestId }, data: { status: 'processing', metadata: JSON.stringify(meta) } });
@@ -85,9 +86,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!project) throw new HttpError('프로젝트를 찾을 수 없습니다.', 404);
     const rows = await db.artifact.findMany({ where: { ownerId: user.id, type: '3d_motion', sourceModule: '3d-studio' }, orderBy: { createdAt: 'desc' }, take: 100 });
     const results: Array<MotionJob & { id: string; name: string; status: string }> = [];
+    const supersededDuringPoll = new Set<string>();
     for (const row of rows) {
       const meta: MotionJob = JSON.parse(row.metadata);
       if (meta.projectId !== id) continue;
+      if (row.status === 'superseded' || supersededDuringPoll.has(row.id)) continue;
       let status = row.status;
       if (status === 'processing' && meta.jobId) {
         const job = await getRunpodJobStatus('rigging', meta.jobId);
@@ -105,17 +108,25 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
             meta.previewGlbUrl = signed ? publicStorageUrl(meta.outputPaths!['preview.glb']) : await uploadBuffer(`${root}/preview.glb`, glb, 'model/gltf-binary');
             meta.fbxUrl = signed ? publicStorageUrl(meta.outputPaths!['character.fbx']) : await uploadBuffer(`${root}/character.fbx`, fbx, 'application/octet-stream');
             meta.executionTimeMs = job.executionTime; status = 'done';
+            const previousVersions = rows.filter(previous => previous.id !== row.id && previous.status === 'done' && (() => {
+              try { const previousMeta = JSON.parse(previous.metadata) as MotionJob; return previousMeta.projectId === id && previousMeta.motionId === meta.motionId; }
+              catch { return false; }
+            })()).map(previous => previous.id);
             const latestProject = await db.artifact.findUnique({ where: { id }, select: { metadata: true } });
             const projectMeta = parseMeta(latestProject?.metadata ?? project.metadata);
             const outputs = (projectMeta.outputs ?? []).map((output) => ({
               ...output,
-              animationUrls: { ...(output.animationUrls ?? {}), [`${row.id}.glb`]: meta.previewGlbUrl!, [`${row.id}.fbx`]: meta.fbxUrl! },
+              animationUrls: { ...Object.fromEntries(Object.entries(output.animationUrls ?? {}).filter(([name]) => !previousVersions.some(previousId => name.startsWith(`${previousId}.`)))), [`${row.id}.glb`]: meta.previewGlbUrl!, [`${row.id}.fbx`]: meta.fbxUrl! },
               animationNames: { ...(output.animationNames ?? {}), [row.id]: row.title },
             }));
             const completedAt = new Date().toISOString();
             const animatedStages = updateWorkflowStage(projectMeta.workflowStages, 'animation', { status: 'completed', completedAt, previewGlbUrl: meta.previewGlbUrl, fbxUrl: meta.fbxUrl });
             const finalStages = updateWorkflowStage(animatedStages, 'unity_bundle', { status: 'completed', completedAt, previewGlbUrl: meta.previewGlbUrl, fbxUrl: meta.fbxUrl });
-            await db.artifact.update({ where: { id }, data: { metadata: JSON.stringify({ ...projectMeta, outputs, workflowStages: finalStages }) } });
+            await db.$transaction([
+              db.artifact.update({ where: { id }, data: { metadata: JSON.stringify({ ...projectMeta, outputs, workflowStages: finalStages }) } }),
+              ...(previousVersions.length ? [db.artifact.updateMany({ where: { id: { in: previousVersions }, ownerId: user.id, type: '3d_motion' }, data: { status: 'superseded' } })] : []),
+            ]);
+            previousVersions.forEach(previousId => supersededDuringPoll.add(previousId));
           } catch (error) { status = 'failed'; meta.error = error instanceof Error ? error.message : '모션 출력 검증 실패'; }
         } else if (['FAILED', 'CANCELLED', 'TIMED_OUT'].includes(job.status)) { status = 'failed'; meta.error = '모션 적용 실패: 관절 매핑과 워커 로그를 확인해주세요.'; }
         if (status !== 'processing') await db.artifact.update({ where: { id: row.id }, data: { status, metadata: JSON.stringify(meta) } });
