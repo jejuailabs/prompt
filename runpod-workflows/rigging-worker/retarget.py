@@ -76,6 +76,8 @@ def bake(character, motion, destination, mapping, clip_name='Motion', in_place=T
         raise ValueError('Exactly one character armature is required')
     target = arms[0]
     validate_mapping(mapping, set(target.data.bones.keys()))
+    from skin_repair import repair_weights, inspect_deformation
+    skin_report = repair_weights(target)
     if not any(obj.type == 'MESH' and any(m.type == 'ARMATURE' and m.object == target for m in obj.modifiers) for obj in targets):
         raise ValueError('Character has no skinned mesh')
     for obj in targets:
@@ -103,8 +105,9 @@ def bake(character, motion, destination, mapping, clip_name='Motion', in_place=T
     # Idle clips start in an already relaxed pose. Their T-pose-to-relaxed
     # rotation is not breathing motion: applying it again to a generated
     # character with relaxed arms stretches the torso and held props.
-    source_reference = ({role: (source.matrix_world @ source.pose.bones[lookup[ROLES[role]]].matrix).copy()
-                         for role in mapping} if reference_pose == 'first_frame' else source_rest)
+    source_reference = {role: (source.matrix_world @ source.pose.bones[lookup[ROLES[role]]].matrix).copy()
+                        if reference_pose == 'first_frame' or not any(part in role for part in ('Leg', 'Foot'))
+                        else source_rest[role] for role in mapping}
     target_rest = {role: target.matrix_world @ target.data.bones[name].matrix_local for role, name in mapping.items()}
     neutral_rotations, rest_knee_bend = neutral_leg_rotations(target, target_rest, mapping) if grounded and reference_pose == 'rest' else ({}, {})
     # Scale root travel by leg length, not file units (FBX often uses centimetres).
@@ -143,6 +146,7 @@ def bake(character, motion, destination, mapping, clip_name='Motion', in_place=T
     for unused_action in list(bpy.data.actions):
         if unused_action != action:
             bpy.data.actions.remove(unused_action)
+    deformation_report = inspect_deformation(target, start, end)
     scene.frame_set(start)
     destination = Path(destination); destination.mkdir(parents=True, exist_ok=True)
     # glTF imports can create hidden Icosphere bone-display helpers. FBX exports
@@ -157,9 +161,10 @@ def bake(character, motion, destination, mapping, clip_name='Motion', in_place=T
     bpy.ops.object.select_all(action='DESELECT')
     for obj in export_objects:
         obj.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=str(destination / 'preview.glb'), use_selection=True, export_format='GLB', export_skins=True, export_animations=True, export_force_sampling=True)
+    bpy.ops.export_scene.gltf(filepath=str(destination / 'preview.glb'), use_selection=True, export_extras=True, export_format='GLB', export_skins=True, export_animations=True, export_force_sampling=True)
     bpy.ops.export_scene.fbx(filepath=str(destination / 'character.fbx'), use_selection=True, object_types={'MESH', 'ARMATURE', 'EMPTY'}, add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=False, bake_anim_use_nla_strips=False, bake_anim_simplify_factor=0, path_mode='COPY', embed_textures=True, axis_forward='-Z', axis_up='Y')
     return {'clip': clip_name, 'frames': end-start+1, 'fps': scene.render.fps / scene.render.fps_base,
             'mapping': mapping, 'in_place': in_place, 'grounded': grounded, 'reference_pose': reference_pose,
             'rest_knee_bend_degrees': rest_knee_bend, 'neutralized_roles': sorted(neutral_rotations),
+            'skin_repair': skin_report, 'deformation_qc': deformation_report,
             'unity_ready': False, 'requires_visual_review': True}

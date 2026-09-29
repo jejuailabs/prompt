@@ -137,7 +137,7 @@ def handler(job):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         output = directory / 'bundle'
-        report = module.process(rigged, output, {'height_m': settings.get('height_meters', 1.7)})
+        report = module.process(rigged, output, {'height_m': settings.get('height_meters', 1.7), 'repair_skin': True})
         if diagnostic:
             # Keep diagnostics under RunPod's response limit.  The normal
             # pipeline will move binary assets via signed storage uploads,

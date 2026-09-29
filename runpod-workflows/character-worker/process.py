@@ -95,6 +95,17 @@ def process(source, destination, settings=None):
     bpy.context.preferences.filepaths.use_scripts_auto_execute = False
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=str(Path(source).resolve()))
+    # Bone display helpers are not character geometry. Including them changes
+    # normalization bounds and can export an unwanted sphere into the FBX.
+    helpers = set()
+    for obj in list(bpy.context.scene.objects):
+        if obj.type == 'ARMATURE':
+            for bone in obj.pose.bones:
+                if bone.custom_shape:
+                    helpers.add(bone.custom_shape)
+                    bone.custom_shape = None
+    for helper in helpers:
+        bpy.data.objects.remove(helper, do_unlink=True)
     meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
     before = measure(meshes)
     errors = geometry_errors(before["dimensions"], before["triangles"])
@@ -138,16 +149,24 @@ def process(source, destination, settings=None):
     bpy.context.view_layer.update()
     after = measure(meshes)
     repaired_unweighted_vertices = repair_unweighted_vertices(meshes)
+    skin_repairs = []
+    if settings and settings.get('repair_skin'):
+        from skin_repair import repair_weights
+        armatures = {modifier.object for obj in meshes for modifier in obj.modifiers
+                     if modifier.type == 'ARMATURE' and modifier.object}
+        for armature in armatures:
+            skin_repairs.extend(repair_weights(armature))
     rig = inspect_rig(meshes)
     report.update({"after": after, "rig": rig, "stage": "prepared_mesh",
                    "status": "needs_review", "errors": rig_errors(rig),
-                   "rig_repair": {"unweighted_vertices_bound_to_nearest_bone": repaired_unweighted_vertices},
+                   "rig_repair": {"unweighted_vertices_bound_to_nearest_bone": repaired_unweighted_vertices,
+                                  "surface_weights": skin_repairs},
                    "warnings": ["Decimation is not animation retopology.",
                                 "Unity material, avatar and motion validation are still required."]})
     report["timings_ms"]["prepare"] = round((time.perf_counter()-prepared)*1000)
     export_start = time.perf_counter()
     bpy.ops.export_scene.gltf(filepath=str(destination / "prepared.glb"), export_format="GLB",
-                             export_skins=True, export_animations=True, export_influence_nb=4)
+                             export_skins=True, export_animations=True, export_influence_nb=4, export_extras=True)
     bpy.ops.export_scene.fbx(filepath=str(destination / "prepared.fbx"), object_types={"MESH", "ARMATURE", "EMPTY"},
                             add_leaf_bones=False, axis_forward="-Z", axis_up="Y", path_mode="COPY", embed_textures=True)
     # FBX texture embedding is not reliable in Unity. Export explicit PNG assets
