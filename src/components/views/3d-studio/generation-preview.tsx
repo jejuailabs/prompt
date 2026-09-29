@@ -10,7 +10,7 @@ const phaseRank: Record<Phase, number> = { waiting: 0, structure: 1, shape: 2, s
 const phaseLabel: Record<Phase, string> = {
   waiting: '워커 대기 중 · 점 연출',
   structure: '실제 공간 구조 계산 완료',
-  shape: '실제 형상 좌표 계산 완료',
+  shape: '형상 잠재값 계산 완료',
   surface: '실제 메시 표면 계산 완료',
 };
 
@@ -81,6 +81,7 @@ export function GenerationPreview({ previewUrl, finalGlbUrl }: { previewUrl: str
       positions[i * 3 + 1] = (Math.sin(i * 0.31) * 0.2) + (i / count - 0.5) * 0.6;
       positions[i * 3 + 2] = Math.sin(angle) * radius;
     }
+    const idlePositions = positions.slice();
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const material = new THREE.PointsMaterial({ color: '#7441eb', size: 0.012, sizeAttenuation: true, transparent: true, opacity: 0.86 });
@@ -90,6 +91,7 @@ export function GenerationPreview({ previewUrl, finalGlbUrl }: { previewUrl: str
     let hasRealPoints = false;
     updatePoints.current = data => {
       hasRealPoints = true;
+      material.color.set(data.phase === 'surface' ? '#4b36cc' : data.phase === 'shape' ? '#6550dc' : '#7441eb');
       const sourceCount = data.points.length / 3;
       starts.set(positions);
       for (let i = 0; i < count; i++) {
@@ -115,6 +117,15 @@ export function GenerationPreview({ previewUrl, finalGlbUrl }: { previewUrl: str
         geometry.attributes.position.needsUpdate = true;
         if (progress === 1) transitionAt = 0;
       } else if (!hasRealPoints) {
+        const time = performance.now() * 0.001;
+        for (let i = 0; i < count; i++) {
+          const offset = i * 3;
+          const wave = time * (0.8 + (i % 7) * 0.09) + i * 0.47;
+          positions[offset] = idlePositions[offset] + Math.sin(wave) * 0.025;
+          positions[offset + 1] = idlePositions[offset + 1] + Math.cos(wave * 0.73) * 0.02;
+          positions[offset + 2] = idlePositions[offset + 2] + Math.cos(wave) * 0.025;
+        }
+        geometry.attributes.position.needsUpdate = true;
         cloud.rotation.y += 0.002;
       }
       controls.update();
