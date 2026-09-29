@@ -5,7 +5,7 @@ import { fail } from '@/lib/server/handler';
 import { parseMeta } from '../../route';
 import { uploadBuffer } from '@/lib/server/storage';
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser();
     const { id } = await params;
@@ -55,6 +55,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const archiveUrl = await uploadBuffer(`3d/${user.id}/${id}/playlab-unity-files.zip`, archive, 'application/zip');
     const downloadUrl = new URL(archiveUrl);
     downloadUrl.searchParams.set('download', `playlab-${id}-unity.zip`);
+    if (new URL(req.url).searchParams.get('format') === 'json') return Response.json({ downloadUrl: downloadUrl.toString() });
     return Response.redirect(downloadUrl, 302);
   } catch (error) { return fail(error); }
 }

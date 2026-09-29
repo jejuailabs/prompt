@@ -530,6 +530,7 @@ export interface Asset3dOutputDTO {
   riggedGlbUrl?: string | null;
   riggedFbxUrl?: string | null;
   animationUrls?: Record<string, string>;
+  animationNames?: Record<string, string>;
   thumbnailUrl?: string | null;
   polyCount?: number;
   dimensions?: { width: number; height: number; depth: number } | null;

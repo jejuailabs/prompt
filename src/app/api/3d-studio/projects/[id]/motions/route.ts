@@ -19,7 +19,7 @@ const requestSchema = z.object({
     new Set(Object.values(mapping)).size === Object.values(mapping).length,
   ), inPlace: z.boolean().default(true),
 });
-interface MotionJob { projectId: string; motionId: string; jobId?: string; queuedAt: string; error?: string; previewGlbUrl?: string; fbxUrl?: string; executionTimeMs?: number; outputPaths?: Record<string, string>; }
+interface MotionJob { projectId: string; motionId: string; jobId?: string; queuedAt: string; error?: string; previewGlbUrl?: string; fbxUrl?: string; executionTimeMs?: number; outputPaths?: Record<string, string>; boneMapping?: Record<string, string>; inPlace?: boolean; }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -60,7 +60,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       'preview.glb': { path: `${root}/preview.glb`, contentType: 'model/gltf-binary' },
       'character.fbx': { path: `${root}/character.fbx`, contentType: 'application/octet-stream' },
     });
-    const meta: MotionJob = { projectId: id, motionId: motion.id, queuedAt: new Date().toISOString(),
+    const meta: MotionJob = { projectId: id, motionId: motion.id, queuedAt: new Date().toISOString(), boneMapping: body.data.boneMapping, inPlace: body.data.inPlace,
       outputPaths: Object.fromEntries(Object.entries(uploads).map(([name, upload]) => [name, upload.path])) };
     // Unique request ID is acquired before submitting any paid operation.
     await db.artifact.create({ data: { id: body.data.requestId, ownerId: user.id, type: '3d_motion', sourceModule: '3d-studio', title: motion.name, status: 'submitting', visibility: 'private', metadata: JSON.stringify(meta) } });
@@ -105,10 +105,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
             meta.previewGlbUrl = signed ? publicStorageUrl(meta.outputPaths!['preview.glb']) : await uploadBuffer(`${root}/preview.glb`, glb, 'model/gltf-binary');
             meta.fbxUrl = signed ? publicStorageUrl(meta.outputPaths!['character.fbx']) : await uploadBuffer(`${root}/character.fbx`, fbx, 'application/octet-stream');
             meta.executionTimeMs = job.executionTime; status = 'done';
-            const projectMeta = parseMeta(project.metadata);
+            const latestProject = await db.artifact.findUnique({ where: { id }, select: { metadata: true } });
+            const projectMeta = parseMeta(latestProject?.metadata ?? project.metadata);
             const outputs = (projectMeta.outputs ?? []).map((output) => ({
               ...output,
               animationUrls: { ...(output.animationUrls ?? {}), [`${row.id}.glb`]: meta.previewGlbUrl!, [`${row.id}.fbx`]: meta.fbxUrl! },
+              animationNames: { ...(output.animationNames ?? {}), [row.id]: row.title },
             }));
             const completedAt = new Date().toISOString();
             const animatedStages = updateWorkflowStage(projectMeta.workflowStages, 'animation', { status: 'completed', completedAt, previewGlbUrl: meta.previewGlbUrl, fbxUrl: meta.fbxUrl });
@@ -118,7 +120,30 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         } else if (['FAILED', 'CANCELLED', 'TIMED_OUT'].includes(job.status)) { status = 'failed'; meta.error = '모션 적용 실패: 관절 매핑과 워커 로그를 확인해주세요.'; }
         if (status !== 'processing') await db.artifact.update({ where: { id: row.id }, data: { status, metadata: JSON.stringify(meta) } });
       }
+      // Older completed jobs stored the mapping only in the worker report.
+      if (status === 'done' && !meta.boneMapping && meta.jobId) {
+        try {
+          const job = await getRunpodJobStatus('rigging', meta.jobId);
+          const report = (job.output as { report?: { mapping?: Record<string, string>; in_place?: boolean } } | undefined)?.report;
+          if (report?.mapping && requiredRoles.every(role => report.mapping?.[role])) {
+            meta.boneMapping = report.mapping;
+            meta.inPlace = report.in_place;
+            await db.artifact.update({ where: { id: row.id }, data: { metadata: JSON.stringify(meta) } });
+          }
+        } catch { /* Expired provider history leaves the completed artifact usable. */ }
+      }
       results.push({ id: row.id, name: row.title, status, ...meta });
+    }
+    // Give older exported motion files human readable names too.
+    if (results.some(result => result.status === 'done')) {
+      const freshProject = await db.artifact.findUnique({ where: { id }, select: { metadata: true } });
+      const projectMeta = parseMeta(freshProject?.metadata ?? project.metadata);
+      const names = Object.fromEntries(results.filter(result => result.status === 'done').map(result => [result.id, result.name]));
+      const missing = (projectMeta.outputs ?? []).some(output => Object.keys(output.animationUrls ?? {}).some(file => names[file.split('.')[0]] && !output.animationNames?.[file.split('.')[0]]));
+      if (missing) {
+        const outputs = (projectMeta.outputs ?? []).map(output => ({ ...output, animationNames: { ...(output.animationNames ?? {}), ...names } }));
+        await db.artifact.update({ where: { id }, data: { metadata: JSON.stringify({ ...projectMeta, outputs }) } });
+      }
     }
     return ok(results);
   } catch (error) { return fail(error); }

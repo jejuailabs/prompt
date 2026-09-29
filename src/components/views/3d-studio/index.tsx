@@ -323,21 +323,18 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
   const downloadUnityPackage = async () => {
     setDownloadingUnity(true);
     try {
-      const response = await fetch(`/api/3d-studio/projects/${projectId}/unity-package`);
+      const response = await fetch(`/api/3d-studio/projects/${projectId}/unity-package?format=json`);
       if (!response.ok) {
         const error = await response.json().catch(() => null) as { error?: string } | null;
         throw new Error(error?.error || `다운로드 실패 (${response.status})`);
       }
-      const blob = await response.blob();
-      if (!blob.size || !response.headers.get('content-type')?.includes('zip')) throw new Error('ZIP 파일 응답이 올바르지 않습니다.');
-      const url = URL.createObjectURL(blob);
+      const { downloadUrl } = await response.json() as { downloadUrl?: string };
+      if (!downloadUrl) throw new Error('ZIP 다운로드 주소를 받지 못했습니다.');
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `playlab-${projectId}-unity.zip`;
+      link.href = downloadUrl;
       document.body.append(link);
       link.click();
       link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error) {
       toast({ title: 'Unity 파일 다운로드 실패', description: errMsg(error), variant: 'destructive' });
     } finally {
@@ -444,7 +441,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
       {project.generationTiming?.executionTimeMs !== undefined && (
         <p className="mb-4 text-sm text-muted-foreground">3D 생성 처리 {Math.round(project.generationTiming.executionTimeMs / 1000)}초 · 워커 대기 {Math.round((project.generationTiming.delayTimeMs ?? 0) / 1000)}초</p>
       )}
-      {screen === 'animation' && rigReady && <MotionLibrary projectId={projectId} riggedGlbUrl={outputs[0]?.riggedGlbUrl} />}
+      {screen === 'animation' && rigReady && <MotionLibrary projectId={projectId} riggedGlbUrl={outputs[0]?.riggedGlbUrl} onContinue={() => setSelectedScreen('unity')} />}
       {(screen === 'shape' || screen === 'unity') && outputs.length > 0 && (
         <div className="space-y-4">
           {outputs.map((output) => (
@@ -483,7 +480,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
                   {output.unityManifestUrl && <Button variant="outline" size="sm" asChild><a href={output.unityManifestUrl} download target="_blank" rel="noreferrer">Unity 머티리얼 정보</a></Button>}
                 </div>
                 {output.textureUrls && Object.keys(output.textureUrls).length > 0 && <div><p className="mb-2 text-sm font-medium">생성 텍스처</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.entries(output.textureUrls).map(([name, url]) => <a key={name} href={url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-lg border"><img src={url} alt={name} className="aspect-square w-full object-cover" /><span className="block truncate p-2 text-xs text-muted-foreground">{name}</span></a>)}</div></div>}
-                {output.animationUrls && Object.keys(output.animationUrls).length > 0 && <div><p className="mb-2 text-sm font-medium">기본 애니메이션</p><div className="flex flex-wrap gap-2">{Object.entries(output.animationUrls).map(([name, url]) => <Button key={name} variant="outline" size="sm" asChild><a href={url} download target="_blank" rel="noreferrer"><Download className="size-3" /> {name.replace(/_url$/, '')}</a></Button>)}</div></div>}
+                {output.animationUrls && Object.keys(output.animationUrls).length > 0 && <div><p className="mb-2 text-sm font-medium">추가한 애니메이션</p><div className="flex flex-wrap gap-2">{Object.entries(output.animationUrls).map(([name, url]) => <Button key={name} variant="outline" size="sm" asChild><a href={url} download target="_blank" rel="noreferrer"><Download className="size-3" /> {output.animationNames?.[name.split('.')[0]] ?? name.split('.')[0]} ({name.split('.').at(-1)?.toUpperCase()})</a></Button>)}</div></div>}
                 {screen === 'unity' && animationReady && <p className="text-xs text-muted-foreground">ZIP의 FBX 파일은 Unity Assets 폴더에 넣을 수 있습니다. Rig 탭에서 Generic으로 설정하고 클립을 확인하세요. Humanoid Avatar와 머티리얼은 Unity에서 별도 검증이 필요합니다.</p>}
               </div>
             </Card>
