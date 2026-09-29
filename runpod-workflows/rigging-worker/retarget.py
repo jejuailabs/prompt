@@ -145,8 +145,20 @@ def bake(character, motion, destination, mapping, clip_name='Motion', in_place=T
             bpy.data.actions.remove(unused_action)
     scene.frame_set(start)
     destination = Path(destination); destination.mkdir(parents=True, exist_ok=True)
-    bpy.ops.export_scene.gltf(filepath=str(destination / 'preview.glb'), export_format='GLB', export_skins=True, export_animations=True, export_force_sampling=True)
-    bpy.ops.export_scene.fbx(filepath=str(destination / 'character.fbx'), object_types={'MESH', 'ARMATURE', 'EMPTY'}, add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=False, bake_anim_use_nla_strips=False, bake_anim_simplify_factor=0, path_mode='COPY', embed_textures=True, axis_forward='-Z', axis_up='Y')
+    # glTF imports can create hidden Icosphere bone-display helpers. FBX exports
+    # hidden objects too, so explicitly select only the character and ancestors.
+    export_objects = {target} | {obj for obj in targets if obj.type == 'MESH' and
+                      any(mod.type == 'ARMATURE' and mod.object == target for mod in obj.modifiers)}
+    for obj in list(export_objects):
+        parent = obj.parent
+        while parent:
+            export_objects.add(parent)
+            parent = parent.parent
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in export_objects:
+        obj.select_set(True)
+    bpy.ops.export_scene.gltf(filepath=str(destination / 'preview.glb'), use_selection=True, export_format='GLB', export_skins=True, export_animations=True, export_force_sampling=True)
+    bpy.ops.export_scene.fbx(filepath=str(destination / 'character.fbx'), use_selection=True, object_types={'MESH', 'ARMATURE', 'EMPTY'}, add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=False, bake_anim_use_nla_strips=False, bake_anim_simplify_factor=0, path_mode='COPY', embed_textures=True, axis_forward='-Z', axis_up='Y')
     return {'clip': clip_name, 'frames': end-start+1, 'fps': scene.render.fps / scene.render.fps_base,
             'mapping': mapping, 'in_place': in_place, 'grounded': grounded, 'reference_pose': reference_pose,
             'rest_knee_bend_degrees': rest_knee_bend, 'neutralized_roles': sorted(neutral_rotations),
