@@ -141,7 +141,7 @@ export interface ArtifactVersionEntry {
 export interface ArtifactMetadata {
   tags?: string[];
   model?: string;
-  params?: { aspect?: string; style?: string };
+  params?: { aspect?: string; style?: string; modelId?: string; quality?: string };
   frames?: string[]; // video slideshow keyframes
   content?: LandingContent; // landing_page template content
   stats?: ArtifactStats;
