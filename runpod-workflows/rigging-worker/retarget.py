@@ -64,7 +64,7 @@ def neutral_leg_rotations(target, target_rest, mapping):
     return rotations, diagnostics
 
 
-def bake(character, motion, destination, mapping, clip_name='Motion', in_place=True, grounded=False):
+def bake(character, motion, destination, mapping, clip_name='Motion', in_place=True, grounded=False, reference_pose='rest'):
     import bpy
     from mathutils import Matrix
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -95,9 +95,18 @@ def bake(character, motion, destination, mapping, clip_name='Motion', in_place=T
         raise ValueError('Motion must be between 2 and 1801 frames')
     scene = bpy.context.scene
     scene.frame_start, scene.frame_end = start, end
+    if reference_pose not in ('rest', 'first_frame'):
+        raise ValueError('Unsupported motion reference pose')
+    scene.frame_set(start)
+    bpy.context.view_layer.update()
     source_rest = {role: source.matrix_world @ source.data.bones[lookup[ROLES[role]]].matrix_local for role in mapping}
+    # Idle clips start in an already relaxed pose. Their T-pose-to-relaxed
+    # rotation is not breathing motion: applying it again to a generated
+    # character with relaxed arms stretches the torso and held props.
+    source_reference = ({role: (source.matrix_world @ source.pose.bones[lookup[ROLES[role]]].matrix).copy()
+                         for role in mapping} if reference_pose == 'first_frame' else source_rest)
     target_rest = {role: target.matrix_world @ target.data.bones[name].matrix_local for role, name in mapping.items()}
-    neutral_rotations, rest_knee_bend = neutral_leg_rotations(target, target_rest, mapping) if grounded else ({}, {})
+    neutral_rotations, rest_knee_bend = neutral_leg_rotations(target, target_rest, mapping) if grounded and reference_pose == 'rest' else ({}, {})
     # Scale root travel by leg length, not file units (FBX often uses centimetres).
     def leg_length(arm, upper, lower):
         return sum((arm.matrix_world.to_3x3() @ arm.data.bones[n].vector).length for n in (upper, lower))
@@ -110,7 +119,7 @@ def bake(character, motion, destination, mapping, clip_name='Motion', in_place=T
         scene.frame_set(frame)
         for role in roles:
             source_pose = source.matrix_world @ source.pose.bones[lookup[ROLES[role]]].matrix
-            rotation = source_pose.to_quaternion() @ source_rest[role].to_quaternion().inverted() @ neutral_rotations.get(role, target_rest[role].to_quaternion())
+            rotation = source_pose.to_quaternion() @ source_reference[role].to_quaternion().inverted() @ neutral_rotations.get(role, target_rest[role].to_quaternion())
             bone = target.pose.bones[mapping[role]]
             # Keep target limb lengths; only Hips transfers translation.
             rest_local = bone.bone.matrix_local
@@ -130,11 +139,15 @@ def bake(character, motion, destination, mapping, clip_name='Motion', in_place=T
     action.name = clip_name
     for obj in sources:
         bpy.data.objects.remove(obj, do_unlink=True)
+    # The source FBX action must not be exported against unrelated target bones.
+    for unused_action in list(bpy.data.actions):
+        if unused_action != action:
+            bpy.data.actions.remove(unused_action)
     scene.frame_set(start)
     destination = Path(destination); destination.mkdir(parents=True, exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=str(destination / 'preview.glb'), export_format='GLB', export_skins=True, export_animations=True, export_force_sampling=True)
     bpy.ops.export_scene.fbx(filepath=str(destination / 'character.fbx'), object_types={'MESH', 'ARMATURE', 'EMPTY'}, add_leaf_bones=False, bake_anim=True, bake_anim_use_all_actions=False, bake_anim_use_nla_strips=False, bake_anim_simplify_factor=0, path_mode='COPY', embed_textures=True, axis_forward='-Z', axis_up='Y')
     return {'clip': clip_name, 'frames': end-start+1, 'fps': scene.render.fps / scene.render.fps_base,
-            'mapping': mapping, 'in_place': in_place, 'grounded': grounded,
+            'mapping': mapping, 'in_place': in_place, 'grounded': grounded, 'reference_pose': reference_pose,
             'rest_knee_bend_degrees': rest_knee_bend, 'neutralized_roles': sorted(neutral_rotations),
             'unity_ready': False, 'requires_visual_review': True}

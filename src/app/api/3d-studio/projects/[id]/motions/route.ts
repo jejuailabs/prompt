@@ -72,6 +72,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     try {
       const job = await queueRunpodJob('rigging', { operation: 'retarget', model_url: sourceUrl.toString(), motion_url: motionAccess.signedUrl, bone_mapping: body.data.boneMapping, clip_name: motion.name, in_place: body.data.inPlace,
         grounded: ['Walk', 'Run', 'Idle'].includes(motion.category),
+        motion_category: motion.category,
         output_uploads: Object.fromEntries(Object.entries(uploads).map(([name, upload]) => [name, { signed_url: upload.signedUrl, content_type: upload.contentType }])) });
       meta.jobId = job.id;
       await db.artifact.update({ where: { id: body.data.requestId }, data: { status: 'processing', metadata: JSON.stringify(meta) } });

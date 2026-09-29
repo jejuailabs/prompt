@@ -100,7 +100,8 @@ def handler(job):
             output = directory / 'animation'
             report = bake(source, motion, output, data.get('bone_mapping'),
                           str(data.get('clip_name', 'Motion'))[:100], data.get('in_place', True) is True,
-                          data.get('grounded') is True)
+                          data.get('grounded') is True,
+                          'first_frame' if data.get('motion_category') == 'Idle' else 'rest')
             # Check the exported FBX contains skin and an actual action.
             import bpy
             bpy.ops.wm.read_factory_settings(use_empty=True)

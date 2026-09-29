@@ -46,12 +46,15 @@ export function suggestBoneMapping(scene: RigScene): Record<string, string> {
   // substantial branches are the head and two arms; ignore tiny leaves.
   let chest = spine;
   for (let depth = 0; depth < 8; depth++) {
+    // Compact mascot rigs can have a single head bone and two arm links.
+    // These are still valid branches; do not require fingers or a long neck.
+    if (children(chest).length >= 3) break;
     const substantial = children(chest).filter(index => size(index) >= 3);
     if (substantial.length >= 3) break;
     if (substantial.length !== 1) return {};
     chest = substantial[0];
   }
-  const branches = children(chest).filter(index => size(index) >= 3).sort((a, b) => size(b) - size(a)).slice(0, 3);
+  const branches = children(chest).sort((a, b) => size(b) - size(a)).slice(0, 3);
   if (branches.length !== 3) return {};
   const centerX = position(hips).x;
   const headStem = [...branches].sort((a, b) => Math.abs(position(a).x - centerX) - Math.abs(position(b).x - centerX))[0];

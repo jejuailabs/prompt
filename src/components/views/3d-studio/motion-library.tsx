@@ -81,7 +81,7 @@ export function MotionLibrary({ projectId, riggedGlbUrl, onContinue }: { project
     (category === 'All' || motion.category === category) && motion.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
   );
   return <section className="space-y-5 rounded-xl border p-4 sm:p-5">
-    <div><h3 className="text-lg font-semibold">애니메이션 추가</h3><p className="mt-1 text-sm text-muted-foreground">대기·걷기·달리기를 각각 추가하면 Unity에서 상황에 맞게 사용할 수 있습니다. 하나만 먼저 만들어도 다음 단계로 갈 수 있습니다.</p></div>
+    <div><h3 className="text-lg font-semibold">애니메이션 추가</h3><p className="mt-1 text-sm text-muted-foreground">대기·걷기·달리기를 각각 추가하면 Unity에서 상황에 맞게 사용할 수 있습니다. 대기 동작은 캐릭터의 현재 자세를 기준으로 움직임을 적용합니다. 하나만 먼저 만들어도 다음 단계로 갈 수 있습니다.</p></div>
 
     <div id="motion-progress" className="rounded-lg border bg-muted/30 p-4" role="status">
       <p className="font-medium">현재 적용된 동작 {completed.length}개</p>
