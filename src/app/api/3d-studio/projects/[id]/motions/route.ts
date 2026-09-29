@@ -37,7 +37,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const existingMotions = await db.artifact.findMany({ where: { ownerId: user.id, type: '3d_motion', sourceModule: '3d-studio' }, select: { status: true, metadata: true } });
     const projectMotions = existingMotions.filter(row => { try { return JSON.parse(row.metadata).projectId === id; } catch { return false; } });
     if (projectMotions.some(row => ['submitting', 'processing'].includes(row.status))) throw new HttpError('진행 중인 애니메이션이 끝난 뒤 다음 동작을 적용해주세요.', 409);
-    if (user.role !== 'admin' && projectMotions.filter(row => row.status === 'done').length >= 3) throw new HttpError('한 캐릭터에는 애니메이션을 최대 3개까지 적용할 수 있습니다.', 409);
+    const completedMotions = projectMotions.filter(row => row.status === 'done');
+    if (user.role !== 'admin' && completedMotions.length >= 3 && !completedMotions.some(row => {
+      try { return JSON.parse(row.metadata).motionId === body.data.motionId; } catch { return false; }
+    })) throw new HttpError('한 캐릭터에는 애니메이션을 최대 3개까지 적용할 수 있습니다.', 409);
     const source = parseMeta(project.metadata).outputs?.[0]?.riggedGlbUrl;
     if (!source) throw new HttpError('먼저 스킨 웨이트가 포함된 리깅을 완료해주세요.', 409);
     const sourceUrl = new URL(source);
