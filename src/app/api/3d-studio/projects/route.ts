@@ -17,6 +17,8 @@ export interface ProjectMeta {
   blender?: { engine?: 'trellis' | 'character_blender'; jobId?: string; accountingJobId?: string; outputPath?: string; creditCharged?: number; status?: string; error?: string; queuedAt?: string; completedAt?: string; delayTimeMs?: number; executionTimeMs?: number };
   /** Always self-hosted on RunPod; never a paid third-party rigging API. */
   rigging?: { provider: 'skintokens'; jobId: string; status: string; progress?: number; queuedAt: string; completedAt?: string; error?: string; outputPaths?: Record<string, string>; outputUrls?: Record<string, string> };
+  /** Kept while re-rigging so a failed attempt leaves the working Unity files intact. */
+  riggingPreviousStages?: Asset3dWorkflowStageDTO[];
   riggingSettings?: { heightMeters?: number; orientationConfirmed?: boolean; jointNotes?: string };
   outputs?: Asset3dProjectDTO['outputs'];
   workflowMode?: Asset3dWorkflowMode;

@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { HttpError, requireUser } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 import { getRunpodJobStatus } from '@/lib/server/runpod';
-import { parseMeta, toProject } from '../route';
+import { parseMeta, toProject, type ProjectMeta } from '../route';
 import { finishMeteredOperation } from '@/lib/server/operation-ledger';
 import { downloadBuffer, publicStorageUrl, uploadBuffer } from '@/lib/server/storage';
 import { inspectRiggedGlb, inspectTrellisGlb } from '@/lib/server/asset3d-qc';
@@ -17,6 +17,12 @@ function riggingError(raw?: string): string {
     if (typeof parsed.error_message === 'string') return parsed.error_message.slice(0, 250);
   } catch { /* The provider can return a plain message. */ }
   return raw.replace(/\s+/g, ' ').slice(0, 250);
+}
+
+function failedRiggingStages(meta: ProjectMeta, error: string, progress: number) {
+  return updateWorkflowStage(meta.riggingPreviousStages ?? meta.workflowStages, 'rigging_animation', {
+    status: meta.riggingPreviousStages ? 'completed' : 'awaiting_approval', progress, error,
+  });
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -49,16 +55,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           const error = typeof output?.worker_error === 'string'
             ? riggingError(output.worker_error)
             : 'SkinTokens 리깅 워커가 rigged.glb와 rigged.fbx를 모두 반환하지 않았습니다.';
-          const stages = updateWorkflowStage(meta.workflowStages, 'rigging_animation', { status: 'awaiting_approval', progress, error });
-          project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, workflowStages: stages, rigging: { ...meta.rigging, status: 'FAILED', progress, error } }) } });
+          const stages = failedRiggingStages(meta, error, progress);
+          project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, workflowStages: stages, riggingPreviousStages: undefined, rigging: { ...meta.rigging, status: 'FAILED', progress, error } }) } });
           return ok(toProject(project));
         }
         try {
           inspectRiggedGlb(riggedGlb);
         } catch (failure) {
           const error = failure instanceof Error ? failure.message : '리깅 결과 검증에 실패했습니다.';
-          const stages = updateWorkflowStage(meta.workflowStages, 'rigging_animation', { status: 'awaiting_approval', progress, error });
-          project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, workflowStages: stages, rigging: { ...meta.rigging, status: 'FAILED', progress, error } }) } });
+          const stages = failedRiggingStages(meta, error, progress);
+          project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, workflowStages: stages, riggingPreviousStages: undefined, rigging: { ...meta.rigging, status: 'FAILED', progress, error } }) } });
           return ok(toProject(project));
         }
         const root = `3d/${user.id}/${id}/rigging-${meta.rigging.jobId}`;
@@ -75,7 +81,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
             textureUrls[name.slice(9)] = await uploadBuffer(`${root}/${name}`, Buffer.from(content, 'base64'), 'image/png');
           }
         }
-        const outputs = (meta.outputs ?? []).map((output) => ({ ...output, riggedGlbUrl, riggedFbxUrl, animationUrls, textureUrls }));
+        const outputs = (meta.outputs ?? []).map((output) => ({ ...output, riggedGlbUrl, riggedFbxUrl, animationUrls, animationNames: {}, textureUrls }));
         const completedAt = new Date().toISOString();
         const riggedStages = updateWorkflowStage(meta.workflowStages, 'rigging_animation', { status: 'completed', progress: 100, completedAt, previewGlbUrl: riggedGlbUrl, fbxUrl: riggedFbxUrl });
         const exportedStages = updateWorkflowStage(riggedStages, 'blender', { status: 'completed', completedAt, previewGlbUrl: riggedGlbUrl, fbxUrl: riggedFbxUrl });
@@ -90,13 +96,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           }
         }
         const finalStages = updateWorkflowStage(animationStages, 'unity_bundle', { status: 'pending', previewGlbUrl: riggedGlbUrl, fbxUrl: riggedFbxUrl });
-        project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, outputs, workflowStages: finalStages, rigging: { ...meta.rigging, status: job.status, progress: 100, completedAt } }) } });
+        const oldMotions = meta.riggingPreviousStages ? await db.artifact.findMany({ where: { ownerId: user.id, type: '3d_motion', sourceModule: '3d-studio', status: 'done' }, select: { id: true, metadata: true } }) : [];
+        const staleMotionIds = oldMotions.filter((motion) => { try { return JSON.parse(motion.metadata).projectId === id; } catch { return false; } }).map((motion) => motion.id);
+        const [updated] = await db.$transaction([
+          db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, outputs, workflowStages: finalStages, riggingPreviousStages: undefined, rigging: { ...meta.rigging, status: job.status, progress: 100, completedAt } }) } }),
+          ...(staleMotionIds.length ? [db.artifact.updateMany({ where: { id: { in: staleMotionIds }, ownerId: user.id, type: '3d_motion' }, data: { status: 'superseded' } })] : []),
+        ]);
+        project = updated;
         return ok(toProject(project));
       }
       if (['FAILED', 'CANCELLED', 'TIMED_OUT'].includes(job.status)) {
         const error = riggingError(job.error);
-        const stages = updateWorkflowStage(meta.workflowStages, 'rigging_animation', { status: 'awaiting_approval', progress, error });
-        project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, workflowStages: stages, rigging: { ...meta.rigging, status: job.status, progress, error } }) } });
+        const stages = failedRiggingStages(meta, error, progress);
+        project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, workflowStages: stages, riggingPreviousStages: undefined, rigging: { ...meta.rigging, status: job.status, progress, error } }) } });
         return ok(toProject(project));
       }
       const stages = updateWorkflowStage(meta.workflowStages, 'rigging_animation', { status: 'running', progress });

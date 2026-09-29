@@ -6,6 +6,7 @@ import { queueCharacterPreparation, queueSkinTokensRigging, updateWorkflowStage 
 
 interface AdvanceBody {
   stage?: 'blender' | 'rigging_animation';
+  rerig?: boolean;
   heightMeters?: number;
   orientationConfirmed?: boolean;
   jointNotes?: string;
@@ -42,7 +43,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const rigging = stages.find((stage) => stage.id === 'rigging_animation');
     if (rigging?.status === 'running') throw new HttpError('리깅·애니메이션이 이미 진행 중입니다.', 409);
-    if (rigging?.status === 'completed') throw new HttpError('리깅이 이미 완료되었습니다.', 409);
+    if (rigging?.status === 'completed' && body.rerig !== true) throw new HttpError('리깅이 이미 완료되었습니다.', 409);
+    if (body.rerig === true && rigging?.status !== 'completed') throw new HttpError('완료된 리깅만 다시 만들 수 있습니다.', 409);
+    if (body.rerig === true) {
+      const motions = await db.artifact.findMany({ where: { ownerId: user.id, type: '3d_motion', sourceModule: '3d-studio', status: { in: ['submitting', 'processing'] } }, select: { metadata: true } });
+      if (motions.some((motion) => { try { return JSON.parse(motion.metadata).projectId === id; } catch { return false; } })) throw new HttpError('진행 중인 애니메이션이 끝난 뒤 리깅을 다시 시작해주세요.', 409);
+    }
     const heightMeters = typeof body.heightMeters === 'number' && body.heightMeters >= 0.5 && body.heightMeters <= 3 ? body.heightMeters : 1.7;
     const response = await fetch(source, { cache: 'no-store' });
     if (!response.ok) throw new HttpError('Blender 결과 GLB를 가져오지 못했습니다. 다시 시도해주세요.', 502);
@@ -50,7 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const job = await queueSkinTokensRigging({ model, ownerId: user.id, projectId: id, heightMeters, orientationConfirmed: body.orientationConfirmed === true, jointNotes: body.jointNotes });
     const queuedAt = new Date().toISOString();
     const nextStages = updateWorkflowStage(stages, 'rigging_animation', { status: 'running', startedAt: queuedAt, progress: 0, error: undefined });
-    const next = await db.artifact.update({ where: { id }, data: { status: 'processing', metadata: JSON.stringify({ ...meta, workflowStages: nextStages, riggingSettings: { heightMeters, orientationConfirmed: body.orientationConfirmed === true, jointNotes: typeof body.jointNotes === 'string' ? body.jointNotes.slice(0, 1000) : undefined }, rigging: { provider: 'skintokens', jobId: job.id, status: job.status, progress: 0, queuedAt, outputPaths: job.outputPaths, outputUrls: job.outputUrls } }) } });
+    const next = await db.artifact.update({ where: { id }, data: { status: 'processing', metadata: JSON.stringify({ ...meta, workflowStages: nextStages, riggingPreviousStages: body.rerig ? stages : undefined, riggingSettings: { heightMeters, orientationConfirmed: body.orientationConfirmed === true, jointNotes: typeof body.jointNotes === 'string' ? body.jointNotes.slice(0, 1000) : undefined }, rigging: { provider: 'skintokens', jobId: job.id, status: job.status, progress: 0, queuedAt, outputPaths: job.outputPaths, outputUrls: job.outputUrls } }) } });
     return ok(toProject(next));
   } catch (error) {
     return fail(error);

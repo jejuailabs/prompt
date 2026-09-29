@@ -41,7 +41,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (user.role !== 'admin' && completedMotions.length >= 3 && !completedMotions.some(row => {
       try { return JSON.parse(row.metadata).motionId === body.data.motionId; } catch { return false; }
     })) throw new HttpError('한 캐릭터에는 애니메이션을 최대 3개까지 적용할 수 있습니다.', 409);
-    const source = parseMeta(project.metadata).outputs?.[0]?.riggedGlbUrl;
+    const projectMeta = parseMeta(project.metadata);
+    if (projectMeta.workflowStages?.some(stage => stage.id === 'rigging_animation' && stage.status === 'running')) throw new HttpError('새 리깅이 끝난 뒤 애니메이션을 적용해주세요.', 409);
+    const source = projectMeta.outputs?.[0]?.riggedGlbUrl;
     if (!source) throw new HttpError('먼저 스킨 웨이트가 포함된 리깅을 완료해주세요.', 409);
     const sourceUrl = new URL(source);
     if (sourceUrl.origin !== new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).origin || !sourceUrl.pathname.startsWith('/storage/v1/object/public/uploads/3d/')) throw new HttpError('캐릭터 파일 저장 경로를 확인해주세요.', 400);
