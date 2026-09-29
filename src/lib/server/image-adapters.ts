@@ -20,19 +20,19 @@ export interface IImageAdapter {
 }
 
 // ── OpenAI adapter (GPT Image 2 / 2.5) ──
-// Uses the gpt-image-1 endpoint. GPT Image 2+ models do NOT support response_format;
-// use output_format instead and read b64_json from the response.
 class OpenAIAdapter implements IImageAdapter {
   async generate(prompt: string, size: string, config: AdapterConfig): Promise<ImageResult> {
     const apiKey = config.apiKey || process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error('OpenAI API key not configured');
 
-    const model = config.model || 'gpt-image-1';
+    const model = config.model;
+    if (!model) throw new Error('OpenAI image model is not configured');
     const body: Record<string, unknown> = {
       model,
       prompt,
       n: 1,
       size: normalizeSize(size),
+      output_format: 'png',
     };
     if (config.quality) body.quality = config.quality;
 
@@ -64,14 +64,14 @@ class OpenAIAdapter implements IImageAdapter {
   }
 }
 
-// ── Google Imagen adapter (via Gemini generateContent API) ──
-// Uses responseModalities: ["IMAGE"] to get image output from Gemini models.
-class ImagenAdapter implements IImageAdapter {
-  async generate(prompt: string, _size: string, config: AdapterConfig): Promise<ImageResult> {
+// ── Google Gemini image adapter ──
+class GeminiImageAdapter implements IImageAdapter {
+  async generate(prompt: string, size: string, config: AdapterConfig): Promise<ImageResult> {
     const apiKey = config.apiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
-    const model = config.model || 'nano-banana-pro-preview';
+    const model = config.model;
+    if (!model) throw new Error('Gemini image model is not configured');
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const res = await fetch(url, {
@@ -79,13 +79,16 @@ class ImagenAdapter implements IImageAdapter {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ['IMAGE'] },
+        generationConfig: {
+          responseModalities: ['IMAGE'],
+          imageConfig: { aspectRatio: aspectFromSize(size) },
+        },
       }),
     });
 
     if (!res.ok) {
       const err = await res.text().catch(() => '');
-      throw new Error(`Imagen API error ${res.status}: ${err.slice(0, 200)}`);
+      throw new Error(`Gemini image API error ${res.status}: ${err.slice(0, 200)}`);
     }
 
     const json = await res.json() as {
@@ -93,7 +96,7 @@ class ImagenAdapter implements IImageAdapter {
     };
     const parts = json.candidates?.[0]?.content?.parts ?? [];
     const imgPart = parts.find((p) => p.inlineData?.data);
-    if (!imgPart?.inlineData) throw new Error('Empty image response from Imagen');
+    if (!imgPart?.inlineData) throw new Error('Empty image response from Gemini image');
     const b64 = imgPart.inlineData.data;
     return { base64: b64, buffer: Buffer.from(b64, 'base64') };
   }
@@ -105,15 +108,15 @@ class StabilityAdapter implements IImageAdapter {
     const apiKey = config.apiKey || process.env.STABILITY_API_KEY;
     if (!apiKey) throw new Error('Stability API key not configured');
 
-    const tier = config.endpoint || 'core';
+    const tier = config.endpoint;
+    if (tier !== 'core' && tier !== 'ultra') throw new Error('Stability image endpoint is not configured');
     const endpoint = `https://api.stability.ai/v2beta/stable-image/generate/${tier}`;
 
-    const [w, h] = normalizeSize(size).split('x').map(Number);
     const form = new FormData();
     form.append('prompt', prompt);
     form.append('output_format', 'png');
-    if (w) form.append('width', String(w));
-    if (h) form.append('height', String(h));
+    const requestedAspect = aspectFromSize(size);
+    form.append('aspect_ratio', requestedAspect === '4:3' ? '5:4' : requestedAspect === '3:4' ? '4:5' : requestedAspect);
 
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -141,13 +144,19 @@ class ReplicateAdapter implements IImageAdapter {
     const apiKey = config.apiKey || process.env.REPLICATE_API_TOKEN;
     if (!apiKey) throw new Error('Replicate API token not configured');
 
-    const modelId = config.modelId || 'black-forest-labs/flux-schnell';
-    const nSize = normalizeSize(size);
-    const [w, h] = nSize.split('x').map(Number);
-    const aspectMap: Record<string, string> = {
-      '1024x1024': '1:1', '768x1344': '9:16', '1344x768': '16:9',
-    };
-    const aspect = aspectMap[nSize] || '1:1';
+    const modelId = config.modelId;
+    if (!modelId) throw new Error('Replicate image model is not configured');
+    const aspect = aspectFromSize(size);
+    let input: Record<string, unknown>;
+    if (modelId === 'black-forest-labs/flux-2-pro') {
+      input = { prompt, aspect_ratio: aspect, resolution: '1 MP', output_format: 'png' };
+    } else if (modelId === 'bytedance/seedream-5-pro') {
+      input = { prompt, aspect_ratio: aspect, size: '1K', output_format: 'png' };
+    } else if (modelId === 'bytedance/seedream-5-lite') {
+      input = { prompt, aspect_ratio: aspect, size: '2K', output_format: 'png' };
+    } else {
+      throw new Error(`Unsupported Replicate image model: ${modelId}`);
+    }
 
     const endpoint = `https://api.replicate.com/v1/models/${modelId}/predictions`;
     const createRes = await fetch(endpoint, {
@@ -157,9 +166,7 @@ class ReplicateAdapter implements IImageAdapter {
         'Authorization': `Bearer ${apiKey}`,
         'Prefer': 'wait=55',
       },
-      body: JSON.stringify({
-        input: { prompt, aspect_ratio: aspect, width: w || 1024, height: h || 1024 },
-      }),
+      body: JSON.stringify({ input }),
     });
 
     if (!createRes.ok) {
@@ -209,7 +216,8 @@ class ReplicateAdapter implements IImageAdapter {
 // ── Registry ──
 const adapters: Record<string, IImageAdapter> = {
   openai: new OpenAIAdapter(),
-  imagen: new ImagenAdapter(),
+  gemini: new GeminiImageAdapter(),
+  imagen: new GeminiImageAdapter(),
   stability: new StabilityAdapter(),
   replicate: new ReplicateAdapter(),
 };
@@ -223,10 +231,25 @@ export function getImageAdapter(adapterType: string): IImageAdapter {
 function normalizeSize(size: string): string {
   const map: Record<string, string> = {
     '1024x1024': '1024x1024',
-    '1344x768': '1344x768',
-    '768x1344': '768x1344',
+    '960x1280': '960x1280',
+    '1280x960': '1280x960',
+    '1536x864': '1536x864',
+    '864x1536': '864x1536',
   };
-  return map[size] || '1024x1024';
+  if (!map[size]) throw new Error(`Unsupported image size: ${size}`);
+  return map[size];
+}
+
+function aspectFromSize(size: string): string {
+  const aspect: Record<string, string> = {
+    '1024x1024': '1:1',
+    '960x1280': '3:4',
+    '1280x960': '4:3',
+    '1536x864': '16:9',
+    '864x1536': '9:16',
+  };
+  if (!aspect[size]) throw new Error(`Unsupported image size: ${size}`);
+  return aspect[size];
 }
 
 export function parseAdapterConfig(raw: string): AdapterConfig {

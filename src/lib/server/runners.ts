@@ -1,5 +1,6 @@
 // Fire-and-forget async runners: lab generation jobs, pipeline executions, smoke test completion
 import { db } from '@/lib/db';
+import sharp from 'sharp';
 import { logEvent } from '@/lib/events';
 import { refundCredits } from '@/lib/server/credits';
 import { chatJson, generateImage } from '@/lib/server/ai';
@@ -10,15 +11,32 @@ import type { LandingContent } from '@/lib/types';
 
 const SIZE_BY_ASPECT: Record<string, string> = {
   '1:1': '1024x1024',
-  '3:4': '768x1344',
-  '4:3': '1344x768',
-  '16:9': '1344x768',
-  '9:16': '768x1344',
+  '3:4': '960x1280',
+  '4:3': '1280x960',
+  '16:9': '1536x864',
+  '9:16': '864x1536',
+};
+
+const EXPECTED_IMAGE_MODELS: Record<string, string> = {
+  'gpt-image-2-low': 'gpt-image-2',
+  'gpt-image-2-medium': 'gpt-image-2',
+  'gpt-image-2-high': 'gpt-image-2',
+  'gpt-image-25-flare': 'gpt-image-2.5-flare',
+  'gpt-image-25-sunburst': 'gpt-image-2.5-sunburst',
+  'imagen-4-fast': 'gemini-2.5-flash-image',
+  'imagen-4-standard': 'gemini-3.1-flash-image',
+  'imagen-4-ultra': 'gemini-3-pro-image',
+  'flux-2-pro': 'black-forest-labs/flux-2-pro',
+  'seedream-5-pro': 'bytedance/seedream-5-pro',
+  'seedream-5-lite': 'bytedance/seedream-5-lite',
+  'stable-image-core': 'stable-image/core',
+  'stable-image-ultra': 'stable-image/ultra',
 };
 
 async function savePng(jobKey: string, buffer: Buffer, sub: string): Promise<string> {
   const filename = `${sub}/${jobKey}.png`;
-  return uploadBuffer(filename, buffer, 'image/png');
+  const png = await sharp(buffer).png().toBuffer();
+  return uploadBuffer(filename, png, 'image/png');
 }
 
 function errorMessage(e: unknown): string {
@@ -48,6 +66,10 @@ export async function processOneGenerationJob(jobId: string): Promise<void> {
 
     const adapter = getImageAdapter((job.provider as Record<string, unknown>).adapterType as string ?? 'default');
     const config = parseAdapterConfig((job.provider as Record<string, unknown>).adapterConfig as string ?? '{}');
+    const actualModel = config.model || config.modelId || (config.endpoint ? `stable-image/${config.endpoint}` : undefined);
+    if (!EXPECTED_IMAGE_MODELS[job.providerId] || actualModel !== EXPECTED_IMAGE_MODELS[job.providerId]) {
+      throw new Error(`Image provider model mismatch: ${job.providerId} -> ${actualModel ?? 'unset'}`);
+    }
     const { buffer } = await adapter.generate(promptParts.join(', '), size, config);
     const fileUrl = await savePng(job.id, buffer, 'gen');
 
@@ -62,7 +84,7 @@ export async function processOneGenerationJob(jobId: string): Promise<void> {
         fileUrl,
         metadata: JSON.stringify({
           model: job.provider.displayName,
-          params: { aspect: job.aspect, style: job.style ?? undefined },
+          params: { aspect: job.aspect, style: job.style ?? undefined, modelId: actualModel, quality: config.quality ?? undefined },
           tags: [],
         }),
         status: 'draft',
@@ -268,7 +290,7 @@ async function runShortformPipeline(
   for (let i = 0; i < scenes.length; i++) {
     const { buffer } = await generateImage(
       `${scenes[i].imagePrompt}, vertical shortform video frame, high quality`,
-      '768x1344',
+      '864x1536',
     );
     frames.push(await savePng(`${runId}-f${i + 1}`, buffer, 'gen'));
   }
