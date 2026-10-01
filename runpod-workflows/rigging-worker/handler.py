@@ -127,7 +127,7 @@ def handler(job):
         demo = runtime()
         loaded = time.perf_counter()
         demo.run_rig([source], 5, 0.95, 1.0, 2.0, 10,
-                     settings.get('use_skeleton') is True, True, False,
+                     settings.get('use_skeleton') is True, True, True,
                      [rigged], demo.MODEL_CKPTS[0], None)
         inferred = time.perf_counter()
         if not rigged.is_file():
@@ -142,7 +142,7 @@ def handler(job):
             # Keep diagnostics under RunPod's response limit.  The normal
             # pipeline will move binary assets via signed storage uploads,
             # never by putting GLB+FBX base64 in the result body.
-            report.update({'provider': 'skintokens', 'diagnostic': True,
+            report.update({'provider': 'skintokens', 'diagnostic': True, 'voxel_skin_refined': True,
                            'artifact_bytes': {file.name: file.stat().st_size for file in output.iterdir() if file.is_file()},
                            'bone_names': [bone.name for obj in __import__('bpy').context.scene.objects if obj.type == 'ARMATURE' for bone in obj.data.bones],
                            'unity_ready': False, 'animation_status': 'not_generated'})
@@ -173,7 +173,7 @@ def handler(job):
                             'artifact_bytes': artifact.stat().st_size,
                             'uploaded': uploaded}
                 uploaded[name] = {'bytes': artifact.stat().st_size}
-            report.update({'provider': 'skintokens', 'fbx_roundtrip': fbx_rig,
+            report.update({'provider': 'skintokens', 'voxel_skin_refined': True, 'fbx_roundtrip': fbx_rig,
                            'animation_status': 'not_generated', 'unity_ready': False,
                            'timings_ms': {'startup': round((loaded-start)*1000),
                                           'rigging': round((inferred-loaded)*1000),
@@ -190,7 +190,7 @@ def handler(job):
             if len(content) > 50 * 1024 * 1024:
                 raise ValueError('Output file exceeds size limit')
             files[name] = base64.b64encode(content).decode('ascii')
-        report.update({'provider': 'skintokens', 'fbx_roundtrip': fbx_rig,
+        report.update({'provider': 'skintokens', 'voxel_skin_refined': True, 'fbx_roundtrip': fbx_rig,
                        'animation_status': 'not_generated', 'unity_ready': False,
                        'timings_ms': {'startup': round((loaded-start)*1000),
                                       'rigging': round((inferred-loaded)*1000),

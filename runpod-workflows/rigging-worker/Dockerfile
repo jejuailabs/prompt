@@ -4,6 +4,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends git build-essen
 WORKDIR /opt/SkinTokens
 ARG SKINTOKENS_REV=273b691d35989d71cd17ff2895fdc735097b92d1
 RUN git init && git remote add origin https://github.com/VAST-AI-Research/SkinTokens.git && git fetch --depth 1 origin ${SKINTOKENS_REV} && git checkout --detach FETCH_HEAD
+COPY runpod-workflows/rigging-worker/patch_skintokens.py /opt/worker/patch_skintokens.py
+RUN python /opt/worker/patch_skintokens.py
 RUN python -m pip install -r requirements.txt runpod ninja packaging && MAX_JOBS=2 python -m pip install flash-attn --no-build-isolation
 RUN python download.py --model
 COPY runpod-workflows/character-worker/process.py runpod-workflows/character-worker/policy.py /opt/character/

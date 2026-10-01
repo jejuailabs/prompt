@@ -35,13 +35,19 @@ interface StudioMetadata {
   aspectRatio?: string;
   quality?: string;
   projectStatus?: string;
+  activeShotId?: string;
   render?: {
     engine?: string; h3Gpu?: '5090' | 'blackwell'; h3Preset?: string; preview?: boolean; runpodJobId?: string;
     status?: string; videoUrl?: string | null; queuedAt?: string; executionTime?: number; delayTime?: number;
     compiler?: { schemaVersion?: string; source?: string };
     contextIr?: { schemaVersion?: string; mode?: string; reference?: { firstFrame?: string; suppliedImageCount?: number }; shot?: { openingFrame?: string; actionProgression?: string; cameraDirection?: string; endingFrame?: string; continuity?: string[]; overallSoundscape?: string; nonDiegeticMusic?: string }; validation?: { passed?: boolean; warnings?: string[] } };
   };
-  shots?: Array<{ id: string; index: number; title: string; prompt: string; duration: number; inputMode: string; status: string }>;
+  upscale?: {
+    runpodJobId?: string; status?: string; tier?: 'hd' | 'fhd'; outputUrl?: string | null;
+    target?: { width?: number; height?: number; label?: string; description?: string };
+    queuedAt?: string; executionTime?: number; delayTime?: number; error?: string;
+  };
+  shots?: Array<{ id: string; index: number; title: string; prompt: string; duration: number; inputMode: string; inputImageUrl?: string | null; lastFrameUrl?: string | null; videoUrl?: string | null; status: string }>;
 }
 
 interface FeaturedCard {
@@ -205,12 +211,20 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
   const timelineRef = useRef<HTMLDivElement>(null);
   const bibleFileRef = useRef<HTMLInputElement>(null);
   const inspectorVideoRef = useRef<HTMLVideoElement>(null);
+  const [inspectorVariant, setInspectorVariant] = useState<'original' | 'upscale'>('original');
   const projectQuery = useQuery({ queryKey: ['video-studio-project', projectId], queryFn: () => api.get<ArtifactDTO>(`/api/video-studio/projects/${projectId}`) });
   const renderJobId = projectQuery.data ? asStudioMetadata(projectQuery.data).render?.runpodJobId : undefined;
   const renderStatusQuery = useQuery({
     queryKey: ['video-studio-render-status', projectId, renderJobId],
     queryFn: () => api.get<{ status: string; delayTime?: number; executionTime?: number; error?: string; videoUrl?: string | null }>(`/api/video-studio/projects/${projectId}/render/status`),
     enabled: Boolean(renderJobId),
+    refetchInterval: (query) => ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'].includes(query.state.data?.status ?? '') ? false : 3000,
+  });
+  const upscaleJobId = projectQuery.data ? asStudioMetadata(projectQuery.data).upscale?.runpodJobId : undefined;
+  const upscaleStatusQuery = useQuery({
+    queryKey: ['video-studio-upscale-status', projectId, upscaleJobId],
+    queryFn: () => api.get<{ status: string; tier?: 'hd' | 'fhd'; videoUrl?: string | null; executionTime?: number; delayTime?: number; error?: string }>(`/api/video-studio/projects/${projectId}/upscale/status`),
+    enabled: Boolean(upscaleJobId),
     refetchInterval: (query) => ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'].includes(query.state.data?.status ?? '') ? false : 3000,
   });
   if (projectQuery.isLoading) return <div className="mx-auto flex min-h-80 max-w-7xl items-center justify-center"><Loader2 className="size-7 animate-spin text-primary" /></div>;
@@ -222,6 +236,12 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
   const renderVideoUrl = renderStatusQuery.data?.videoUrl ?? meta.render?.videoUrl ?? project.fileUrl ?? null;
   const rendering = ['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING'].includes(renderStatus);
   const generationTiming = { executionTime: renderStatusQuery.data?.executionTime ?? meta.render?.executionTime, delayTime: renderStatusQuery.data?.delayTime ?? meta.render?.delayTime };
+  const upscaleStatus = upscaleStatusQuery.isError ? 'FAILED' : (upscaleStatusQuery.data?.status ?? meta.upscale?.status ?? 'IDLE');
+  const upscaling = ['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING'].includes(upscaleStatus);
+  const upscaleVideoUrl = upscaleStatusQuery.data?.videoUrl ?? meta.upscale?.outputUrl ?? null;
+  const upscaleTarget = upscaleStatusQuery.data?.tier ? meta.upscale?.target : meta.upscale?.target;
+  const upscaleTiming = { executionTime: upscaleStatusQuery.data?.executionTime ?? meta.upscale?.executionTime, delayTime: upscaleStatusQuery.data?.delayTime ?? meta.upscale?.delayTime };
+  const displayedVideoUrl = inspectorVariant === 'upscale' && upscaleStatus === 'COMPLETED' && upscaleVideoUrl ? upscaleVideoUrl : renderVideoUrl;
   const rerender = async () => {
     try {
       const result = await api.post<{ engine: string }>(`/api/video-studio/projects/${projectId}/render`, { shotId: 'shot-1' });
@@ -234,7 +254,12 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
   };
   const addShot = async () => {
     const nextIndex = shots.length;
-    const newShot = { id: `shot-${nextIndex + 1}`, index: nextIndex, title: `샷 ${nextIndex + 1}`, prompt: meta.prompt ?? '', duration: meta.targetDurationSec ?? 6, inputMode: 'text', status: 'ready' };
+    const previous = shots.at(-1);
+    if (!previous || previous.status !== 'completed' || !previous.lastFrameUrl) {
+      toast({ title: '앞 샷 렌더가 아직 완료되지 않았습니다', description: '마지막 프레임이 저장된 뒤에 다음 샷을 만들 수 있습니다.', variant: 'destructive' });
+      return;
+    }
+    const newShot = { id: `shot-${nextIndex + 1}`, index: nextIndex, title: `샷 ${nextIndex + 1}`, prompt: '', duration: meta.targetDurationSec ?? 6, inputMode: 'image', inputImageUrl: previous.lastFrameUrl, status: 'ready' };
     const updatedShots = [...shots, newShot];
     try {
       await api.patch(`/api/artifacts/${projectId}`, { metadata: { shots: updatedShots } });
@@ -242,6 +267,41 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
       toast({ title: `샷 ${nextIndex + 1} 추가됨`, description: '새 샷이 프로젝트에 추가되었습니다.' });
     } catch (error) {
       toast({ title: '샷 추가 실패', description: errorMessage(error), variant: 'destructive' });
+    }
+  };
+  const updateShotPrompt = async (shotId: string, prompt: string) => {
+    const updatedShots = shots.map((shot) => shot.id === shotId ? { ...shot, prompt } : shot);
+    await api.patch(`/api/artifacts/${projectId}`, { metadata: { shots: updatedShots } });
+    await projectQuery.refetch();
+  };
+  const renderShot = async (shotId: string) => {
+    try {
+      const result = await api.post<{ engine: string }>(`/api/video-studio/projects/${projectId}/render`, { shotId });
+      await projectQuery.refetch();
+      toast({ title: '샷 렌더를 시작했습니다', description: `${result.engine.toUpperCase()}가 앞 샷의 마지막 프레임에서 이어 만듭니다.` });
+    } catch (error) {
+      toast({ title: '샷 렌더 요청 실패', description: errorMessage(error), variant: 'destructive' });
+    }
+  };
+  const requestUpscale = async (tier: 'hd' | 'fhd') => {
+    try {
+      const result = await api.post<{ target: { label: string; description: string }; creditCharged: number }>(`/api/video-studio/projects/${projectId}/upscale`, { tier, shotId: meta.activeShotId ?? 'shot-1' });
+      setInspectorVariant('original');
+      await projectQuery.refetch();
+      await upscaleStatusQuery.refetch();
+      toast({ title: `${result.target.label} 업스케일을 시작했습니다`, description: `${result.target.description} · ${result.creditCharged} 크레딧. 원본은 그대로 유지됩니다.` });
+    } catch (error) {
+      toast({ title: '업스케일 요청 실패', description: errorMessage(error), variant: 'destructive' });
+    }
+  };
+  const cancelUpscale = async () => {
+    try {
+      await api.post(`/api/video-studio/projects/${projectId}/upscale/cancel`, {});
+      await projectQuery.refetch();
+      await upscaleStatusQuery.refetch();
+      toast({ title: '업스케일 중지 요청됨', description: '완료되지 않은 업스케일 비용은 환불 처리됩니다.' });
+    } catch (error) {
+      toast({ title: '업스케일 중지 실패', description: errorMessage(error), variant: 'destructive' });
     }
   };
   const saveProject = async () => {
@@ -318,8 +378,8 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
           <main className="min-w-0 rounded-2xl border bg-card p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3"><div><Badge variant="secondary">씬 1</Badge><h2 className="mt-2 text-lg font-semibold">첫 장면</h2><p className="mt-1 text-sm text-muted-foreground">첫 샷을 확정한 다음, 장면을 이어가세요.</p></div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => timelineRef.current?.scrollIntoView({ behavior: 'smooth' })}><Layers3 className="size-4" /> 타임라인</Button><Button variant="outline" size="sm" onClick={() => void addShot()}><Plus className="size-4" /> 샷 추가</Button></div></div>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <ShotCanvasCard title="샷 1" prompt={meta.prompt ?? project.description} duration={meta.targetDurationSec ?? 6} imageUrl={meta.inputImageUrl ?? null} videoUrl={renderVideoUrl} rendering={rendering} status={renderLabel} aspectRatio={meta.aspectRatio ?? '9:16'} selected />
-              {shots.slice(1).map((shot) => <ShotCanvasCard key={shot.id} title={shot.title} prompt={shot.prompt} duration={shot.duration} aspectRatio={meta.aspectRatio ?? '9:16'} status={shot.status === 'ready' ? '렌더 대기' : shot.status} />)}
+              <ShotCanvasCard title="샷 1" prompt={meta.prompt ?? project.description} duration={meta.targetDurationSec ?? 6} imageUrl={meta.inputImageUrl ?? null} videoUrl={shots[0]?.videoUrl ?? (meta.activeShotId === 'shot-1' ? renderVideoUrl : null)} rendering={rendering && meta.activeShotId === 'shot-1'} status={shots[0]?.status === 'completed' ? '렌더 완료' : renderLabel} aspectRatio={meta.aspectRatio ?? '9:16'} selected />
+              {shots.slice(1).map((shot) => <div key={shot.id} className="space-y-2"><ShotCanvasCard title={shot.title} prompt={shot.prompt || '다음 장면의 동작을 입력하세요'} duration={shot.duration} imageUrl={shot.inputImageUrl} videoUrl={shot.videoUrl ?? (meta.activeShotId === shot.id ? renderVideoUrl : null)} rendering={rendering && meta.activeShotId === shot.id} aspectRatio={meta.aspectRatio ?? '9:16'} status={shot.status === 'ready' ? '렌더 대기' : shot.status} /><Textarea defaultValue={shot.prompt} rows={3} placeholder="예: 두 인물이 성을 향해 천천히 걸어간다. 카메라는 뒤에서 직선으로 따라간다." onBlur={(event) => { const nextPrompt = event.target.value.trim(); if (nextPrompt !== shot.prompt) void updateShotPrompt(shot.id, nextPrompt); }} /><Button size="sm" className="w-full" disabled={shot.status !== 'ready' || shot.prompt.trim().length < 3} onClick={() => void renderShot(shot.id)}><Clapperboard className="size-4" /> 이 프롬프트로 이어 만들기</Button><p className="text-xs text-muted-foreground">샷 {shot.index}의 마지막 프레임을 시작 이미지로 고정합니다.</p></div>)}
               <button type="button" onClick={() => void addShot()} className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed text-muted-foreground transition-colors hover:border-primary hover:bg-primary/[.03]"><Plus className="size-7" /><span className="mt-3 font-medium">다음 샷 추가</span><span className="mt-1 text-xs">앞 샷의 마지막 프레임을 이어갈 수 있어요</span></button>
             </div>
             <div className={cn('mt-4 rounded-2xl border p-4', renderStatus === 'FAILED' || renderStatus === 'CANCELLED' ? 'border-destructive/30 bg-destructive/[.06]' : renderStatus === 'COMPLETED' ? 'border-emerald-500/30 bg-emerald-500/[.08]' : 'border-primary/20 bg-primary/[.05]')}>
@@ -330,6 +390,12 @@ function ProjectWorkspace({ projectId, onBack }: { projectId: string; onBack: ()
               <p className="mt-1 text-xs leading-5 text-muted-foreground">{renderDescription}</p>
               {renderStatus === 'COMPLETED' && <div className="mt-2"><GenerationTime {...generationTiming} /></div>}
             </div>
+            {renderVideoUrl && renderStatus === 'COMPLETED' && <section className="mt-4 rounded-2xl border bg-muted/[.18] p-4" aria-label="영상 해상도 업스케일">
+              <div className="flex items-start justify-between gap-3"><div><p className="font-semibold">해상도 업스케일</p><p className="mt-1 text-xs leading-5 text-muted-foreground">원본을 다시 생성하지 않고 영상 복원으로 선명도를 높입니다. 원본은 보존되며 결과는 별도 파일로 저장됩니다.</p></div>{upscaling && <Loader2 className="size-5 shrink-0 animate-spin text-primary" />}</div>
+              {upscaling ? <div className="mt-3 rounded-xl border border-primary/20 bg-primary/[.04] p-3"><p className="text-sm font-medium">{meta.upscale?.target?.label ?? '업스케일'} 처리 중</p><div className="mt-2"><GenerationTime {...upscaleTiming} /></div><Button className="mt-3" size="sm" variant="destructive" onClick={() => void cancelUpscale()}>업스케일 중지</Button></div> : <div className="mt-3 grid gap-2 sm:grid-cols-2"><Button variant="outline" onClick={() => void requestUpscale('hd')}><Sparkles className="size-4" /> HD 1단계 · 45 크레딧</Button><Button onClick={() => void requestUpscale('fhd')}><Sparkles className="size-4" /> FHD 2단계 · 70 크레딧</Button></div>}
+              {upscaleStatus === 'COMPLETED' && upscaleVideoUrl && <div className="mt-3 rounded-xl border bg-background p-3"><div className="flex flex-wrap items-center gap-2"><Badge className="bg-emerald-600 hover:bg-emerald-600">업스케일 완료</Badge><span className="text-xs text-muted-foreground">{upscaleTarget?.width} × {upscaleTarget?.height}</span><Button size="sm" variant="ghost" onClick={() => setInspectorVariant('original')}>원본 보기</Button><Button size="sm" variant={inspectorVariant === 'upscale' ? 'default' : 'outline'} onClick={() => setInspectorVariant('upscale')}>업스케일 보기</Button></div><video key={displayedVideoUrl} src={displayedVideoUrl ?? undefined} controls playsInline className="mt-3 aspect-video w-full rounded-lg bg-black object-contain" /></div>}
+              {upscaleStatus === 'FAILED' && <p className="mt-3 rounded-xl bg-destructive/[.08] p-3 text-xs text-destructive">{upscaleStatusQuery.data?.error ?? meta.upscale?.error ?? '업스케일 작업을 완료하지 못했습니다. 원본 영상은 안전하게 유지됩니다.'}</p>}
+            </section>}
             <div ref={timelineRef} className="mt-6 rounded-2xl border bg-muted/[.25] p-4"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><Clock3 className="size-4 text-primary" /><p className="text-sm font-medium">타임라인</p></div><span className="text-xs text-muted-foreground">00:00 · 00:{String(shots.reduce((sum, s) => sum + s.duration, 0)).padStart(2, '0')}</span></div>{shots.map((shot, i) => <div key={shot.id} className="mt-4 flex gap-2"><div className="w-16 pt-2 text-xs text-muted-foreground">{shot.title}</div><div className={cn('h-12 flex-1 rounded-lg p-2 text-xs text-white', i === 0 ? 'bg-gradient-to-r from-primary/70 via-violet-500/70 to-sky-500/70' : 'bg-gradient-to-r from-violet-500/60 to-sky-500/60')}>{shot.title} · {shot.duration}초</div></div>)}<div className="mt-2 flex gap-2"><div className="w-16 pt-2 text-xs text-muted-foreground">Subtitle</div><div className="h-8 flex-1 rounded-lg border border-dashed bg-background" /></div></div>
           </main>
 

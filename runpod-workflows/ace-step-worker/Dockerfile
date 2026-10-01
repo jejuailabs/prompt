@@ -33,6 +33,10 @@ ARG ACE_STEP_REF=v0.1.6
 RUN git clone --branch ${ACE_STEP_REF} --depth 1 https://github.com/ACE-Step/ACE-Step-1.5.git ace-step
 WORKDIR /opt/ace-step
 RUN uv sync --no-dev
+# The official ACE-Step project does not ship the RunPod serverless adapter.
+# Install it in the same isolated environment used by handler.py, otherwise
+# the worker exits before it can accept its first job.
+RUN uv pip install --python /opt/ace-step/.venv/bin/python runpod
 ENV PATH="/opt/ace-step/.venv/bin:${PATH}"
 
 # Default components supply VAE, embedding model and the 1.7B LM. XL-Turbo is

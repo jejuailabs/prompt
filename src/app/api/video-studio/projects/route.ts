@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
         prompt,
         duration,
         inputMode,
+        inputImageUrl: body.inputImageUrl ?? null,
         status: 'ready',
       }],
       bible: { characters: [], locations: [], props: [], styles: [] },

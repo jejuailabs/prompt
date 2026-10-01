@@ -10,6 +10,7 @@ function metadata(raw: string): Record<string, unknown> {
 }
 
 interface VideoResult { url?: string; base64?: string; contentType?: string; filename?: string }
+interface ImageResult { url?: string; base64?: string; contentType?: string; filename?: string }
 
 function findVideo(value: unknown): VideoResult | null {
   if (typeof value === 'string') {
@@ -32,6 +33,28 @@ function findVideo(value: unknown): VideoResult | null {
   return null;
 }
 
+function findLastFrame(value: unknown): ImageResult | null {
+  if (typeof value === 'string') {
+    if (/^data:image\/(png|jpeg|webp);base64,/i.test(value)) {
+      const [header, base64] = value.split(',', 2);
+      return { base64, contentType: header.slice(5, header.indexOf(';')), filename: 'last-frame.png' };
+    }
+    return /(?:last[-_]frame|continuity[-_]frame).*\.(png|jpe?g|webp)(?:\?|$)/i.test(value) ? { url: value } : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) { const found = findLastFrame(item); if (found) return found; }
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const filename = typeof record.filename === 'string' ? record.filename : '';
+    if (typeof record.data === 'string' && /(?:last[-_]frame|continuity[-_]frame).*\.(png|jpe?g|webp)$/i.test(filename)) {
+      return { base64: record.data.replace(/^data:[^,]+,/, ''), filename, contentType: filename.endsWith('.webp') ? 'image/webp' : filename.endsWith('.jpg') || filename.endsWith('.jpeg') ? 'image/jpeg' : 'image/png' };
+    }
+    for (const item of Object.values(record)) { const found = findLastFrame(item); if (found) return found; }
+  }
+  return null;
+}
+
 async function materializeVideo(output: unknown, jobId: string): Promise<string | null> {
   const result = findVideo(output);
   if (!result) return null;
@@ -41,6 +64,17 @@ async function materializeVideo(output: unknown, jobId: string): Promise<string 
   if (!data.length || data.length > 100 * 1024 * 1024) return null;
   const extension = result.contentType === 'video/webm' ? 'webm' : result.contentType === 'video/quicktime' ? 'mov' : 'mp4';
   return uploadBuffer(`video-renders/${jobId}.${extension}`, data, result.contentType ?? 'video/mp4');
+}
+
+async function materializeLastFrame(output: unknown, jobId: string): Promise<string | null> {
+  const result = findLastFrame(output);
+  if (!result) return null;
+  if (result.url) return result.url;
+  if (!result.base64) return null;
+  const data = Buffer.from(result.base64, 'base64');
+  if (!data.length || data.length > 8 * 1024 * 1024) return null;
+  const extension = result.contentType === 'image/webp' ? 'webp' : result.contentType === 'image/jpeg' ? 'jpg' : 'png';
+  return uploadBuffer(`video-renders/${jobId}.last-frame.${extension}`, data, result.contentType ?? 'image/png');
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -74,7 +108,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         job.status = 'FAILED';
         job.error = '워커가 종료됐지만 재생 가능한 영상이 반환되지 않았습니다.';
       }
-      const nextMeta = { ...meta, projectStatus: job.status === 'COMPLETED' ? 'completed' : 'failed', render: { ...render, status: job.status, completedAt: new Date().toISOString(), outputReceived: Boolean(job.output), error: job.error, videoUrl, executionTime: job.executionTime, delayTime: job.delayTime } };
+      const lastFrameUrl = job.status === 'COMPLETED' ? await materializeLastFrame(job.output, job.id) : null;
+      const activeShotId = typeof meta.activeShotId === 'string' ? meta.activeShotId : 'shot-1';
+      const shots = Array.isArray(meta.shots) ? meta.shots as Array<Record<string, unknown>> : [];
+      const nextMeta = { ...meta, projectStatus: job.status === 'COMPLETED' ? 'completed' : 'failed', shots: shots.map(shot => shot.id === activeShotId ? { ...shot, status: job.status === 'COMPLETED' ? 'completed' : 'failed', videoUrl, lastFrameUrl, render: { ...(shot.render as Record<string, unknown> ?? render), status: job.status, completedAt: new Date().toISOString(), outputReceived: Boolean(job.output), error: job.error, videoUrl, lastFrameUrl, executionTime: job.executionTime, delayTime: job.delayTime } } : shot), render: { ...render, status: job.status, completedAt: new Date().toISOString(), outputReceived: Boolean(job.output), error: job.error, videoUrl, lastFrameUrl, executionTime: job.executionTime, delayTime: job.delayTime } };
       const saved = await db.artifact.updateMany({ where: { id: project.id, metadata: project.metadata }, data: { metadata: JSON.stringify(nextMeta), status: job.status === 'COMPLETED' ? 'completed' : 'failed', ...(videoUrl ? { fileUrl: videoUrl } : {}) } });
       if (!saved.count) throw new HttpError('작업 상태가 변경됐습니다. 다시 확인해주세요.', 409);
     }

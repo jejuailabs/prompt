@@ -1,16 +1,16 @@
-name: ACE-Step XL-Turbo worker image
+name: SeedVR2 video upscale worker image
 on:
   push:
-    branches: [main, codex/3d-unity-pipeline]
+    branches: [codex/video-upscale]
     paths:
-      - runpod-workflows/ace-step-worker/**
-      - .github/workflows/ace-step-worker-image.yml
+      - runpod-workflows/upscale-worker/**
+      - .github/workflows/video-upscale-worker-image.yml
   workflow_dispatch:
 permissions:
   contents: read
   packages: write
 concurrency:
-  group: ace-step-worker-image
+  group: seedvr2-video-upscale-image
   cancel-in-progress: false
 jobs:
   build:
@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+      - name: Validate worker input contract
+        run: python3 runpod-workflows/upscale-worker/test_handler.py
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -27,11 +29,11 @@ jobs:
       - uses: docker/build-push-action@v6
         id: image
         with:
-          context: runpod-workflows/ace-step-worker
+          context: runpod-workflows/upscale-worker
           push: true
-          tags: ghcr.io/jejuailabs/playlab-ace-step-xl:${{ github.sha }}
+          tags: ghcr.io/jejuailabs/playlab-seedvr2-upscale:${{ github.sha }}
           provenance: false
       - name: Record immutable image reference
         env:
           DIGEST: ${{ steps.image.outputs.digest }}
-        run: echo "ghcr.io/jejuailabs/playlab-ace-step-xl@$DIGEST" >> "$GITHUB_STEP_SUMMARY"
+        run: echo "ghcr.io/jejuailabs/playlab-seedvr2-upscale@$DIGEST" >> "$GITHUB_STEP_SUMMARY"
