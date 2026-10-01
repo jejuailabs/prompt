@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const aspect = body.aspect && VALID_ASPECTS.includes(body.aspect) ? body.aspect : '1:1';
 
     const providers = await db.modelProvider.findMany({
-      where: { id: { in: providerIds }, active: true },
+      where: { id: { in: providerIds }, active: true, category: 'image', adapterType: { not: 'runpod' } },
     });
     if (providers.length !== providerIds.length) {
       throw new HttpError('사용할 수 없는 모델이 포함되어 있습니다', 400);

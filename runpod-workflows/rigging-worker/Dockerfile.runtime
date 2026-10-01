@@ -3,7 +3,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends libsm6 libice6 
 # Fail CI on missing shared libraries, before paying for a GPU job.
 RUN python -c "import bpy; bpy.ops.wm.read_factory_settings(use_empty=True); print('Blender runtime verified:', bpy.app.version_string)"
 COPY runpod-workflows/character-worker/process.py runpod-workflows/character-worker/policy.py /opt/character/
-COPY runpod-workflows/rigging-worker/handler.py runpod-workflows/rigging-worker/retarget.py /opt/worker/
+COPY runpod-workflows/rigging-worker/handler.py runpod-workflows/rigging-worker/retarget.py runpod-workflows/rigging-worker/skin_repair.py /opt/worker/
 # Do not let the base image's older preparation script silently shadow a new
 # worker build.  This catches a Docker context / ignore-rule regression in CI.
 RUN python -m py_compile /opt/character/process.py /opt/character/policy.py
+RUN PYTHONPATH=/opt/worker python -c "from skin_repair import repair_weights, inspect_deformation; from retarget import bake; print('Rigging modules verified')"

@@ -5,6 +5,7 @@ export type Locale = 'ko' | 'en';
 
 export type ArtifactType =
   | 'image'
+  | 'audio'
   | 'text'
   | 'video'
   | '3d_asset'
@@ -141,7 +142,7 @@ export interface ArtifactVersionEntry {
 export interface ArtifactMetadata {
   tags?: string[];
   model?: string;
-  params?: { aspect?: string; style?: string };
+  params?: { aspect?: string; style?: string; modelId?: string; quality?: string };
   frames?: string[]; // video slideshow keyframes
   content?: LandingContent; // landing_page template content
   stats?: ArtifactStats;
@@ -529,6 +530,7 @@ export interface Asset3dOutputDTO {
   riggedGlbUrl?: string | null;
   riggedFbxUrl?: string | null;
   animationUrls?: Record<string, string>;
+  animationNames?: Record<string, string>;
   thumbnailUrl?: string | null;
   polyCount?: number;
   dimensions?: { width: number; height: number; depth: number } | null;
@@ -541,7 +543,7 @@ export type Asset3dWorkflowMode = 'automatic' | 'guided';
 export type Asset3dStageStatus = 'pending' | 'running' | 'awaiting_approval' | 'completed' | 'failed';
 
 export interface Asset3dWorkflowStageDTO {
-  id: 'trellis' | 'blender' | 'rigging_animation' | 'unity_bundle';
+  id: 'trellis' | 'blender' | 'rigging_animation' | 'animation' | 'unity_bundle';
   title: string;
   description: string;
   status: Asset3dStageStatus;
@@ -569,6 +571,8 @@ export interface Asset3dProjectDTO {
   error?: string | null;
   outputs?: Asset3dOutputDTO[];
   generationTiming?: { queuedAt?: string; completedAt?: string; delayTimeMs?: number; executionTimeMs?: number };
+  /** Authenticated, same-origin endpoints for genuine TRELLIS intermediate geometry. */
+  generationPreview?: { url: string };
   workflowMode?: Asset3dWorkflowMode;
   workflowStages?: Asset3dWorkflowStageDTO[];
   createdAt: string;

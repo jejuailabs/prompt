@@ -7,6 +7,10 @@ from pathlib import Path
 import sys
 import tempfile
 import time
+import traceback
+import urllib.error
+import urllib.parse
+import urllib.request
 
 import runpod
 
@@ -28,13 +32,53 @@ def runtime():
     return _demo
 
 
+def upload_signed(target, source, label):
+    """Store a binary through one server-issued, expiring upload URL.
+
+    The worker never receives Supabase credentials.  This avoids returning
+    multi-megabyte GLB/FBX blobs through RunPod's limited result channel.
+    """
+    if not isinstance(target, dict) or not isinstance(target.get('signed_url'), str):
+        raise ValueError(f'Missing signed upload target for {label}')
+    url = target['signed_url']
+    if not url.startswith('https://'):
+        raise ValueError(f'Invalid signed upload URL for {label}')
+    content_type = target.get('content_type') if isinstance(target.get('content_type'), str) else 'application/octet-stream'
+    request = urllib.request.Request(url, data=source.read_bytes(), method='PUT', headers={
+        'content-type': content_type,
+        'cache-control': 'max-age=3600',
+        'x-upsert': 'false',
+    })
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            if response.status not in (200, 201):
+                raise RuntimeError(f'Storage returned HTTP {response.status} for {label}')
+    except urllib.error.HTTPError as error:
+        detail = error.read(500).decode('utf-8', errors='replace')
+        raise RuntimeError(f'Storage upload failed for {label}: HTTP {error.code} {detail}') from error
+
+
+def download_storage(url, label, limit):
+    if not isinstance(url, str):
+        raise ValueError(f'Missing storage URL for {label}')
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != 'https' or not parsed.hostname or not parsed.hostname.endswith('.supabase.co') or not parsed.path.startswith('/storage/v1/object/'):
+        raise ValueError(f'Invalid storage URL for {label}')
+    with urllib.request.urlopen(url, timeout=120) as response:
+        content = response.read(limit + 1)
+    if len(content) > limit:
+        raise ValueError(f'{label} exceeds size limit')
+    return content
+
+
 def handler(job):
     start = time.perf_counter()
     data = job.get('input', {})
     encoded = data.get('model_base64')
-    if not isinstance(encoded, str) or not 1 <= len(encoded) <= 70_000_000:
-        raise ValueError('GLB payload missing or too large')
-    model = base64.b64decode(encoded, validate=True)
+    if isinstance(encoded, str) and 1 <= len(encoded) <= 70_000_000:
+        model = base64.b64decode(encoded, validate=True)
+    else:
+        model = download_storage(data.get('model_url'), 'GLB', 50_000_000)
     if len(model) < 20 or model[:4] != b'glTF' or int.from_bytes(model[4:8], 'little') != 2 or int.from_bytes(model[8:12], 'little') != len(model):
         raise ValueError('Invalid GLB 2.0')
     settings = data.get('settings') or {}
@@ -48,13 +92,16 @@ def handler(job):
         if data.get('operation') == 'retarget':
             from retarget import bake
             motion_encoded = data.get('motion_base64')
-            if not isinstance(motion_encoded, str) or not 1 <= len(motion_encoded) <= 40_000_000:
-                raise ValueError('Motion FBX payload missing or too large')
             motion = directory / 'motion.fbx'
-            motion.write_bytes(base64.b64decode(motion_encoded, validate=True))
+            if isinstance(motion_encoded, str) and 1 <= len(motion_encoded) <= 40_000_000:
+                motion.write_bytes(base64.b64decode(motion_encoded, validate=True))
+            else:
+                motion.write_bytes(download_storage(data.get('motion_url'), 'Motion FBX', 28_000_000))
             output = directory / 'animation'
             report = bake(source, motion, output, data.get('bone_mapping'),
-                          str(data.get('clip_name', 'Motion'))[:100], data.get('in_place', True) is True)
+                          str(data.get('clip_name', 'Motion'))[:100], data.get('in_place', True) is True,
+                          data.get('grounded') is True,
+                          'first_frame' if data.get('motion_category') == 'Idle' else 'rest')
             # Check the exported FBX contains skin and an actual action.
             import bpy
             bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -63,11 +110,19 @@ def handler(job):
                 raise RuntimeError('FBX roundtrip lost animation')
             if not any(o.type == 'MESH' and any(m.type == 'ARMATURE' and m.object for m in o.modifiers) and len(o.vertex_groups) for o in bpy.context.scene.objects):
                 raise RuntimeError('FBX roundtrip lost skin')
+            report['total_ms'] = round((time.perf_counter()-start)*1000)
+            upload_targets = data.get('output_uploads')
+            if isinstance(upload_targets, dict):
+                artifacts = {'preview.glb': output / 'preview.glb', 'character.fbx': output / 'character.fbx'}
+                uploaded = {}
+                for name, artifact in artifacts.items():
+                    upload_signed(upload_targets.get(name), artifact, name)
+                    uploaded[name] = {'bytes': artifact.stat().st_size}
+                return {'uploads': uploaded, 'report': report}
             files = {}
             for file in output.iterdir():
                 if file.stat().st_size > 50 * 1024 * 1024: raise ValueError('Output too large')
                 files[file.name] = base64.b64encode(file.read_bytes()).decode('ascii')
-            report['total_ms'] = round((time.perf_counter()-start)*1000)
             return {'files': files, 'report': report}
         demo = runtime()
         loaded = time.perf_counter()
@@ -82,12 +137,14 @@ def handler(job):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         output = directory / 'bundle'
-        report = module.process(rigged, output, {'height_m': settings.get('height_meters', 1.7)})
+        report = module.process(rigged, output, {'height_m': settings.get('height_meters', 1.7), 'repair_skin': True})
         if diagnostic:
             # Keep diagnostics under RunPod's response limit.  The normal
             # pipeline will move binary assets via signed storage uploads,
             # never by putting GLB+FBX base64 in the result body.
             report.update({'provider': 'skintokens', 'diagnostic': True,
+                           'artifact_bytes': {file.name: file.stat().st_size for file in output.iterdir() if file.is_file()},
+                           'bone_names': [bone.name for obj in __import__('bpy').context.scene.objects if obj.type == 'ARMATURE' for bone in obj.data.bones],
                            'unity_ready': False, 'animation_status': 'not_generated'})
             return {'report': report}
         if report.get('errors'):
@@ -99,6 +156,30 @@ def handler(job):
         fbx_rig = module.inspect_rig([o for o in bpy.context.scene.objects if o.type == 'MESH'])
         if module.rig_errors(fbx_rig):
             raise RuntimeError('FBX roundtrip lost skeleton or vertex weights')
+        upload_targets = data.get('output_uploads')
+        if isinstance(upload_targets, dict):
+            artifacts = {'rigged.glb': output / 'prepared.glb', 'rigged.fbx': output / 'prepared.fbx'}
+            if any(not artifact.is_file() for artifact in artifacts.values()):
+                raise RuntimeError('Rigging export did not produce both GLB and FBX')
+            uploaded = {}
+            for name, artifact in artifacts.items():
+                try:
+                    upload_signed(upload_targets.get(name), artifact, name)
+                except Exception as error:
+                    # RunPod can discard exception payloads when its job-done
+                    # callback rejects them. A compact result preserves the
+                    # storage failure so the API can show the real cause.
+                    return {'upload_error': str(error)[:500], 'artifact': name,
+                            'artifact_bytes': artifact.stat().st_size,
+                            'uploaded': uploaded}
+                uploaded[name] = {'bytes': artifact.stat().st_size}
+            report.update({'provider': 'skintokens', 'fbx_roundtrip': fbx_rig,
+                           'animation_status': 'not_generated', 'unity_ready': False,
+                           'timings_ms': {'startup': round((loaded-start)*1000),
+                                          'rigging': round((inferred-loaded)*1000),
+                                          'export_and_validation': round((time.perf_counter()-inferred)*1000),
+                                          'total': round((time.perf_counter()-start)*1000)}})
+            return {'uploads': uploaded, 'report': report}
         files = {}
         for file in output.rglob('*'):
             if not file.is_file() or file.name == 'report.json':
@@ -118,5 +199,14 @@ def handler(job):
         return {'files': files, 'report': report}
 
 
+def safe_handler(job):
+    try:
+        return handler(job)
+    except Exception as error:
+        # A raised exception has produced a RunPod COMPLETED job with no output
+        # on this endpoint. Preserve a bounded, serializable error instead.
+        return {'worker_error': str(error)[:500], 'traceback': traceback.format_exc()[-1800:]}
+
+
 if __name__ == '__main__':
-    runpod.serverless.start({'handler': handler})
+    runpod.serverless.start({'handler': safe_handler})

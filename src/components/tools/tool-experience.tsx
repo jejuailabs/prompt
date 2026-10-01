@@ -8,6 +8,7 @@ import { MetaPromptTool } from './meta-prompt-tool';
 import { ThumbnailTool } from './thumbnail-tool';
 import { SunoTool } from './suno-tool';
 import { Detail2Tool } from './detail2-tool';
+import { AceMusicTool } from './ace-music-tool';
 
 const voices = ['Charon', 'Fenrir', 'Puck', 'Orus', 'Enceladus', 'Kore', 'Aoede', 'Leda', 'Zephyr', 'Callirrhoe'];
 const labels: Record<string, string> = { Charon: '차분한 남성', Fenrir: '에너지 있는 남성', Puck: '친근한 남성', Orus: '설명형 남성', Enceladus: '부드러운 남성', Kore: '맑은 여성', Aoede: '따뜻한 여성', Leda: '전문적인 여성', Zephyr: '경쾌한 여성', Callirrhoe: '고급스러운 여성' };
@@ -212,4 +213,4 @@ function WhisperTool() {
 
 function Output({ title, value }: { title: string; value: string }) { return <div className="rounded-xl border p-4"><div className="flex items-center justify-between gap-3"><h3 className="font-semibold">{title}</h3><button onClick={() => navigator.clipboard.writeText(value)} className="text-sm text-primary">복사</button></div><pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap font-sans text-sm leading-7 text-muted-foreground">{value}</pre></div>; }
 
-export function ToolExperience({ slug }: { slug: string }) { if (slug === 'tts') return <TtsTool />; if (slug === 'metaprompt') return <MetaPromptTool />; if (slug === 'suno') return <SunoTool />; if (slug === 'qr') return <QrTool />; if (slug === 'thumbnail') return <ThumbnailTool />; if (slug === 'storyboard') return <CreativePlanTool kind="storyboard" />; if (slug === 'detail') return <CreativePlanTool kind="detail" />; if (slug === 'detail2') return <Detail2Tool />; if (slug === 'converter') return <ConverterTool />; if (slug === 'whisper') return <WhisperTool />; if (slug === 'srt') return <TranscriptTool />; if (slug === 'autocut') return <TranscriptTool autoCut />; return null; }
+export function ToolExperience({ slug }: { slug: string }) { if (slug === 'tts') return <TtsTool />; if (slug === 'metaprompt') return <MetaPromptTool />; if (slug === 'suno') return <SunoTool />; if (slug === 'ace-music') return <AceMusicTool />; if (slug === 'qr') return <QrTool />; if (slug === 'thumbnail') return <ThumbnailTool />; if (slug === 'storyboard') return <CreativePlanTool kind="storyboard" />; if (slug === 'detail') return <CreativePlanTool kind="detail" />; if (slug === 'detail2') return <Detail2Tool />; if (slug === 'converter') return <ConverterTool />; if (slug === 'whisper') return <WhisperTool />; if (slug === 'srt') return <TranscriptTool />; if (slug === 'autocut') return <TranscriptTool autoCut />; return null; }

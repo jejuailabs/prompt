@@ -15,3 +15,11 @@ test('duplicate ids rejected', () => assert.equal(parse([motion, motion]), false
 test('external URL and traversal rejected', () => {
   for (const file of ['../secret.fbx', '/walk.fbx', 'https://example.com/walk.fbx', 'walk.glb']) assert.equal(parse([{ ...motion, file }]), false);
 });
+test('admin-uploaded rows remain visible without a legacy manifest', () => {
+  const result = output.mergeMotionCatalog([], [motion]);
+  assert.equal(JSON.stringify(result), JSON.stringify([motion]));
+});
+test('an uploaded row overrides its legacy entry by id', () => {
+  const result = output.mergeMotionCatalog([motion], [{ ...motion, name: 'Walk updated' }]);
+  assert.equal(JSON.stringify(result), JSON.stringify([{ ...motion, name: 'Walk updated' }]));
+});

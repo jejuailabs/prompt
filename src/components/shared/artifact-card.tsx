@@ -17,6 +17,7 @@ const TYPE_LABELS: Record<ArtifactType, { ko: string; en: string }> = {
   game: { ko: '게임', en: 'Game' },
   app: { ko: '앱', en: 'App' },
   text: { ko: '텍스트', en: 'Text' },
+  audio: { ko: '음악', en: 'Audio' },
 };
 
 /**

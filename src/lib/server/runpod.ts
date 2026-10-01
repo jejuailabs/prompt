@@ -2,7 +2,7 @@
 // API keys stay in RUNPOD_API_KEY and must never be exposed to the browser.
 
 export type RunpodVideoEngine = 'h3' | 'wan' | 'ltx';
-export type RunpodEngine = RunpodVideoEngine | 'flux' | 'blender' | 'character_blender' | 'rigging' | 'whisper' | 'trellis';
+export type RunpodEngine = RunpodVideoEngine | 'flux' | 'blender' | 'character_blender' | 'rigging' | 'whisper' | 'trellis' | 'ace_music';
 
 export interface RunpodQueuedJob {
   id: string;
@@ -31,6 +31,7 @@ const endpointEnv: Record<RunpodEngine, string> = {
   rigging: 'RUNPOD_RIGGING_ENDPOINT_ID',
   whisper: 'RUNPOD_WHISPER_ENDPOINT_ID',
   trellis: 'RUNPOD_TRELLIS_ENDPOINT_ID',
+  ace_music: 'RUNPOD_ACE_STEP_ENDPOINT_ID',
 };
 
 function getApiKey(): string {
@@ -102,12 +103,13 @@ export async function queueRunpodWorkflow(
 export async function queueRunpodJob(
   engine: RunpodEngine,
   input: Record<string, unknown>,
+  options?: { webhook?: string; policy?: { executionTimeout?: number; ttl?: number } },
 ): Promise<RunpodQueuedJob> {
   const endpointId = getRunpodEndpointId(engine);
   if (!endpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
   return runpodFetch<RunpodQueuedJob>(`/v2/${endpointId}/run`, {
     method: 'POST',
-    body: JSON.stringify({ input }),
+    body: JSON.stringify({ input, ...options }),
   });
 }
 

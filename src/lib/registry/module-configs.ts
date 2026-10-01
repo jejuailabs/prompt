@@ -114,6 +114,13 @@ export const MODULE_CONFIGS: ModuleConfigSeed[] = [
     mainScreenSlot: 'none', entryView: 'ai-tools', requiresAuth: true, adminOnly: false,
     group: 'tools', newUntilDays: 30,
   },
+  {
+    id: 'tool-ace-music', phase: 3, titleKo: 'ACE-Step 노래 생성', titleEn: 'ACE-Step Music',
+    descKo: 'ACE-Step 1.5 XL-Turbo로 노래와 배경음악을 생성합니다', descEn: 'Generate songs and instrumentals with ACE-Step 1.5 XL-Turbo',
+    icon: 'music', navOrder: 57, enabled: true, status: 'new',
+    mainScreenSlot: 'none', entryView: 'ai-tools', requiresAuth: true, adminOnly: false,
+    group: 'tools', newUntilDays: 30,
+  },
   // ─── Admin ───
   {
     id: 'admin', phase: 0, titleKo: '어드민', titleEn: 'Admin',

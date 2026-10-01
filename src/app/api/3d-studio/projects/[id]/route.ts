@@ -4,9 +4,20 @@ import { fail, ok } from '@/lib/server/handler';
 import { getRunpodJobStatus } from '@/lib/server/runpod';
 import { parseMeta, toProject } from '../route';
 import { finishMeteredOperation } from '@/lib/server/operation-ledger';
-import { uploadBuffer } from '@/lib/server/storage';
+import { downloadBuffer, publicStorageUrl, uploadBuffer } from '@/lib/server/storage';
 import { inspectRiggedGlb, inspectTrellisGlb } from '@/lib/server/asset3d-qc';
 import { queueCharacterPreparation, queueSkinTokensRigging, updateWorkflowStage } from '@/lib/server/asset3d-character';
+import { queueAutomaticCharacterMotion } from '@/lib/server/asset3d-animation';
+import { finalizeTrellisProject } from '@/lib/server/trellis-finalize';
+
+function riggingError(raw?: string): string {
+  if (!raw) return '자동 리깅에 실패했습니다. 캐릭터 형상과 워커 상태를 확인해주세요.';
+  try {
+    const parsed = JSON.parse(raw) as { error_message?: unknown };
+    if (typeof parsed.error_message === 'string') return parsed.error_message.slice(0, 250);
+  } catch { /* The provider can return a plain message. */ }
+  return raw.replace(/\s+/g, ' ').slice(0, 250);
+}
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,21 +26,35 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     let project = await db.artifact.findFirst({ where: { id, ownerId: user.id, type: '3d_asset', sourceModule: '3d-studio' } });
     if (!project) throw new HttpError('3D 프로젝트를 찾을 수 없습니다', 404);
     const meta = parseMeta(project.metadata);
+    if (project.status === 'settling') return ok(toProject(project));
     if (meta.rigging && !['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'].includes(meta.rigging.status)) {
       const job = await getRunpodJobStatus('rigging', meta.rigging.jobId);
       const progress = job.status === 'COMPLETED' ? 100 : typeof (job.output as { progress?: unknown } | undefined)?.progress === 'number' ? (job.output as { progress: number }).progress : 0;
       if (job.status === 'COMPLETED') {
-        const files = (job.output as { files?: Record<string, unknown>; error?: unknown } | undefined)?.files;
-        const riggedGlb = files?.['rigged.glb'];
-        const riggedFbx = files?.['rigged.fbx'];
-        if (typeof riggedGlb !== 'string' || typeof riggedFbx !== 'string') {
-          const error = 'SkinTokens 리깅 워커가 rigged.glb와 rigged.fbx를 모두 반환하지 않았습니다.';
+        const output = job.output as { files?: Record<string, unknown>; uploads?: Record<string, unknown>; error?: unknown; worker_error?: unknown } | undefined;
+        const files = output?.files;
+        let riggedGlb: Buffer | null = null;
+        let riggedFbx: Buffer | null = null;
+        if (meta.rigging.outputPaths?.['rigged.glb'] && meta.rigging.outputPaths?.['rigged.fbx'] && output?.uploads?.['rigged.glb'] && output?.uploads?.['rigged.fbx']) {
+          [riggedGlb, riggedFbx] = await Promise.all([
+            downloadBuffer(meta.rigging.outputPaths['rigged.glb']),
+            downloadBuffer(meta.rigging.outputPaths['rigged.fbx']),
+          ]);
+        } else if (typeof files?.['rigged.glb'] === 'string' && typeof files?.['rigged.fbx'] === 'string') {
+          // Legacy jobs may still contain base64 while their workers drain.
+          riggedGlb = Buffer.from(files['rigged.glb'], 'base64');
+          riggedFbx = Buffer.from(files['rigged.fbx'], 'base64');
+        }
+        if (!riggedGlb || !riggedFbx) {
+          const error = typeof output?.worker_error === 'string'
+            ? riggingError(output.worker_error)
+            : 'SkinTokens 리깅 워커가 rigged.glb와 rigged.fbx를 모두 반환하지 않았습니다.';
           const stages = updateWorkflowStage(meta.workflowStages, 'rigging_animation', { status: 'awaiting_approval', progress, error });
           project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, workflowStages: stages, rigging: { ...meta.rigging, status: 'FAILED', progress, error } }) } });
           return ok(toProject(project));
         }
         try {
-          inspectRiggedGlb(Buffer.from(riggedGlb, 'base64'));
+          inspectRiggedGlb(riggedGlb);
         } catch (failure) {
           const error = failure instanceof Error ? failure.message : '리깅 결과 검증에 실패했습니다.';
           const stages = updateWorkflowStage(meta.workflowStages, 'rigging_animation', { status: 'awaiting_approval', progress, error });
@@ -37,8 +62,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           return ok(toProject(project));
         }
         const root = `3d/${user.id}/${id}/rigging-${meta.rigging.jobId}`;
-        const riggedGlbUrl = await uploadBuffer(`${root}/character-rigged.glb`, Buffer.from(riggedGlb, 'base64'), 'model/gltf-binary');
-        const riggedFbxUrl = await uploadBuffer(`${root}/character-rigged.fbx`, Buffer.from(riggedFbx, 'base64'), 'application/octet-stream');
+        const riggedGlbUrl = meta.rigging.outputPaths?.['rigged.glb'] ? publicStorageUrl(meta.rigging.outputPaths['rigged.glb']) : await uploadBuffer(`${root}/character-rigged.glb`, riggedGlb, 'model/gltf-binary');
+        const riggedFbxUrl = meta.rigging.outputPaths?.['rigged.fbx'] ? publicStorageUrl(meta.rigging.outputPaths['rigged.fbx']) : await uploadBuffer(`${root}/character-rigged.fbx`, riggedFbx, 'application/octet-stream');
         const animationUrls: Record<string, string> = {};
         for (const [name, content] of Object.entries(files ?? {})) {
           if (!name.startsWith('animations/') || typeof content !== 'string') continue;
@@ -54,12 +79,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         const completedAt = new Date().toISOString();
         const riggedStages = updateWorkflowStage(meta.workflowStages, 'rigging_animation', { status: 'completed', progress: 100, completedAt, previewGlbUrl: riggedGlbUrl, fbxUrl: riggedFbxUrl });
         const exportedStages = updateWorkflowStage(riggedStages, 'blender', { status: 'completed', completedAt, previewGlbUrl: riggedGlbUrl, fbxUrl: riggedFbxUrl });
-        const finalStages = updateWorkflowStage(exportedStages, 'unity_bundle', { status: 'completed', completedAt, previewGlbUrl: riggedGlbUrl, fbxUrl: riggedFbxUrl });
+        let animationStages = updateWorkflowStage(exportedStages, 'animation', { status: 'awaiting_approval', previewGlbUrl: riggedGlbUrl });
+        if (meta.workflowMode === 'automatic') {
+          try {
+            await queueAutomaticCharacterMotion({ ownerId: user.id, projectId: id, riggingJobId: meta.rigging.jobId, riggedGlb, riggedGlbUrl });
+            animationStages = updateWorkflowStage(animationStages, 'animation', { status: 'running', startedAt: new Date().toISOString(), error: undefined });
+          } catch (failure) {
+            const error = failure instanceof Error ? failure.message : '자동 애니메이션을 시작하지 못했습니다.';
+            animationStages = updateWorkflowStage(animationStages, 'animation', { status: 'awaiting_approval', error });
+          }
+        }
+        const finalStages = updateWorkflowStage(animationStages, 'unity_bundle', { status: 'pending', previewGlbUrl: riggedGlbUrl, fbxUrl: riggedFbxUrl });
         project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, outputs, workflowStages: finalStages, rigging: { ...meta.rigging, status: job.status, progress: 100, completedAt } }) } });
         return ok(toProject(project));
       }
       if (['FAILED', 'CANCELLED', 'TIMED_OUT'].includes(job.status)) {
-        const error = job.error || 'SkinTokens 자동 리깅이 휴머노이드 자세를 인식하지 못했습니다. 관절 보정 후 다시 시도하세요.';
+        const error = riggingError(job.error);
         const stages = updateWorkflowStage(meta.workflowStages, 'rigging_animation', { status: 'awaiting_approval', progress, error });
         project = await db.artifact.update({ where: { id }, data: { status: 'done', metadata: JSON.stringify({ ...meta, workflowStages: stages, rigging: { ...meta.rigging, status: job.status, progress, error } }) } });
         return ok(toProject(project));
@@ -72,7 +107,35 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const terminalStates = ['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT'];
     if (jobId && !terminalStates.includes(meta.blender?.status ?? '')) {
       const engine = meta.blender?.engine === 'character_blender' ? 'character_blender' : 'trellis';
-      const job = await getRunpodJobStatus(engine, jobId);
+      let job;
+      try {
+        job = await getRunpodJobStatus(engine, jobId);
+      } catch (failure) {
+        const queuedAt = Date.parse(meta.blender?.queuedAt ?? '');
+        const missingJob = failure instanceof Error && failure.message.includes('Runpod API 404:') && failure.message.includes('job not found');
+        if (engine !== 'trellis' || !missingJob || !Number.isFinite(queuedAt) || Date.now() - queuedAt < 10 * 60_000) throw failure;
+
+        if (meta.blender?.outputPath) {
+          try {
+            const saved = await downloadBuffer(meta.blender.outputPath);
+            const recovered = await finalizeTrellisProject(id, user.id, { id: jobId, status: 'COMPLETED', output: { model_upload: { bytes: saved.length } } });
+            return ok(toProject(recovered));
+          } catch {
+            // No stored GLB exists; settle the missing job as failed below.
+          }
+        }
+
+        const error = 'RunPod 작업 결과를 찾을 수 없어 생성을 완료하지 못했습니다. 사용한 크레딧은 환불됩니다.';
+        await finishMeteredOperation({ operationId: meta.blender?.accountingJobId, engine, status: 'FAILED', error });
+        const workflowStages = updateWorkflowStage(meta.workflowStages, 'trellis', { status: 'failed', error, completedAt: new Date().toISOString() });
+        const nextMeta = { ...meta, workflowStages, blender: { ...meta.blender, status: 'FAILED', error, completedAt: new Date().toISOString() } };
+        project = await db.artifact.update({ where: { id }, data: { metadata: JSON.stringify(nextMeta), status: 'failed' } });
+        return ok(toProject(project));
+      }
+      if (engine === 'trellis' && terminalStates.includes(job.status)) {
+        project = await finalizeTrellisProject(id, user.id, job);
+        return ok(toProject(project));
+      }
       let status = job.status;
       let error = job.error;
       let outputs = meta.outputs ?? [];
@@ -107,10 +170,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
             if (meta.workflowMode === 'automatic') {
               try {
-                const preparedJob = await queueSkinTokensRigging({ model, heightMeters: meta.riggingSettings?.heightMeters });
+                const preparedJob = await queueSkinTokensRigging({ model, ownerId: user.id, projectId: id, heightMeters: meta.riggingSettings?.heightMeters });
                 const startedAt = new Date().toISOString();
                 const nextStages = updateWorkflowStage(readyStages, 'rigging_animation', { status: 'running', startedAt });
-                const nextMeta = { ...meta, outputs, workflowStages: nextStages, blender: { ...meta.blender, status: 'COMPLETED', completedAt: startedAt, delayTimeMs: job.delayTime, executionTimeMs: job.executionTime }, rigging: { provider: 'skintokens' as const, jobId: preparedJob.id, status: preparedJob.status, queuedAt: startedAt } };
+                const nextMeta = { ...meta, outputs, workflowStages: nextStages, blender: { ...meta.blender, status: 'COMPLETED', completedAt: startedAt, delayTimeMs: job.delayTime, executionTimeMs: job.executionTime }, rigging: { provider: 'skintokens' as const, jobId: preparedJob.id, status: preparedJob.status, queuedAt: startedAt, outputPaths: preparedJob.outputPaths, outputUrls: preparedJob.outputUrls } };
                 project = await db.artifact.update({ where: { id }, data: { metadata: JSON.stringify(nextMeta), status: 'processing' } });
                 await finishMeteredOperation({ operationId: meta.blender?.accountingJobId, engine, status, executionTimeMs: job.executionTime, error });
                 return ok(toProject(project));
@@ -152,10 +215,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
             if (meta.workflowMode === 'automatic') {
               try {
                 const preparedModel = Buffer.from(files['prepared.glb'], 'base64');
-                const riggingJob = await queueSkinTokensRigging({ model: preparedModel, heightMeters: meta.riggingSettings?.heightMeters });
+                const riggingJob = await queueSkinTokensRigging({ model: preparedModel, ownerId: user.id, projectId: id, heightMeters: meta.riggingSettings?.heightMeters });
                 const queuedAt = new Date().toISOString();
                 const runningStages = updateWorkflowStage(readyStages, 'rigging_animation', { status: 'running', progress: 0, startedAt: queuedAt });
-                const nextMeta = { ...meta, outputs, workflowStages: runningStages, blender: { ...meta.blender, status: 'COMPLETED', completedAt: queuedAt, delayTimeMs: job.delayTime, executionTimeMs: job.executionTime }, rigging: { provider: 'skintokens' as const, jobId: riggingJob.id, status: riggingJob.status, progress: 0, queuedAt } };
+                const nextMeta = { ...meta, outputs, workflowStages: runningStages, blender: { ...meta.blender, status: 'COMPLETED', completedAt: queuedAt, delayTimeMs: job.delayTime, executionTimeMs: job.executionTime }, rigging: { provider: 'skintokens' as const, jobId: riggingJob.id, status: riggingJob.status, progress: 0, queuedAt, outputPaths: riggingJob.outputPaths, outputUrls: riggingJob.outputUrls } };
                 project = await db.artifact.update({ where: { id }, data: { metadata: JSON.stringify(nextMeta), status: 'processing' } });
                 return ok(toProject(project));
               } catch (startError) {

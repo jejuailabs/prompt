@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { logEvent } from '@/lib/events';
 import { chargeCredits, refundCredits } from '@/lib/server/credits';
 
-export type MeteredEngine = 'h3' | 'wan' | 'ltx' | 'flux' | 'blender' | 'whisper' | 'trellis';
+export type MeteredEngine = 'h3' | 'wan' | 'ltx' | 'flux' | 'blender' | 'whisper' | 'trellis' | 'ace_music';
 
 // All values are internal KRW estimates. They are deliberately stored with the
 // operation so a future invoice import can replace the estimate without losing
@@ -15,6 +15,10 @@ const CATALOG: Record<MeteredEngine, { providerId: string; label: string; catego
   flux: { providerId: 'runpod-flux', label: 'FLUX · Runpod', category: 'image', creditCharge: 18, gpuKrwPerMinute: 12 },
   blender: { providerId: 'runpod-blender', label: 'Blender · Runpod', category: '3d', creditCharge: 70, gpuKrwPerMinute: 24 },
   whisper: { providerId: 'runpod-whisper', label: 'Whisper · Runpod', category: 'audio', creditCharge: 15, gpuKrwPerMinute: 8 },
+  // Initial public rate for a 30s XL-Turbo render. This is deliberately
+  // recorded as an estimate per job so it can be reconciled against RunPod
+  // runtime data without losing the original user charge.
+  ace_music: { providerId: 'runpod-ace-step', label: 'ACE-Step 1.5 XL-Turbo · Runpod', category: 'audio', creditCharge: 40, gpuKrwPerMinute: 18 },
 };
 
 async function providerFor(engine: MeteredEngine) {
@@ -41,9 +45,10 @@ export async function beginMeteredOperation(input: {
   aspect?: string;
   style?: string | null;
   preview?: boolean;
+  creditCharge?: number;
 }) {
   const item = CATALOG[input.engine];
-  const creditCharge = input.engine === 'h3' && input.preview ? Math.ceil(item.creditCharge / 2) : item.creditCharge;
+  const creditCharge = input.creditCharge ?? (input.engine === 'h3' && input.preview ? Math.ceil(item.creditCharge / 2) : item.creditCharge);
   const provider = await providerFor(input.engine);
   const operation = await db.generationJob.create({
     data: {

@@ -61,7 +61,7 @@ export async function chatJson<T>(system: string, user: string): Promise<T> {
 /** Image generation via OpenAI API (uses OPENAI_API_KEY). */
 export async function generateImage(
   prompt: string,
-  size: '1024x1024' | '768x1344' | '1344x768' = '1024x1024',
+  size: '1024x1024' | '864x1536' | '1536x864' = '1024x1024',
 ): Promise<{ base64: string; buffer: Buffer }> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('OPENAI_API_KEY 환경변수가 설정되지 않았습니다');
@@ -76,11 +76,12 @@ export async function generateImage(
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'gpt-image-1',
+          model: 'gpt-image-2',
           prompt,
           n: 1,
           size,
-          response_format: 'b64_json',
+          quality: 'medium',
+          output_format: 'png',
         }),
       });
       if (!res.ok) {

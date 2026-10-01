@@ -30,6 +30,7 @@ import { ViewHeader } from '@/components/shared/view-header';
 import { EmptyState } from '@/components/shared/empty-state';
 import { StepForm } from '@/components/shared/step-form';
 import { ModelPreview } from './model-preview';
+import { GenerationPreview } from './generation-preview';
 import { MotionLibrary } from './motion-library';
 
 function errMsg(e: unknown): string {
@@ -298,6 +299,7 @@ function CreateProjectForm({ onBack, onCreated }: { onBack: () => void; onCreate
 function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const t = useTranslations('studio3d');
   const tc = useTranslations('core');
+  const { toast } = useToast();
 
   const q = useQuery({
     queryKey: ['3d-project', projectId],
@@ -308,13 +310,36 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
     },
   });
   const [advancing, setAdvancing] = useState(false);
+  const [downloadingUnity, setDownloadingUnity] = useState(false);
   const [heightMeters, setHeightMeters] = useState('1.70');
   const [orientationConfirmed, setOrientationConfirmed] = useState(false);
   const [jointNotes, setJointNotes] = useState('');
+  const [selectedScreen, setSelectedScreen] = useState<'shape' | 'rigging' | 'animation' | 'unity' | null>(null);
   const advance = async (stage: 'blender' | 'rigging_animation') => {
     setAdvancing(true);
     try { await api.post(`/api/3d-studio/projects/${projectId}/advance`, stage === 'rigging_animation' ? { stage, heightMeters: Number(heightMeters), orientationConfirmed, jointNotes } : { stage }); await q.refetch(); }
     finally { setAdvancing(false); }
+  };
+  const downloadUnityPackage = async () => {
+    setDownloadingUnity(true);
+    try {
+      const response = await fetch(`/api/3d-studio/projects/${projectId}/unity-package?format=json`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(error?.error || `다운로드 실패 (${response.status})`);
+      }
+      const { downloadUrl } = await response.json() as { downloadUrl?: string };
+      if (!downloadUrl) throw new Error('ZIP 다운로드 주소를 받지 못했습니다.');
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      document.body.append(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      toast({ title: 'Unity 파일 다운로드 실패', description: errMsg(error), variant: 'destructive' });
+    } finally {
+      setDownloadingUnity(false);
+    }
   };
 
   if (q.isLoading) {
@@ -339,6 +364,15 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
   const project = q.data;
   const outputs = project.outputs ?? [];
   const isWorking = project.status === 'generating' || project.status === 'processing';
+  const stage = (id: 'trellis' | 'rigging_animation' | 'blender' | 'animation' | 'unity_bundle') => project.workflowStages?.find((item) => item.id === id);
+  const shapeReady = stage('trellis')?.status === 'completed';
+  const rigReady = stage('rigging_animation')?.status === 'completed';
+  const animationReady = stage('animation')?.status === 'completed';
+  const suggestedScreen = animationReady ? 'unity' : rigReady ? 'animation' : stage('rigging_animation')?.status === 'running' ? 'rigging' : 'shape';
+  const screen = selectedScreen ?? suggestedScreen;
+  const screenStages: Record<typeof screen, Array<'trellis' | 'rigging_animation' | 'blender' | 'animation' | 'unity_bundle'>> = {
+    shape: ['trellis'], rigging: ['rigging_animation', 'blender'], animation: ['animation'], unity: ['unity_bundle'],
+  };
 
   return (
     <div className="mx-auto w-full max-w-5xl">
@@ -356,13 +390,13 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
             {t(`subtrack${project.subtrack.charAt(0).toUpperCase() + project.subtrack.slice(1)}` as any)}
           </p>
         </div>
-        <StatusBadge status={project.status} />
+        <Badge variant={animationReady ? 'default' : project.status === 'failed' ? 'destructive' : 'secondary'}>{animationReady ? '애니메이션 완료' : project.status === 'failed' ? '생성 실패' : shapeReady ? rigReady ? '리깅 완료 · 애니메이션 대기' : '3D 형상 완료 · 리깅 대기' : '3D 형상 생성 중'}</Badge>
       </div>
 
       {isWorking && (
         <Card className="mb-6 flex items-center gap-3 p-4">
           <Loader2 className="size-5 animate-spin text-primary" />
-          <span className="text-sm font-medium">{project.status === 'generating' ? '3D 생성 워커 준비·대기 중입니다. 첫 실행은 모델 로딩에 시간이 걸립니다.' : '이미지를 3D 모델로 변환하고 있습니다. 완료되면 뷰어가 표시됩니다.'}</span>
+          <span className="text-sm font-medium">{project.status === 'generating' ? '3D 생성 워커 준비·대기 중입니다. 첫 실행은 모델 로딩에 시간이 걸립니다.' : stage('rigging_animation')?.status === 'running' ? '캐릭터의 뼈대와 스킨 웨이트를 생성하고 FBX를 검증 중입니다.' : stage('animation')?.status === 'running' ? '선택한 동작을 적용하고 애니메이션 파일을 검증 중입니다.' : '이미지를 3D 모델로 변환하고 있습니다. 완료되면 뷰어가 표시됩니다.'}</span>
         </Card>
       )}
 
@@ -374,19 +408,32 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
         </Card>
       )}
 
+      <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="3D 제작 화면">
+        {([
+          ['shape', '1. 3D 형상', true],
+          ['rigging', '2. 리깅', shapeReady],
+          ['animation', '3. 애니메이션', rigReady],
+          ['unity', '4. Unity 파일', animationReady],
+        ] as const).map(([id, label, enabled]) => <Button key={id} type="button" variant={screen === id ? 'default' : 'outline'} disabled={!enabled} onClick={() => setSelectedScreen(id)}>{label}</Button>)}
+      </div>
+
       {project.workflowStages?.length ? (
         <Card className="mb-6 p-5">
           <div className="mb-4 flex items-center justify-between gap-3"><div><h2 className="font-semibold">3D 제작 단계</h2><p className="mt-1 text-sm text-muted-foreground">{project.workflowMode === 'guided' ? '중간 결과를 확인하고 직접 다음 단계로 진행합니다.' : '각 단계가 성공하면 자동으로 다음 단계로 이어집니다.'}</p></div><Badge variant="outline">{project.workflowMode === 'guided' ? '단계 확인' : '자동 완주'}</Badge></div>
           <div className="space-y-3">
-            {project.workflowStages.map((stage) => <div key={stage.id} className="rounded-xl border p-4">
+            {project.workflowStages.filter((item) => screenStages[screen].includes(item.id)).map((stage) => <div key={stage.id} className="rounded-xl border p-4">
               <div className="flex flex-wrap items-center gap-2"><p className="font-medium">{stage.title}</p><Badge variant={stage.status === 'completed' ? 'default' : stage.status === 'failed' ? 'destructive' : 'secondary'}>{stage.status === 'completed' ? '완료' : stage.status === 'running' ? '진행 중' : stage.status === 'awaiting_approval' ? '다음 단계 대기' : stage.status === 'failed' ? '실패' : '대기'}</Badge></div>
               <p className="mt-1 text-sm text-muted-foreground">{stage.description}</p>
               {stage.error && <p className="mt-2 text-sm text-destructive">{stage.error}</p>}
-              {stage.previewGlbUrl && <div className="mt-3 rounded-lg bg-muted"><ModelPreview src={stage.previewGlbUrl} /></div>}
+              {stage.id === 'trellis' && project.generationPreview ? <div className="mt-3"><GenerationPreview previewUrl={project.generationPreview.url} finalGlbUrl={stage.previewGlbUrl} /></div>
+                : stage.previewGlbUrl && <div className="mx-auto mt-3 w-full max-w-[560px] rounded-lg bg-muted"><ModelPreview src={stage.previewGlbUrl} /></div>}
               {stage.id === 'blender' && stage.status === 'awaiting_approval' && (project.workflowMode === 'guided' || Boolean(stage.error)) && <Button className="mt-3" size="sm" onClick={() => void advance('blender')} disabled={advancing}><Play className="size-3.5" /> {advancing ? 'Blender 준비 요청 중…' : '이 3D 결과로 Blender 준비 진행'}</Button>}
               {stage.id === 'rigging_animation' && stage.status === 'awaiting_approval' && <div className="mt-3 space-y-3 rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">캐릭터의 크기와 방향을 확인하세요. 뼈대와 웨이트를 자동 생성한 뒤 FBX로 변환합니다. 아래 메모는 기록용이며 관절을 수정하지는 않습니다. 관절 직접 편집과 동작 클립 연결은 아직 지원하지 않습니다.</p><div className="grid gap-2 sm:grid-cols-2"><Label className="text-xs">캐릭터 키(m)<input className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-sm" type="number" min="0.5" max="3" step="0.01" value={heightMeters} onChange={(event) => setHeightMeters(event.target.value)} /></Label><Label className="flex items-end gap-2 pb-1 text-xs"><input type="checkbox" checked={orientationConfirmed} onChange={(event) => setOrientationConfirmed(event.target.checked)} /> 얼굴이 +Z 전방을 향함</Label></div><textarea value={jointNotes} onChange={(event) => setJointNotes(event.target.value)} placeholder="수동 보정 메모: 예) 팔이 몸통에 붙어 있음, 발 위치를 넓혀야 함" className="min-h-16 w-full rounded-md border bg-background p-2 text-sm" /><Button size="sm" onClick={() => void advance('rigging_animation')} disabled={advancing || !orientationConfirmed}><Play className="size-3.5" /> {advancing ? '리깅 요청 중…' : 'SkinTokens 자동 리깅 요청'}</Button></div>}
             </div>)}
           </div>
+          {screen === 'shape' && shapeReady && <Button className="mt-4" onClick={() => setSelectedScreen('rigging')}>리깅 화면으로 진행 <ChevronRight className="size-4" /></Button>}
+          {screen === 'rigging' && rigReady && <Button className="mt-4" onClick={() => setSelectedScreen('animation')}>애니메이션 화면으로 진행 <ChevronRight className="size-4" /></Button>}
+          {screen === 'animation' && animationReady && <Button className="mt-4" onClick={() => setSelectedScreen('unity')}>Unity 파일 화면으로 진행 <ChevronRight className="size-4" /></Button>}
         </Card>
       ) : null}
 
@@ -394,12 +441,13 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
       {project.generationTiming?.executionTimeMs !== undefined && (
         <p className="mb-4 text-sm text-muted-foreground">3D 생성 처리 {Math.round(project.generationTiming.executionTimeMs / 1000)}초 · 워커 대기 {Math.round((project.generationTiming.delayTimeMs ?? 0) / 1000)}초</p>
       )}
-      {outputs.length > 0 && (
+      {screen === 'animation' && rigReady && <MotionLibrary projectId={projectId} riggedGlbUrl={outputs[0]?.riggedGlbUrl} onContinue={() => setSelectedScreen('unity')} />}
+      {(screen === 'shape' || screen === 'unity') && outputs.length > 0 && (
         <div className="space-y-4">
           {outputs.map((output) => (
             <Card key={output.id} className="overflow-hidden">
-              <div className="flex min-h-80 items-center justify-center bg-muted">
-                {output.riggedGlbUrl || output.glbUrl ? <ModelPreview src={output.riggedGlbUrl ?? output.glbUrl} /> : output.thumbnailUrl ? (
+              <div className="mx-auto flex aspect-square w-full max-w-[560px] items-center justify-center bg-muted">
+                {output.riggedGlbUrl || output.glbUrl ? <ModelPreview src={(screen === 'unity' ? stage('animation')?.previewGlbUrl ?? Object.entries(output.animationUrls ?? {}).find(([name]) => name.endsWith('.glb'))?.[1] : undefined) ?? output.riggedGlbUrl ?? output.glbUrl} /> : output.thumbnailUrl ? (
                   <img src={output.thumbnailUrl} alt="" className="h-full object-contain" />
                 ) : (
                   <div className="text-center text-muted-foreground">
@@ -410,7 +458,6 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
               </div>
               <div className="space-y-3 p-4">
                 <p className={`rounded-md p-3 text-sm ${output.riggedFbxUrl ? 'bg-emerald-500/10' : 'bg-amber-500/10'}`}>{output.riggedFbxUrl ? '리깅된 캐릭터 번들 · 아래 모션 라이브러리에서 동작을 적용하고 관절 변형을 검수하세요.' : '생성 메시 · 게임 캐릭터 준비 미완료. 형상 검토, 리깅·관절 변형 및 Unity 임포트 검증이 필요합니다.'}</p>
-                <MotionLibrary projectId={projectId} riggedGlbUrl={output.riggedGlbUrl} />
                 {output.polyCount && (
                   <p className="text-sm text-muted-foreground">
                     {t('polyCount')}: {output.polyCount.toLocaleString()}
@@ -422,6 +469,7 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
                   </p>
                 )}
                 <div className="flex gap-2">
+                  {screen === 'unity' && animationReady && <Button size="sm" onClick={() => void downloadUnityPackage()} disabled={downloadingUnity}>{downloadingUnity ? <Loader2 className="size-3 animate-spin" /> : <Download className="size-3" />} {downloadingUnity ? 'Unity 파일 준비 중…' : 'Unity 개발 파일 ZIP'}</Button>}
                   {output.glbUrl && <Button variant="outline" size="sm" asChild><a href={output.glbUrl} download target="_blank" rel="noreferrer"><Download className="size-3" /> {t('downloadGlb')}</a></Button>}
                   {output.fbxUrl && (
                     <Button variant="outline" size="sm" asChild>
@@ -432,7 +480,8 @@ function ProjectDetail({ projectId, onBack }: { projectId: string; onBack: () =>
                   {output.unityManifestUrl && <Button variant="outline" size="sm" asChild><a href={output.unityManifestUrl} download target="_blank" rel="noreferrer">Unity 머티리얼 정보</a></Button>}
                 </div>
                 {output.textureUrls && Object.keys(output.textureUrls).length > 0 && <div><p className="mb-2 text-sm font-medium">생성 텍스처</p><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.entries(output.textureUrls).map(([name, url]) => <a key={name} href={url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-lg border"><img src={url} alt={name} className="aspect-square w-full object-cover" /><span className="block truncate p-2 text-xs text-muted-foreground">{name}</span></a>)}</div></div>}
-                {output.animationUrls && Object.keys(output.animationUrls).length > 0 && <div><p className="mb-2 text-sm font-medium">기본 애니메이션</p><div className="flex flex-wrap gap-2">{Object.entries(output.animationUrls).map(([name, url]) => <Button key={name} variant="outline" size="sm" asChild><a href={url} download target="_blank" rel="noreferrer"><Download className="size-3" /> {name.replace(/_url$/, '')}</a></Button>)}</div></div>}
+                {output.animationUrls && Object.keys(output.animationUrls).length > 0 && <div><p className="mb-2 text-sm font-medium">추가한 애니메이션</p><div className="flex flex-wrap gap-2">{Object.entries(output.animationUrls).map(([name, url]) => <Button key={name} variant="outline" size="sm" asChild><a href={url} download target="_blank" rel="noreferrer"><Download className="size-3" /> {output.animationNames?.[name.split('.')[0]] ?? name.split('.')[0]} ({name.split('.').at(-1)?.toUpperCase()})</a></Button>)}</div></div>}
+                {screen === 'unity' && animationReady && <p className="text-xs text-muted-foreground">ZIP의 FBX 파일은 Unity Assets 폴더에 넣을 수 있습니다. Rig 탭에서 Generic으로 설정하고 클립을 확인하세요. Humanoid Avatar와 머티리얼은 Unity에서 별도 검증이 필요합니다.</p>}
               </div>
             </Card>
           ))}

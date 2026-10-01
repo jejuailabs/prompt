@@ -54,3 +54,10 @@ server.log
 # Skills directory
 /skills/
 .vercel
+
+# local tooling / large binary assets
+/.tmp/
+/animations/
+/exports/
+__pycache__/
+*.pyc

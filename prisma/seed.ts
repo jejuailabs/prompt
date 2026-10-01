@@ -128,25 +128,25 @@ async function main() {
   // 1크레딧 = ₩1
   const providers = [
     // ── OpenAI GPT Image 2 (품질별 3종) ──
-    { id: 'gpt-image-2-high', displayName: 'GPT Image 2 (High)', category: 'image', costPerUnit: 290, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-1","quality":"high"}' },
-    { id: 'gpt-image-2-medium', displayName: 'GPT Image 2 (Medium)', category: 'image', costPerUnit: 73, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-1","quality":"medium"}' },
-    { id: 'gpt-image-2-low', displayName: 'GPT Image 2 (Low)', category: 'image', costPerUnit: 8, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-1","quality":"low"}' },
+    { id: 'gpt-image-2-high', displayName: 'GPT Image 2 (High)', category: 'image', costPerUnit: 290, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-2","quality":"high"}' },
+    { id: 'gpt-image-2-medium', displayName: 'GPT Image 2 (Medium)', category: 'image', costPerUnit: 73, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-2","quality":"medium"}' },
+    { id: 'gpt-image-2-low', displayName: 'GPT Image 2 (Low)', category: 'image', costPerUnit: 8, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-2","quality":"low"}' },
     // ── OpenAI GPT Image 2.5 (2종) ──
     { id: 'gpt-image-25-sunburst', displayName: 'GPT Image 2.5 Sunburst', category: 'image', costPerUnit: 138, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-2.5-sunburst"}' },
     { id: 'gpt-image-25-flare', displayName: 'GPT Image 2.5 Flare', category: 'image', costPerUnit: 69, marginRate: 1.4, styleHint: '', adapterType: 'openai', adapterConfig: '{"model":"gpt-image-2.5-flare"}' },
-    // ── Google Gemini Image (3종, generateContent + responseModalities:IMAGE) ──
-    { id: 'imagen-4-ultra', displayName: 'Imagen 4 Ultra', category: 'image', costPerUnit: 83, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"gemini-3-pro-image"}' },
-    { id: 'imagen-4-standard', displayName: 'Imagen 4 Standard', category: 'image', costPerUnit: 55, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"gemini-3.1-flash-image"}' },
-    { id: 'imagen-4-fast', displayName: 'Imagen 4 Fast', category: 'image', costPerUnit: 28, marginRate: 1.4, styleHint: '', adapterType: 'imagen', adapterConfig: '{"model":"gemini-2.5-flash-image"}' },
+    // ── Google Gemini Image (legacy IDs are kept for existing jobs) ──
+    { id: 'imagen-4-ultra', displayName: 'Gemini 3 Pro Image', category: 'image', costPerUnit: 83, marginRate: 1.4, styleHint: '', adapterType: 'gemini', adapterConfig: '{"model":"gemini-3-pro-image"}' },
+    { id: 'imagen-4-standard', displayName: 'Gemini 3.1 Flash Image', category: 'image', costPerUnit: 55, marginRate: 1.4, styleHint: '', adapterType: 'gemini', adapterConfig: '{"model":"gemini-3.1-flash-image"}' },
+    { id: 'imagen-4-fast', displayName: 'Gemini 2.5 Flash Image', category: 'image', costPerUnit: 28, marginRate: 1.4, styleHint: '', adapterType: 'gemini', adapterConfig: '{"model":"gemini-2.5-flash-image"}' },
     // ── Stability AI (2종) ──
     { id: 'stable-image-ultra', displayName: 'Stable Image Ultra', category: 'image', costPerUnit: 110, marginRate: 1.4, styleHint: 'artistic, painterly quality', adapterType: 'stability', adapterConfig: '{"endpoint":"ultra"}' },
     { id: 'stable-image-core', displayName: 'Stable Image Core', category: 'image', costPerUnit: 41, marginRate: 1.4, styleHint: '', adapterType: 'stability', adapterConfig: '{"endpoint":"core"}' },
     // ── FLUX via Replicate (2종) ──
     { id: 'flux-2-pro', displayName: 'FLUX 2 Pro', category: 'image', costPerUnit: 55, marginRate: 1.4, styleHint: '', adapterType: 'replicate', adapterConfig: '{"modelId":"black-forest-labs/flux-2-pro"}' },
-    { id: 'flux-3', displayName: 'FLUX 3', category: 'image', costPerUnit: 69, marginRate: 1.4, styleHint: '', adapterType: 'replicate', adapterConfig: '{"modelId":"black-forest-labs/flux-3"}' },
+    { id: 'flux-3', displayName: 'FLUX 3 (Video)', category: 'video', active: false, costPerUnit: 69, marginRate: 1.4, styleHint: '', adapterType: 'replicate', adapterConfig: '{"modelId":"black-forest-labs/flux-3"}' },
     // ── Seedream 5.0 via Replicate (2종) ──
-    { id: 'seedream-5-pro', displayName: 'Seedream 5.0 Pro', category: 'image', costPerUnit: 62, marginRate: 1.4, styleHint: '', adapterType: 'replicate', adapterConfig: '{"modelId":"bytedance/seedream-5-pro"}' },
-    { id: 'seedream-5-lite', displayName: 'Seedream 5.0 Lite', category: 'image', costPerUnit: 55, marginRate: 1.4, styleHint: '', adapterType: 'replicate', adapterConfig: '{"modelId":"bytedance/seedream-5-lite"}' },
+    { id: 'seedream-5-pro', displayName: 'Seedream 5.0 Pro', category: 'image', active: false, costPerUnit: 62, marginRate: 1.4, styleHint: '', adapterType: 'replicate', adapterConfig: '{"modelId":"bytedance/seedream-5-pro"}' },
+    { id: 'seedream-5-lite', displayName: 'Seedream 5.0 Lite', category: 'image', active: false, costPerUnit: 55, marginRate: 1.4, styleHint: '', adapterType: 'replicate', adapterConfig: '{"modelId":"bytedance/seedream-5-lite"}' },
   ];
 
   for (const p of providers) {

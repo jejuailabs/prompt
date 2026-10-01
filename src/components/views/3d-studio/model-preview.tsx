@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-export function ModelPreview({ src }: { src: string }) {
+export function ModelPreview({ src, onReady }: { src: string; onReady?: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const playback = useRef({ clip: 0, speed: 1, playing: true, loop: true, skeleton: false });
   const [clips, setClips] = useState<string[]>([]);
@@ -28,7 +28,10 @@ export function ModelPreview({ src }: { src: string }) {
     setReady(false); setError(''); setClips([]); setBones(0); setClip(0);
     playback.current.clip = 0;
     try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); }
-    catch { setError('WebGL을 시작하지 못했습니다. 하드웨어 가속을 확인해주세요.'); return; }
+    catch {
+      const notice = window.setTimeout(() => setError('WebGL을 시작하지 못했습니다. 하드웨어 가속을 확인해주세요.'), 0);
+      return () => window.clearTimeout(notice);
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -58,10 +61,15 @@ export function ModelPreview({ src }: { src: string }) {
       if (disposed) { release(gltf.scene); return; }
       model = gltf.scene; scene.add(model);
       const box = new THREE.Box3().setFromObject(model);
-      const size = box.getSize(new THREE.Vector3()).length() || 1;
+      const bounds = box.getSize(new THREE.Vector3());
+      const size = bounds.length() || 1;
       const center = box.getCenter(new THREE.Vector3());
       controls.target.copy(center);
-      camera.position.copy(center).add(new THREE.Vector3(size * 0.8, size * 0.35, size * 1.5));
+      const halfFov = THREE.MathUtils.degToRad(camera.fov) / 2;
+      const fitHeight = bounds.y / (2 * Math.tan(halfFov));
+      const fitWidth = bounds.x / (2 * Math.tan(halfFov) * Math.max(camera.aspect, 0.1));
+      const distance = Math.max(fitHeight, fitWidth, bounds.z * 2, 0.1) * 1.18;
+      camera.position.copy(center).add(new THREE.Vector3(0.25, 0.12, 1).normalize().multiplyScalar(distance));
       camera.near = size / 1000; camera.far = size * 100; camera.updateProjectionMatrix();
       controls.minDistance = size * 0.1; controls.maxDistance = size * 10;
       helper = new THREE.SkeletonHelper(model);
@@ -72,7 +80,10 @@ export function ModelPreview({ src }: { src: string }) {
       setBones(joints.size);
       animations = gltf.animations;
       mixer = new THREE.AnimationMixer(model);
-      setClips(animations.map((item, i) => item.name || `동작 ${i + 1}`)); setReady(true);
+      const preferredClip = Math.max(0, animations.findIndex(item => item.name && !item.name.includes('mixamo.com')));
+      playback.current.clip = preferredClip;
+      setClip(preferredClip);
+      setClips(animations.map((item, i) => item.name || `동작 ${i + 1}`)); setReady(true); onReady?.();
     }, undefined, () => { if (!disposed) setError('3D 파일을 불러오지 못했습니다. 파일 주소·권한을 확인해주세요.'); });
     const observer = new ResizeObserver(() => {
       const width = container.clientWidth, height = container.clientHeight;
@@ -100,10 +111,10 @@ export function ModelPreview({ src }: { src: string }) {
       mixer?.stopAllAction(); if (model) { mixer?.uncacheRoot(model); release(model); }
       helper?.dispose(); renderer.dispose(); renderer.domElement.remove();
     };
-  }, [src]);
+  }, [src, onReady]);
 
   return <div className="w-full space-y-2">
-    <div ref={host} className="h-80 w-full overflow-hidden rounded-lg" aria-label="3D 모델: 드래그로 회전, 휠로 확대·축소" />
+    <div ref={host} className="mx-auto aspect-square w-full max-w-[560px] overflow-hidden rounded-lg" aria-label="3D 모델: 드래그로 회전, 휠로 확대·축소" />
     {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : !ready ? <p role="status">3D 불러오는 중…</p> : <>
       <p className="text-xs text-muted-foreground">{bones ? `스킨에 연결된 뼈 ${bones}개` : '정적 메시 · 리깅 없음'} · 내장 동작 {clips.length}개</p>
       <div className="flex flex-wrap items-center gap-3 text-sm">

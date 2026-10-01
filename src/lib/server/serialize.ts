@@ -325,7 +325,7 @@ export function serializeJob(j: JobWithRelations, resultArtifact?: ArtifactDTO |
   return {
     id: j.id,
     providerId: j.providerId,
-    providerName: j.provider.displayName,
+    providerName: resultArtifact?.metadata.model || j.provider.displayName,
     promptText: j.promptText,
     aspect: j.aspect,
     style: j.style,

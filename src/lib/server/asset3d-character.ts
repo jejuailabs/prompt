@@ -1,5 +1,6 @@
 import { getRunpodEndpointId, queueRunpodJob } from '@/lib/server/runpod';
 import type { Asset3dWorkflowStageDTO } from '@/lib/types';
+import { createSignedWorkerUploads, publicStorageUrl } from '@/lib/server/storage';
 
 /** Character Blender is deliberately separate from the older architectural worker. */
 export async function queueCharacterPreparation(model: Buffer) {
@@ -22,11 +23,13 @@ export function updateWorkflowStage(
 
 /**
  * Queue the self-hosted SkinTokens / TokenRig worker. This has no SaaS key and
- * must not fall back to a paid provider. The worker returns base64 files:
- * rigged.glb, rigged.fbx, and optional animations/<name>.fbx.
+ * must not fall back to a paid provider.  Binary assets upload directly to
+ * short-lived signed Storage URLs; RunPod returns only the receipt/report.
  */
 export async function queueSkinTokensRigging(input: {
   model: Buffer;
+  ownerId: string;
+  projectId: string;
   heightMeters?: number;
   orientationConfirmed?: boolean;
   jointNotes?: string;
@@ -34,8 +37,17 @@ export async function queueSkinTokensRigging(input: {
   if (!getRunpodEndpointId('rigging')) {
     throw new Error('자가호스팅 SkinTokens 리깅 워커가 아직 연결되지 않았습니다. 외부 유료 리깅 API로 대체 호출하지 않습니다.');
   }
-  return queueRunpodJob('rigging', {
+  const root = `3d/${input.ownerId}/${input.projectId}/rigging-${crypto.randomUUID()}`;
+  const uploads = await createSignedWorkerUploads({
+    'rigged.glb': { path: `${root}/character-rigged.glb`, contentType: 'model/gltf-binary' },
+    'rigged.fbx': { path: `${root}/character-rigged.fbx`, contentType: 'application/octet-stream' },
+  });
+  const job = await queueRunpodJob('rigging', {
     model_base64: input.model.toString('base64'),
+    output_uploads: Object.fromEntries(Object.entries(uploads).map(([name, upload]) => [name, {
+      signed_url: upload.signedUrl,
+      content_type: upload.contentType,
+    }])),
     settings: {
       height_meters: input.heightMeters ?? 1.7,
       forward_axis: '+Z',
@@ -44,4 +56,9 @@ export async function queueSkinTokensRigging(input: {
       use_skeleton: false,
     },
   });
+  return {
+    ...job,
+    outputPaths: Object.fromEntries(Object.entries(uploads).map(([name, upload]) => [name, upload.path])),
+    outputUrls: Object.fromEntries(Object.entries(uploads).map(([name, upload]) => [name, publicStorageUrl(upload.path)])),
+  };
 }

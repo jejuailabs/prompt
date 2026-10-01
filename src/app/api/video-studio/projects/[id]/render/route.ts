@@ -9,7 +9,7 @@ import { buildH3TextToVideoWorkflow, getEngineForFirstShot, type VideoAspectRati
 import { buildLtx2bWorkflow } from '@/lib/server/ltx-2b-workflow';
 import { buildWanWorkflow } from '@/lib/server/wan-workflow';
 import { beginMeteredOperation, failMeteredOperation } from '@/lib/server/operation-ledger';
-import { buildVideoModelPrompt, compileVideoIntent } from '@/lib/server/video-intent';
+import { buildVideoModelPrompt, compileVideoIntent, createH3ContextIR } from '@/lib/server/video-intent';
 import type { ComparisonInfo } from '@/lib/video-comparison';
 
 function metadata(raw: string): Record<string, unknown> {
@@ -80,6 +80,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (inputMode === 'image' && !inputImageUrl) throw new HttpError('시작 이미지를 찾을 수 없습니다', 400);
     const firstFrame = inputImageUrl ? await getRunpodFirstFrame(inputImageUrl) : undefined;
     const intent = comparison ? undefined : await compileVideoIntent(prompt, { hasReferenceImage: Boolean(firstFrame), durationSec: duration });
+    // Persist a versioned plan with every non-comparison render. It is the
+    // stable boundary for future multi-reference / storyboard stages and lets
+    // users inspect exactly how their wording was interpreted.
+    const contextIr = intent ? createH3ContextIR(prompt, intent, { hasReferenceImage: Boolean(firstFrame), durationSec: duration }) : undefined;
     const modelPrompt = comparison?.compiledPrompt ?? buildVideoModelPrompt(intent!, Boolean(firstFrame));
     const renderInput = { comparison: Boolean(comparison), h3Preset, preview, seed, prompt: modelPrompt, durationSec: duration, aspectRatio: aspect as VideoAspectRatio, quality: quality === 'standard' ? 'standard' as const : 'draft' as const, ...(firstFrame ? { firstFrameName: firstFrame.name } : {}) };
     const workflow = engine === 'h3' ? buildH3TextToVideoWorkflow(renderInput)
@@ -98,7 +102,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       ...meta,
       projectStatus: 'rendering',
       activeShotId: body.shotId ?? 'shot-1',
-      render: { engine, h3Gpu, h3Preset, preview, seed, configRevision: config?.revision, runpodJobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged, status: job.status, queuedAt: new Date().toISOString(), intent, compiledPrompt: modelPrompt },
+      render: {
+        engine, h3Gpu, h3Preset, preview, seed, configRevision: config?.revision,
+        runpodJobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged,
+        status: job.status, queuedAt: new Date().toISOString(),
+        compiler: comparison ? { schemaVersion: 'h3-context-ir/v1', source: 'comparison-shared-prompt' } : { schemaVersion: contextIr!.schemaVersion, source: 'playlab-context-compiler' },
+        contextIr, intent, compiledPrompt: modelPrompt,
+      },
     };
     await db.artifact.update({ where: { id: project.id }, data: { metadata: JSON.stringify(nextMeta), status: 'processing' } });
     return ok({ projectId: project.id, engine, jobId: job.id, status: job.status, creditCharged: ledger.creditCharged });
