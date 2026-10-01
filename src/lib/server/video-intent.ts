@@ -55,7 +55,7 @@ function textList(value: unknown, fallback: string[]) {
   return values.length ? values : fallback;
 }
 
-function fallbackIntent(prompt: string, hasReferenceImage: boolean): VideoIntent {
+function fallbackIntent(prompt: string, hasReferenceImage: boolean, audioEnabled = false): VideoIntent {
   const forward = /(앞으로|전진|다가가|접근|forward|dolly\s*in|push\s*in)/i.test(prompt);
   const backward = /(뒤로|후진|멀어지|backward|dolly\s*out|pull\s*back)/i.test(prompt);
   const left = /(왼쪽|좌측|left)/i.test(prompt);
@@ -75,7 +75,9 @@ function fallbackIntent(prompt: string, hasReferenceImage: boolean): VideoIntent
     openingFrame: hasReferenceImage
       ? 'The reference image establishes the exact opening subjects, objects, architecture, spatial layout, materials, lighting, and framing.'
       : text(prompt, 'The requested scene is established in a clear cinematic opening composition.'),
-    actionProgression: hasReferenceImage
+    actionProgression: audioEnabled
+      ? `Follow this original scene and audio direction, preserving spoken words in their original language: ${text(prompt, '', 2000)}`
+      : hasReferenceImage
       ? 'Motion begins naturally from the opening frame and develops continuously through one clear visual beat.'
       : 'The requested visual action begins clearly and develops as one continuous cinematic beat.',
     cameraDirection,
@@ -83,8 +85,8 @@ function fallbackIntent(prompt: string, hasReferenceImage: boolean): VideoIntent
     continuity: hasReferenceImage
       ? ['Keep the visible subjects, geometry, materials, lighting, and spatial relationships consistent across the full shot.']
       : ['Keep the scene visually coherent and physically plausible across the full shot.'],
-    overallSoundscape: 'N/A',
-    nonDiegeticMusic: 'N/A',
+    overallSoundscape: audioEnabled ? 'Follow the original sound direction in the integrated description, including requests for silence. Otherwise use only subtle sounds motivated by the visible scene.' : 'N/A',
+    nonDiegeticMusic: audioEnabled ? 'Use background music only if requested in the original direction, following its instruments and mood. Otherwise no background music.' : 'N/A',
   };
 }
 
@@ -133,9 +135,9 @@ export function createH3ContextIR(
  */
 export async function compileVideoIntent(
   prompt: string,
-  options: { hasReferenceImage: boolean; durationSec: number },
+  options: { hasReferenceImage: boolean; durationSec: number; audioEnabled?: boolean },
 ): Promise<VideoIntent> {
-  const fallback = fallbackIntent(prompt, options.hasReferenceImage);
+  const fallback = fallbackIntent(prompt, options.hasReferenceImage, options.audioEnabled);
   if (!process.env.GEMINI_API_KEY) return fallback;
 
   try {
@@ -143,13 +145,14 @@ export async function compileVideoIntent(
       `You are a senior video director compiling a creator's Korean or English request for MiniMax H3 image-to-video generation. Return JSON only with exactly these keys: openingFrame, actionProgression, cameraDirection, endingFrame, continuity, overallSoundscape, nonDiegeticMusic.
 
 Rules:
-- Write concise, natural English only. Translate intent; never copy Korean into the output.
+- Write concise, natural English directions. Preserve requested dialogue, narration and lyrics verbatim in their original language, including Korean. Never translate spoken words.
 - Build one chronological shot: opening frame anchor -> action onset -> continuous development -> resolved ending frame. Do not invent a second scene or cut.
 - When hasReferenceImage is true, the supplied image is the exact visual state at 0.00 seconds. Preserve its visible subject identity, objects, architecture, layout, lighting, materials, and framing unless the creator explicitly asks for a change.
 - Separate what is visible from cinematography. Camera, lens, gimbal, dolly, crane, pan, tilt, orbit, and handheld normally describe viewer-camera motion. Do not make them visible props, people, dialogue, or text unless explicitly requested.
 - Express one dominant camera motion as a complete natural sentence using a standard motion term (for example Push In, Pull Out, Pan, Track) plus direction, amplitude, and speed. If the creator asks to move forward, use a straight Push In; do not reinterpret it as orbiting or a lateral move.
 - continuity is an array of at most three short, positive visual-consistency directions. Do not list forbidden items or use negative prompts.
-- Default to a silent clip: overallSoundscape and nonDiegeticMusic must be "N/A" unless audio is explicitly requested. Do not add dialogue, narration, subtitles, captions, logos, watermarks, signs, or readable text unless explicitly requested.
+- When audioEnabled is true, include requested dialogue/narration in actionProgression with speaker, delivery and timing. Put environmental ambience and physical sound effects in overallSoundscape, and audience-only background score in nonDiegeticMusic. Keep music beneath speech. Without audio directions, use subtle scene-appropriate ambience only; never invent dialogue or music. Honor requests for silence, no speech or no music independently. For complete silence set both sound fields to "N/A" and omit speech.
+- When audioEnabled is false or absent, default to a silent clip: both sound fields must be "N/A" unless audio is explicitly requested. Do not add subtitles, captions, logos, watermarks, signs, or readable text unless requested.
 - Do not invent people, vehicles, objects, actions, text, or sound.
 - Keep every string under 700 characters.`,
       JSON.stringify({ creatorPrompt: prompt, ...options }),
@@ -183,10 +186,9 @@ export function buildVideoModelPrompt(intent: VideoIntent, hasReferenceImage: bo
     ...intent.continuity,
   ].join(' ');
 
-  return [
-    alignment,
-    `integrated_multimodal_description: ${visual}`,
-    `overall_soundscape: ${intent.overallSoundscape}`,
-    `non_diegetic_music: ${intent.nonDiegeticMusic}`,
-  ].join('\n\n');
+  // Reserve space for sound before the workflow's 4000-character limit.
+  // Long visual directions must not silently truncate music at the tail.
+  const prefix = `${alignment}\n\nintegrated_multimodal_description: `;
+  const sound = `\n\noverall_soundscape: ${intent.overallSoundscape.slice(0, 300)}\n\nnon_diegetic_music: ${intent.nonDiegeticMusic.slice(0, 300)}`;
+  return `${prefix}${visual.slice(0, 4000 - prefix.length - sound.length)}${sound}`;
 }

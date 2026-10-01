@@ -19,6 +19,7 @@ interface CreateVideoProjectBody {
   engine?: 'h3' | 'wan' | 'ltx';
   h3Gpu?: '5090' | 'blackwell';
   preview?: boolean;
+  audioEnabled?: boolean;
 }
 
 function parseMetadata(raw: string): Record<string, unknown> {
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireUser();
     const body = await readJson<CreateVideoProjectBody>(req);
+    if (body.audioEnabled !== undefined && typeof body.audioEnabled !== 'boolean') throw new HttpError('사운드 설정을 확인해주세요', 400);
     const prompt = (body.prompt ?? body.script ?? '').trim();
     if (prompt.length < 3) throw new HttpError('영상 설명을 3자 이상 입력해주세요', 400);
 
@@ -72,6 +74,7 @@ export async function POST(req: NextRequest) {
       engine: body.engine ?? null,
       h3Gpu: body.h3Gpu === 'blackwell' ? 'blackwell' : '5090',
       preview: body.preview === true,
+      audioEnabled: body.audioEnabled !== false,
       projectStatus: 'editing',
       shots: [{
         id: 'shot-1',

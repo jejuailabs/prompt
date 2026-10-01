@@ -89,13 +89,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const inputImageUrl = shotIndex > 0 ? carriedFrame : (typeof shot.inputImageUrl === 'string' ? shot.inputImageUrl : (typeof meta.inputImageUrl === 'string' ? meta.inputImageUrl : null));
     if (inputMode === 'image' && !inputImageUrl) throw new HttpError('시작 이미지를 찾을 수 없습니다', 400);
     const firstFrame = inputImageUrl ? await getRunpodFirstFrame(inputImageUrl) : undefined;
-    const intent = comparison ? undefined : await compileVideoIntent(prompt, { hasReferenceImage: Boolean(firstFrame), durationSec: duration });
+    const audioEnabled = engine === 'h3' && !comparison && meta.audioEnabled !== false;
+    const intent = comparison ? undefined : await compileVideoIntent(prompt, { hasReferenceImage: Boolean(firstFrame), durationSec: duration, audioEnabled });
     // Persist a versioned plan with every non-comparison render. It is the
     // stable boundary for future multi-reference / storyboard stages and lets
     // users inspect exactly how their wording was interpreted.
     const contextIr = intent ? createH3ContextIR(prompt, intent, { hasReferenceImage: Boolean(firstFrame), durationSec: duration }) : undefined;
     const modelPrompt = comparison?.compiledPrompt ?? buildVideoModelPrompt(intent!, Boolean(firstFrame));
-    const renderInput = { comparison: Boolean(comparison), h3Preset, preview, seed, prompt: modelPrompt, durationSec: duration, aspectRatio: aspect as VideoAspectRatio, quality: quality === 'standard' ? 'standard' as const : 'draft' as const, ...(firstFrame ? { firstFrameName: firstFrame.name } : {}) };
+    const renderInput = { comparison: Boolean(comparison), audioEnabled, h3Preset, preview, seed, prompt: modelPrompt, durationSec: duration, aspectRatio: aspect as VideoAspectRatio, quality: quality === 'standard' ? 'standard' as const : 'draft' as const, ...(firstFrame ? { firstFrameName: firstFrame.name } : {}) };
     const workflow = engine === 'h3' ? buildH3TextToVideoWorkflow(renderInput)
       : engine === 'wan' ? buildWanWorkflow(renderInput) : buildLtx2bWorkflow(renderInput);
     const ledger = await beginMeteredOperation({ userId: user.id, engine, preview, prompt, aspect, style: typeof meta.style === 'string' ? meta.style : null });
@@ -114,13 +115,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       activeShotId: shotId,
       shots: shots.map((candidate, index) => index === shotIndex ? {
         ...candidate, inputMode, inputImageUrl, status: 'rendering', render: {
-          engine, h3Gpu, h3Preset, preview, seed, configRevision: config?.revision,
+          engine, audioEnabled, h3Gpu, h3Preset, preview, seed, configRevision: config?.revision,
           runpodJobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged,
           status: job.status, queuedAt: new Date().toISOString(),
         },
       } : candidate),
       render: {
-        engine, h3Gpu, h3Preset, preview, seed, configRevision: config?.revision,
+        engine, audioEnabled, h3Gpu, h3Preset, preview, seed, configRevision: config?.revision,
         runpodJobId: job.id, accountingJobId: ledger.operationId, creditCharged: ledger.creditCharged,
         status: job.status, queuedAt: new Date().toISOString(),
         compiler: comparison ? { schemaVersion: 'h3-context-ir/v1', source: 'comparison-shared-prompt' } : { schemaVersion: contextIr!.schemaVersion, source: 'playlab-context-compiler' },
