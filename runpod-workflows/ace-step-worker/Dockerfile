@@ -41,8 +41,7 @@ ENV PATH="/opt/ace-step/.venv/bin:${PATH}"
 
 # Default components supply VAE, embedding model and the 1.7B LM. XL-Turbo is
 # added explicitly and selected at startup; no paid or gated model is used.
-# XL-SFT (50 steps, CFG) backs the 'high' quality preset; swapped in via /v1/init.
-RUN acestep-download && acestep-download --model acestep-v15-xl-turbo && acestep-download --model acestep-v15-xl-sft
+RUN acestep-download && acestep-download --model acestep-v15-xl-turbo
 
 COPY handler.py /opt/worker/handler.py
 WORKDIR /opt/worker

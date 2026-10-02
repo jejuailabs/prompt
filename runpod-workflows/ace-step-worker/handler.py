@@ -29,11 +29,10 @@ MAX_AUDIO_BYTES = 60 * 1024 * 1024
 MAX_SOURCE_BYTES = 256 * 1024 * 1024
 MAX_DURATION_SECONDS = 240
 MAX_WAIT_SECONDS = 25 * 60
-# standard: XL-Turbo 8 steps (fast). high: XL-SFT 50 steps, the official guide's
-# "highest quality" model with CFG.
+# standard: XL-Turbo 8 steps. The XL-SFT 'high' preset (50 steps) returns once its
+# weights fit in the image build (the runner ran out of disk with both XL models).
 QUALITY_PRESETS: dict[str, dict[str, Any]] = {
     'standard': {'model': 'acestep-v15-xl-turbo', 'inference_steps': 8},
-    'high': {'model': 'acestep-v15-xl-sft', 'inference_steps': 50, 'guidance_scale': 7.0},
 }
 OVERRIDABLE = {
     'model', 'inference_steps', 'guidance_scale', 'shift', 'infer_method', 'use_adg',

@@ -163,7 +163,6 @@ export function AceMusicTool() {
       </div>
       <div className="flex flex-wrap items-end gap-3">
         <div className="grid gap-1.5 text-sm font-medium">{mode === 'cover' ? '길이' : '생성 길이'} {mode === 'cover' ? <p className="py-2 text-sm font-normal text-muted-foreground">원곡 길이(10초~4분)를 따릅니다</p> : <div className="flex flex-wrap gap-1">{[30, 60, 90, 180, 240].map((value) => <button key={value} type="button" onClick={() => setDuration(value)} disabled={active} className={`rounded-md border px-3 py-2 text-sm ${duration === value ? 'border-primary bg-primary text-primary-foreground' : 'bg-background'}`}>{value >= 60 ? `${value / 60}분` : `${value}초`}</button>)}</div>}</div>
-        {mode === 'song' && <div className="grid gap-1.5 text-sm font-medium">품질 <div className="flex gap-1">{([['standard', '표준 · 빠름'], ['high', '고품질 · 느림']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setQuality(value)} disabled={active} className={`rounded-md border px-3 py-2 text-sm ${quality === value ? 'border-primary bg-primary text-primary-foreground' : 'bg-background'}`}>{label}</button>)}</div></div>}
         <label className="grid w-28 gap-1.5 text-sm font-medium">BPM <input inputMode="numeric" value={bpm} onChange={(event) => setBpm(event.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="자동" className="rounded-lg border bg-background px-3 py-2 text-sm" /></label>
       </div>
     </div>
