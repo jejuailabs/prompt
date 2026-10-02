@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Check, Copy, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,44 +76,85 @@ const PRIVACY = (
   </p>
 );
 
+// ─── fill-in widgets: ① 크게 입력 → ② 버튼 하나로 복사 ───
+function StepLabel({ n, children }: { n: number; children: ReactNode }) {
+  return (
+    <div className="mb-2 flex items-center gap-2 text-base font-bold">
+      <span className="flex size-7 items-center justify-center rounded-full bg-primary text-sm text-primary-foreground">{n}</span>
+      {children}
+    </div>
+  );
+}
+
+function BigField({ label, value, placeholder, onChange, error, type = 'text', hint }: { label: string; value: string; placeholder: string; onChange: (v: string) => void; error?: string; type?: string; hint?: ReactNode }) {
+  const empty = !value.trim();
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-sm font-semibold">{label}</span>
+      <Input
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn('h-12 border-2 bg-background text-base', empty ? 'border-primary ring-4 ring-primary/15' : error ? 'border-destructive' : 'border-emerald-500')}
+      />
+      {error ? <span className="block text-xs text-destructive">{error}</span> : hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
+    </label>
+  );
+}
+
+/** Command preview where the user's own values are highlighted. */
+function Preview({ parts }: { parts: (string | { v: string; ok: boolean })[][] }) {
+  return (
+    <pre className="overflow-x-auto rounded-lg bg-zinc-950 p-3 font-mono text-[13px] leading-7 text-zinc-300">
+      {parts.map((line, i) => (
+        <div key={i}>
+          {line.map((p, j) => typeof p === 'string' ? <span key={j}>{p}</span> : <span key={j} className={cn('rounded px-1', p.ok ? 'bg-emerald-500/20 font-semibold text-emerald-300' : 'bg-amber-500/20 text-amber-300')}>{p.v}</span>)}
+        </div>
+      ))}
+    </pre>
+  );
+}
+
+function CopyStep({ n, ready, text, waitMsg, children }: { n: number; ready: boolean; text: string; waitMsg: string; children: ReactNode }) {
+  return (
+    <div className={cn('rounded-xl border-2 p-4 transition-colors', ready ? 'border-primary bg-primary/5' : 'border-dashed opacity-80')}>
+      <StepLabel n={n}>복사해서 PowerShell에 붙여넣기</StepLabel>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <CopyButton text={text} label="명령어 전체 복사" primary disabled={!ready} className="h-11 px-6 text-base" />
+        <span className={cn('text-sm', ready ? 'font-medium text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground')}>{ready ? '✓ 준비 완료! 버튼을 누르고 붙여넣기(오른쪽 클릭) → Enter' : waitMsg}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // ─── Git identity ───
 export function GitIdentityWidget() {
   const [user, setUser] = useStored('vibe-setup:git-user', { name: '', email: '' });
-  const nameOk = /^[A-Za-z0-9-]+$/.test(user.name.trim());
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email.trim());
-  const name = user.name.trim() || '내GitHub아이디';
-  const email = user.email.trim() || '내이메일@example.com';
-  const lines = [`git config --global user.name "${name}"`, `git config --global user.email "${email}"`];
+  const name = user.name.trim();
+  const email = user.email.trim();
+  const nameOk = /^[A-Za-z0-9-]+$/.test(name);
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const ready = nameOk && emailOk;
+  const text = [`git config --global user.name "${name}"`, `git config --global user.email "${email}"`, 'git config --global --list'].join('\n');
 
   return (
-    <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
-      <div className="text-sm font-semibold">✍️ 입력하면 명령어가 자동으로 완성돼요</div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="space-y-1">
-          <span className="text-xs font-medium">GitHub 아이디 (Username)</span>
-          <Input value={user.name} placeholder="my-id" onChange={(e) => setUser({ ...user, name: e.target.value })} />
-          {user.name && !nameOk && <span className="text-[11px] text-destructive">영문 · 숫자 · 하이픈(-)만 사용해요</span>}
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium">이메일 (GitHub 가입 이메일 또는 noreply 주소)</span>
-          <Input type="email" value={user.email} placeholder="12345678+my-id@users.noreply.github.com" onChange={(e) => setUser({ ...user, email: e.target.value })} />
-          {user.email && !emailOk && <span className="text-[11px] text-destructive">이메일 형식을 확인해 주세요</span>}
-        </label>
+    <div className="space-y-3">
+      <div className="rounded-xl border-2 border-primary/40 bg-card p-4">
+        <StepLabel n={1}>내 정보 입력 <span className="text-sm font-normal text-muted-foreground">— 입력하면 아래 명령어에 자동으로 들어가요</span></StepLabel>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <BigField label="GitHub 아이디" value={user.name} placeholder="예: my-id" onChange={(v) => setUser({ ...user, name: v })} error={name && !nameOk ? '영문 · 숫자 · 하이픈(-)만 사용해요' : undefined} hint="github.com/ 뒤에 붙는 내 아이디" />
+          <BigField label="이메일" type="email" value={user.email} placeholder="예: me@gmail.com" onChange={(v) => setUser({ ...user, email: v })} error={email && !emailOk ? '이메일 형식을 확인해 주세요' : undefined} hint={<>GitHub 가입 이메일. 숨기고 싶다면 <a href="https://github.com/settings/emails" target="_blank" rel="noopener noreferrer" className="underline">noreply 주소</a> 사용</>} />
+        </div>
       </div>
-      <div className="space-y-2">
-        {lines.map((l) => (
-          <div key={l} className="flex items-center gap-2 rounded-md bg-zinc-950 py-1.5 pl-3 pr-1.5">
-            <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[12px] text-zinc-100">{l}</code>
-            <CopyButton text={l} disabled={!ready} />
-          </div>
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <CopyButton text={lines.join('\n')} label="두 줄 한번에 복사" disabled={!ready} className="h-8 px-3" />
-        {!ready && <span className="text-[11px] text-muted-foreground">아이디와 이메일을 입력하면 복사 버튼이 켜져요</span>}
-      </div>
-      <CommandBlock label="확인" code="git config --global --list" />
+      <CopyStep n={2} ready={ready} text={text} waitMsg="↑ 아이디와 이메일을 먼저 입력하세요">
+        <Preview parts={[
+          ['git config --global user.name "', { v: name || '아이디', ok: nameOk }, '"'],
+          ['git config --global user.email "', { v: email || '이메일', ok: emailOk }, '"'],
+          ['git config --global --list   ', '# 마지막 줄: 잘 들어갔는지 확인'],
+        ]} />
+      </CopyStep>
       {PRIVACY}
     </div>
   );
@@ -123,23 +164,27 @@ export function GitIdentityWidget() {
 export function RepoCommandsWidget() {
   const [user] = useStored('vibe-setup:git-user', { name: '', email: '' });
   const [repo, setRepo] = useStored('vibe-setup:repo', { owner: '', name: 'my-first-app' });
-  const owner = repo.owner || user.name;
-  const url = `https://github.com/${owner.trim() || '내아이디'}/${repo.name.trim() || 'my-first-app'}.git`;
-  const code = ['git init', 'git add .', 'git commit -m "first commit"', 'git branch -M main', `git remote add origin ${url}`, 'git push -u origin main'].join('\n');
+  const owner = (repo.owner || user.name).trim();
+  const name = repo.name.trim();
+  const ready = /^[A-Za-z0-9-]+$/.test(owner) && /^[A-Za-z0-9._-]+$/.test(name);
+  const url = `https://github.com/${owner}/${name}.git`;
+  const text = ['git init', 'git add .', 'git commit -m "first commit"', 'git branch -M main', `git remote add origin ${url}`, 'git push -u origin main'].join('\n');
   return (
-    <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
-      <div className="text-sm font-semibold">✍️ 아이디와 리포지토리 이름만 넣으세요</div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="space-y-1">
-          <span className="text-xs font-medium">GitHub 아이디</span>
-          <Input value={owner} placeholder="my-id" onChange={(e) => setRepo({ ...repo, owner: e.target.value })} />
-        </label>
-        <label className="space-y-1">
-          <span className="text-xs font-medium">리포지토리 이름</span>
-          <Input value={repo.name} placeholder="my-first-app" onChange={(e) => setRepo({ ...repo, name: e.target.value.replace(/\s+/g, '-') })} />
-        </label>
+    <div className="space-y-3">
+      <div className="rounded-xl border-2 border-primary/40 bg-card p-4">
+        <StepLabel n={1}>아이디 · 리포지토리 이름 입력</StepLabel>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <BigField label="GitHub 아이디" value={repo.owner || user.name} placeholder="예: my-id" onChange={(v) => setRepo({ ...repo, owner: v })} />
+          <BigField label="리포지토리 이름" value={repo.name} placeholder="예: my-first-app" onChange={(v) => setRepo({ ...repo, name: v.replace(/\s+/g, '-') })} hint="GitHub에서 만든 이름과 똑같이" />
+        </div>
       </div>
-      <CommandBlock label="첫 업로드 (프로젝트 폴더의 터미널에서)" note="한 번에 복사해서 붙여넣어도 순서대로 실행돼요" code={code} copyLabel="전체 복사" />
+      <CopyStep n={2} ready={ready} text={text} waitMsg="↑ 아이디와 리포지토리 이름을 입력하세요">
+        <Preview parts={[
+          ['git init'], ['git add .'], ['git commit -m "first commit"'], ['git branch -M main'],
+          ['git remote add origin https://github.com/', { v: owner || '아이디', ok: Boolean(owner) }, '/', { v: name || '이름', ok: Boolean(name) }, '.git'],
+          ['git push -u origin main'],
+        ]} />
+      </CopyStep>
     </div>
   );
 }

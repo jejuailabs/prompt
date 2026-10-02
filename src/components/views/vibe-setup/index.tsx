@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { COLUMNS, PS_ALL, getItems, type ColumnId, type DbChoice, type GuideItem } from './data';
+import { MANUAL_PATH, getManualDocs, manualSlug } from './manual';
+import { ManualFullCollapsible } from './manual-content';
 import { MotionGuide } from './motion-guide';
 import { CommandBlock, EnvVarsWidget, GitIdentityWidget, PsSetupWidget, RepoCommandsWidget, useStored } from './widgets';
 
@@ -205,7 +207,11 @@ export default function VibeSetupView() {
         </Button>
       )}
 
-      <p className="mt-8 text-center text-[11px] text-muted-foreground">
+      <div className="mt-12">
+        <ManualFullCollapsible docs={getManualDocs()} />
+      </div>
+
+      <p className="mt-6 text-center text-[11px] text-muted-foreground">
         화면 구성은 2026년 10월 기준으로 단순화해 다시 그린 것이에요. 실제 버튼 이름 · 위치가 조금 다를 수 있으니 공식 매뉴얼 링크도 함께 확인하세요.
       </p>
     </div>
@@ -219,7 +225,7 @@ function ItemDetail({ item, db, done, onToggleDone, onTop }: { item: GuideItem; 
       {item.widget === 'ps-setup' && <PsSetupWidget script={PS_ALL} />}
 
       {/* download / manual links */}
-      {item.links.length > 0 && <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {item.links.map((l) => (
           <Button key={l.href} asChild size="sm" variant={l.primary ? 'default' : 'outline'} className="gap-1.5">
             <a href={l.href} target="_blank" rel="noopener noreferrer">
@@ -228,7 +234,10 @@ function ItemDetail({ item, db, done, onToggleDone, onTop }: { item: GuideItem; 
             </a>
           </Button>
         ))}
-      </div>}
+        <Button asChild size="sm" variant="ghost" className="gap-1.5 text-muted-foreground">
+          <a href={`${MANUAL_PATH}/${manualSlug(item, db)}`} target="_blank" rel="noopener noreferrer"><BookOpen className="size-4" />문서로 보기</a>
+        </Button>
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <MotionGuide steps={item.steps} step={step} onStep={setStep} />
