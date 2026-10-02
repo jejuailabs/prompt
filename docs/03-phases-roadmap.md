@@ -34,6 +34,7 @@ Claude Code는 특정 Phase 작업을 시작하기 전 이 문서에서 해당 �
 - [x] 프롬프트 위키 트리뷰 (포크 관계 시각화)
 - [x] Prisma→Supabase REST 마이그레이션 (API 성능 최적화)
 - [x] Vercel 리전 도쿄 배치 (DB 인접 배치)
+- [x] 바이브코딩 시작하기 가이드 (`vibe-setup` 모듈, Phase 0 공통) — 설치/AI도구/계정/프로젝트 4단 보드, 모형 UI 모션 가이드, Git 사용자 등록·리포 push·.env 변환 입력기, Firebase/Supabase 탭
 
 ---
 

@@ -16,6 +16,7 @@ import RevenueView from '@/components/views/revenue';
 import MarketplaceView from '@/components/views/market';
 import CommunityView from '@/components/views/community';
 import AcademyView from '@/components/views/academy';
+import VibeSetupView from '@/components/views/vibe-setup';
 import AiToolsView from '@/components/views/ai-tools';
 import MyProjectsView from '@/components/views/my-projects';
 import GameRoomView from '@/components/views/game-room';
@@ -57,6 +58,8 @@ export default function ViewRouter() {
       return <CommunityView />;
     case 'academy':
       return <AcademyView />;
+    case 'vibe-setup':
+      return <VibeSetupView />;
     case 'ai-tools':
       return <AiToolsView />;
     case 'tool':

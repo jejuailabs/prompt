@@ -31,6 +31,7 @@ export type ViewKey =
   | 'market'
   | 'community'
   | 'academy'
+  | 'vibe-setup'
   | 'ai-tools'
   | 'tool'
   | 'my-projects'

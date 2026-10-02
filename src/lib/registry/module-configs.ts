@@ -63,6 +63,13 @@ export const MODULE_CONFIGS: ModuleConfigSeed[] = [
     icon: 'graduation-cap', navOrder: 9, enabled: true, status: 'coming-soon',
     mainScreenSlot: 'none', entryView: 'academy', requiresAuth: false, adminOnly: false,
   },
+  {
+    id: 'vibe-setup', phase: 0, titleKo: '바이브코딩 시작하기', titleEn: 'Vibe-coding Setup',
+    descKo: '설치·회원가입·프로젝트 생성을 따라 하면 끝나는 준비 가이드', descEn: 'Install, sign up and create your first project step by step',
+    icon: 'rocket', navOrder: 10, enabled: true, status: 'new',
+    mainScreenSlot: 'none', entryView: 'vibe-setup', requiresAuth: false, adminOnly: false,
+    newUntilDays: 30,
+  },
   // ─── Studio group (Track A / Track B) ───
   {
     id: 'video-studio', phase: 3, titleKo: 'AI 영상 스튜디오', titleEn: 'AI Video Studio',
