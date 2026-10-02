@@ -34,6 +34,42 @@ server_lock = threading.Lock()
 generation_lock = threading.Lock()
 # Last lines printed by the ACE-Step server, returned with any failure so the
 # cause is visible through the RunPod job API (console logs are not retained).
+# Started instead of `python -m acestep.api_server`. torchaudio.save in this
+# image routes through torchcodec, whose native library fails to load, so every
+# audio export failed. Fall back to soundfile (wav/flac) or soundfile + ffmpeg.
+SERVER_LAUNCHER = """
+import os, runpy, subprocess, tempfile
+import soundfile as sf
+import torchaudio
+
+_original_save = torchaudio.save
+
+def _save(uri, src, sample_rate, *args, **kwargs):
+    try:
+        return _original_save(uri, src, sample_rate, *args, **kwargs)
+    except Exception as error:
+        print(f'[launcher] torchaudio.save failed, using soundfile/ffmpeg: {error}', flush=True)
+    data = src.detach().cpu().float().numpy()
+    if kwargs.get('channels_first', True) and data.ndim == 2:
+        data = data.T
+    path = os.fspath(uri)
+    ext = (kwargs.get('format') or os.path.splitext(path)[1].lstrip('.') or 'wav').lower()
+    if ext in ('wav', 'flac'):
+        sf.write(path, data, sample_rate, format=ext.upper())
+        return None
+    fd, temporary = tempfile.mkstemp(suffix='.wav')
+    os.close(fd)
+    try:
+        sf.write(temporary, data, sample_rate, subtype='FLOAT')
+        subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-i', temporary, path], check=True)
+    finally:
+        os.unlink(temporary)
+    return None
+
+torchaudio.save = _save
+runpy.run_module('acestep.api_server', run_name='__main__', alter_sys=True)
+"""
+
 server_log: collections.deque[str] = collections.deque(maxlen=200)
 startup_error: str | None = None
 
@@ -108,7 +144,7 @@ def ensure_server() -> None:
             'ACESTEP_QUEUE_MAXSIZE': '1',
         })
         server = subprocess.Popen(
-            [sys.executable, '-u', '-m', 'acestep.api_server'],
+            [sys.executable, '-u', '-c', SERVER_LAUNCHER],
             cwd='/opt/ace-step', env=environment,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
             start_new_session=True,
@@ -145,8 +181,8 @@ def wav_to_mp3(wav: bytes) -> bytes:
     """Encode with the system ffmpeg.
 
     ACE-Step's own MP3 export first writes a temp WAV through torchaudio, which
-    routes to torchcodec and fails to load in this image. Requesting wav32
-    (written directly by soundfile) and encoding here avoids that path entirely.
+    routes to torchcodec and fails to load in this image. The server is asked
+    for WAV (saved by the soundfile fallback in SERVER_LAUNCHER) and encoded here.
     """
     with tempfile.TemporaryDirectory() as tmp:
         source, target = Path(tmp) / 'in.wav', Path(tmp) / 'out.mp3'
@@ -255,7 +291,7 @@ def generate(job: dict[str, Any]) -> dict[str, Any]:
                 'use_format': task_type != 'cover',
                 'vocal_language': language,
                 'audio_duration': duration,
-                'audio_format': 'wav32',
+                'audio_format': 'wav',
                 'model': 'acestep-v15-xl-turbo',
                 'inference_steps': 8,
                 'shift': 3.0,
