@@ -223,7 +223,7 @@ def generate(job: dict[str, Any]) -> dict[str, Any]:
         ensure_server()
         temporary_cover: str | None = download_cover_audio(cover_audio_url) if task_type == 'cover' else None
         try:
-            task = request_json('/release_task', {
+            task = request_json('/release_task', timeout=300, payload={
                 'prompt': prompt,
                 'lyrics': '' if instrumental or task_type == 'cover' else lyrics,
                 'thinking': task_type != 'cover' and payload.get('thinking') is not False,
@@ -245,7 +245,15 @@ def generate(job: dict[str, Any]) -> dict[str, Any]:
                 raise RuntimeError('ACE-Step did not return a task ID')
             deadline = time.monotonic() + MAX_WAIT_SECONDS
             while time.monotonic() < deadline:
-                result = request_json('/query_result', {'task_id_list': [task_id]})
+                try:
+                    # The first job can arrive while the 5Hz LM is still initializing;
+                    # a slow status reply is not a failure, so keep polling until the deadline.
+                    result = request_json('/query_result', {'task_id_list': [task_id]}, timeout=120)
+                except RuntimeError as error:
+                    if 'timed out' not in str(error):
+                        raise
+                    time.sleep(3)
+                    continue
                 entries = result.get('data') or []
                 entry = entries[0] if isinstance(entries, list) and entries else {}
                 status = entry.get('status') if isinstance(entry, dict) else None
