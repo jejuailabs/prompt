@@ -25,6 +25,8 @@ import runpod
 
 BASE_URL = 'http://127.0.0.1:8001'
 MAX_AUDIO_BYTES = 60 * 1024 * 1024
+# Raw float WAV straight from ACE-Step (4 min stereo 48 kHz ≈ 92 MB) before MP3 encoding.
+MAX_SOURCE_BYTES = 256 * 1024 * 1024
 MAX_DURATION_SECONDS = 240
 MAX_WAIT_SECONDS = 25 * 60
 server: subprocess.Popen | None = None
@@ -130,13 +132,36 @@ def get_audio(path: str) -> bytes:
     if parsed.scheme or parsed.netloc or not path.startswith('/v1/audio?'):
         raise ValueError('ACE-Step returned an unsafe audio path')
     try:
-        with urlopen(Request(f'{BASE_URL}{path}'), timeout=90) as response:
-            content = response.read(MAX_AUDIO_BYTES + 1)
+        with urlopen(Request(f'{BASE_URL}{path}'), timeout=180) as response:
+            content = response.read(MAX_SOURCE_BYTES + 1)
     except (HTTPError, URLError, TimeoutError) as error:
         raise RuntimeError(f'ACE-Step audio download failed: {error}') from error
-    if not content or len(content) > MAX_AUDIO_BYTES:
-        raise ValueError('ACE-Step MP3 output is empty or exceeds the 60 MB limit')
+    if not content or len(content) > MAX_SOURCE_BYTES:
+        raise ValueError('ACE-Step audio output is empty or too large')
     return content
+
+
+def wav_to_mp3(wav: bytes) -> bytes:
+    """Encode with the system ffmpeg.
+
+    ACE-Step's own MP3 export first writes a temp WAV through torchaudio, which
+    routes to torchcodec and fails to load in this image. Requesting wav32
+    (written directly by soundfile) and encoding here avoids that path entirely.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        source, target = Path(tmp) / 'in.wav', Path(tmp) / 'out.mp3'
+        source.write_bytes(wav)
+        done = subprocess.run(
+            ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-i', str(source),
+             '-codec:a', 'libmp3lame', '-b:a', '192k', str(target)],
+            capture_output=True, text=True, timeout=180,
+        )
+        if done.returncode != 0 or not target.exists():
+            raise RuntimeError(f'MP3 encoding failed: {done.stderr[-500:]}')
+        mp3 = target.read_bytes()
+    if not mp3 or len(mp3) > MAX_AUDIO_BYTES:
+        raise ValueError('Encoded MP3 is empty or exceeds the 60 MB limit')
+    return mp3
 
 
 def download_cover_audio(url: str) -> str:
@@ -230,7 +255,7 @@ def generate(job: dict[str, Any]) -> dict[str, Any]:
                 'use_format': task_type != 'cover',
                 'vocal_language': language,
                 'audio_duration': duration,
-                'audio_format': 'mp3',
+                'audio_format': 'wav32',
                 'model': 'acestep-v15-xl-turbo',
                 'inference_steps': 8,
                 'shift': 3.0,
@@ -266,8 +291,8 @@ def generate(job: dict[str, Any]) -> dict[str, Any]:
                     item = files[0] if isinstance(files, list) and files else {}
                     path = item.get('file') if isinstance(item, dict) else None
                     if not isinstance(path, str):
-                        raise RuntimeError('ACE-Step result contains no MP3 path')
-                    audio = get_audio(path)
+                        raise RuntimeError(f'ACE-Step saved no audio file\n{log_tail(30)}')
+                    audio = wav_to_mp3(get_audio(path))
                     metadata = item.get('metas') if isinstance(item, dict) and isinstance(item.get('metas'), dict) else {}
                     return {
                         'audio_base64': base64.b64encode(audio).decode('ascii'),
