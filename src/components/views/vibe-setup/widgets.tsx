@@ -35,12 +35,12 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export function CopyButton({ text, label = '복사', className, disabled }: { text: string; label?: string; className?: string; disabled?: boolean }) {
+export function CopyButton({ text, label = '복사', className, disabled, primary }: { text: string; label?: string; className?: string; disabled?: boolean; primary?: boolean }) {
   const [done, setDone] = useState(false);
   return (
     <Button
       size="sm"
-      variant={done ? 'default' : 'outline'}
+      variant={done || primary ? 'default' : 'outline'}
       className={cn('h-7 gap-1 px-2 text-xs', className)}
       disabled={disabled}
       onClick={async () => { if (await copyText(text)) { setDone(true); window.setTimeout(() => setDone(false), 1500); } }}
@@ -187,6 +187,25 @@ export function EnvVarsWidget({ db }: { db: DbChoice }) {
       )}
       <CommandBlock label=".env.local 에 붙여넣을 내용" note={filled ? 'Vercel의 Environment Variables 칸에도 그대로 붙여넣으면 돼요' : '위에 값을 넣으면 오른쪽 값이 채워져요'} code={env} copyLabel="전체 복사" />
       {PRIVACY}
+    </div>
+  );
+}
+
+// ─── PowerShell one-shot setup ───
+export function PsSetupWidget({ script }: { script: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="rounded-xl border-2 border-primary/40 bg-primary/5 p-4">
+      <ol className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-sm font-medium">
+        <li>① PowerShell 열기</li>
+        <li>② 아래 버튼으로 전체 복사</li>
+        <li>③ 창에 오른쪽 클릭(붙여넣기) → Enter</li>
+      </ol>
+      <div className="flex flex-wrap items-center gap-2">
+        <CopyButton text={script} label="전체 한번에 복사" primary className="h-10 px-5 text-sm" />
+        <Button size="sm" variant="ghost" className="text-xs text-muted-foreground" onClick={() => setShow(!show)}>{show ? '내용 접기' : '내용 보기'}</Button>
+      </div>
+      {show && <pre className="mt-3 overflow-x-auto rounded-md bg-zinc-950 p-3 font-mono text-[12px] leading-relaxed text-zinc-100">{script}</pre>}
     </div>
   );
 }

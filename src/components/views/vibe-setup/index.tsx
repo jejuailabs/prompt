@@ -1,20 +1,19 @@
 'use client';
 
-import { useMemo, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import {
-  AlertTriangle, ArrowRight, BookOpen, Check, CircleCheck, Clock, Code, Database, Download, ExternalLink, Flame, FolderGit2,
+  AlertTriangle, ArrowRight, ArrowUp, ChevronDown, BookOpen, Check, CircleCheck, Clock, Code, Database, Download, ExternalLink, Flame, FolderGit2,
   GitBranch, Github, Hexagon, KeyRound, Lightbulb, MessageCircle, Orbit, Rocket, Sparkles, SquareTerminal, Triangle, UserCheck,
   type LucideProps,
 } from 'lucide-react';
 import { ViewHeader } from '@/components/shared/view-header';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { COLUMNS, getItems, type ColumnId, type DbChoice, type GuideItem } from './data';
+import { COLUMNS, PS_ALL, getItems, type ColumnId, type DbChoice, type GuideItem } from './data';
 import { MotionGuide } from './motion-guide';
-import { CommandBlock, EnvVarsWidget, GitIdentityWidget, RepoCommandsWidget, useStored } from './widgets';
+import { CommandBlock, EnvVarsWidget, GitIdentityWidget, PsSetupWidget, RepoCommandsWidget, useStored } from './widgets';
 
 const ICONS: Record<string, ComponentType<LucideProps>> = {
   'git-branch': GitBranch, hexagon: Hexagon, code: Code, terminal: SquareTerminal, 'user-check': UserCheck,
@@ -37,8 +36,20 @@ function ItemIcon({ name, className }: { name: string; className?: string }) {
 export default function VibeSetupView() {
   const [db, setDb] = useStored<DbChoice>('vibe-setup:db', 'firebase');
   const [done, setDone] = useStored<string[]>('vibe-setup:done', []);
-  const [open, setOpen] = useState<string[]>([]);
+  const [openStep, setOpenStep] = useState<ColumnId | null>(null);
+  const [openItem, setOpenItem] = useState<string | null>(null);
   const items = useMemo(() => getItems(db), [db]);
+  const boardRef = useRef<HTMLElement>(null);
+  const [boardVisible, setBoardVisible] = useState(true);
+  useEffect(() => {
+    const el = boardRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setBoardVisible(e.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  const scrollToId = (id: string) => window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  const toTop = () => scrollToId('vibe-top');
 
   // AI 도구는 하나 이상만 설치하면 되므로 진행률에선 1칸으로 계산
   const required = items.filter((i) => i.column !== 'ai');
@@ -48,16 +59,29 @@ export default function VibeSetupView() {
   const nextItem = items.find((i) => !done.includes(i.id) && !(i.column === 'ai' && aiDone));
 
   const toggleDone = (id: string) => setDone(done.includes(id) ? done.filter((d) => d !== id) : [...done, id]);
-  const jumpTo = (id: string) => {
-    if (!open.includes(id)) setOpen([...open, id]);
-    window.setTimeout(() => document.getElementById(`guide-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  const toggleStep = (col: ColumnId) => {
+    if (openStep === col) { setOpenStep(null); return; }
+    setOpenStep(col);
+    setOpenItem(null);
+    scrollToId('step-panel');
+  };
+  const openGuide = (id: string) => {
+    const it = items.find((i) => i.id === id);
+    if (!it) return;
+    setOpenStep(it.column);
+    setOpenItem(id);
+    scrollToId('item-detail');
   };
 
+  const step = COLUMNS.find((c) => c.id === openStep);
+  const stepItems = step ? items.filter((i) => i.column === step.id) : [];
+  const current = stepItems.find((i) => i.id === openItem) ?? null;
+
   return (
-    <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
+    <div id="vibe-top" className="mx-auto w-full max-w-7xl scroll-mt-20 p-4 md:p-6 lg:p-8">
       <ViewHeader
         title="바이브코딩 시작하기"
-        subtitle="설치 → 회원가입 → 프로젝트 만들기. 위에서부터 한 번씩만 따라 하면 누구나 첫 서비스를 인터넷에 올릴 수 있어요."
+        subtitle="1단계부터 차례대로 한 번씩만 따라 하면, 누구나 첫 서비스를 인터넷에 올릴 수 있어요."
       />
 
       {/* progress + db choice */}
@@ -69,7 +93,7 @@ export default function VibeSetupView() {
           </div>
           <Progress value={(completed / total) * 100} />
           {nextItem ? (
-            <Button size="sm" className="mt-3 gap-1" onClick={() => jumpTo(nextItem.id)}>
+            <Button size="sm" className="mt-3 gap-1" onClick={() => openGuide(nextItem.id)}>
               다음 할 일: {nextItem.title}<ArrowRight className="size-3.5" />
             </Button>
           ) : (
@@ -96,82 +120,90 @@ export default function VibeSetupView() {
         </div>
       </div>
 
-      {/* overview board */}
-      <section aria-label="한눈에 보기" className="mb-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* 4 big step buttons */}
+      <section ref={boardRef} aria-label="4단계" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {COLUMNS.map((col) => {
           const colItems = items.filter((i) => i.column === col.id);
+          const colDone = colItems.filter((i) => done.includes(i.id)).length;
+          const active = openStep === col.id;
           return (
-            <div key={col.id} className="flex flex-col rounded-xl border bg-card">
-              <div className="border-b p-3">
-                <div className="flex items-center gap-2">
-                  <span className={cn('rounded-md px-2 py-0.5 text-[11px] font-semibold', COLUMN_TONE[col.id])}>{col.id === 'project' ? '반복' : col.id === 'ai' ? '택1+' : '1회'}</span>
-                  <h2 className="text-sm font-bold">{col.title}</h2>
-                </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">{col.desc}</p>
-              </div>
-              <div className="flex flex-1 flex-col gap-1.5 p-2">
-                {colItems.map((it) => {
-                  const isDone = done.includes(it.id);
-                  return (
-                    <button
-                      key={it.id}
-                      onClick={() => jumpTo(it.id)}
-                      className={cn('group flex items-start gap-2.5 rounded-lg border p-2.5 text-left transition-colors hover:border-primary/50 hover:bg-muted/50', isDone && 'border-emerald-500/40 bg-emerald-500/5')}
-                    >
-                      <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg', COLUMN_TONE[col.id])}><ItemIcon name={it.icon} /></span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-1.5 text-sm font-semibold">
-                          <span className="text-[11px] tabular-nums text-muted-foreground">{String(it.order).padStart(2, '0')}</span>
-                          <span className="truncate">{it.title}</span>
-                          {isDone && <CircleCheck className="size-4 shrink-0 text-emerald-500" />}
-                        </span>
-                        <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{it.summary}</span>
-                        <span className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-                          <span className="inline-flex items-center gap-0.5"><Clock className="size-3" />약 {it.minutes}분</span>
-                          {it.after && <span className="text-amber-600 dark:text-amber-400">· {it.after}</span>}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <button
+              key={col.id}
+              onClick={() => toggleStep(col.id)}
+              aria-expanded={active}
+              className={cn('flex flex-col items-start gap-2 rounded-2xl border-2 bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md', active ? 'border-primary shadow-md' : 'border-border')}
+            >
+              <span className={cn('rounded-full px-3 py-1 text-sm font-bold', COLUMN_TONE[col.id])}>{col.step}단계</span>
+              <span className="text-xl font-bold leading-snug">{col.title}</span>
+              <span className="text-sm text-muted-foreground">{col.desc}</span>
+              <span className="mt-1 flex w-full items-center justify-between text-xs text-muted-foreground">
+                <span>항목 {colItems.length}개 · {colDone}개 완료</span>
+                <ChevronDown className={cn('size-5 transition-transform', active && 'rotate-180 text-primary')} />
+              </span>
+            </button>
           );
         })}
       </section>
 
-      {/* detail sections */}
-      <Accordion type="multiple" value={open} onValueChange={setOpen} className="space-y-8">
-        {COLUMNS.map((col) => (
-          <section key={col.id} aria-labelledby={`col-${col.id}`}>
-            <h2 id={`col-${col.id}`} className="mb-2 flex items-center gap-2 text-lg font-bold">
-              <span className={cn('rounded-md px-2 py-0.5 text-xs', COLUMN_TONE[col.id])}>{col.title}</span>
-            </h2>
-            <div className="rounded-xl border bg-card px-4">
-              {items.filter((i) => i.column === col.id).map((it) => (
-                <AccordionItem key={it.id} value={it.id} id={`guide-${it.id}`} className="scroll-mt-20">
-                  <AccordionTrigger className="items-center hover:no-underline">
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', COLUMN_TONE[col.id])}><ItemIcon name={it.icon} /></span>
-                      <span className="min-w-0">
-                        <span className="flex flex-wrap items-center gap-2 text-base font-semibold">
-                          {it.title}
-                          {done.includes(it.id) && <Badge className="bg-emerald-500 text-white hover:bg-emerald-500">완료</Badge>}
-                          {it.after && <Badge variant="outline" className="font-normal">{it.after}</Badge>}
-                        </span>
-                        <span className="block text-xs font-normal text-muted-foreground">{it.summary}</span>
-                      </span>
+      {/* opened step: item cards */}
+      {step && (
+        <section id="step-panel" className="mt-4 scroll-mt-20 rounded-2xl border bg-card p-4 md:p-5">
+          <h2 className="mb-3 text-lg font-bold">
+            <span className="text-primary">{step.step}단계</span> {step.title}
+            <span className="ml-2 text-sm font-normal text-muted-foreground">— 항목을 누르면 자세한 설명이 열려요</span>
+          </h2>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {stepItems.map((it, idx) => {
+              const isDone = done.includes(it.id);
+              const sel = openItem === it.id;
+              return (
+                <button
+                  key={it.id}
+                  onClick={() => (sel ? setOpenItem(null) : openGuide(it.id))}
+                  className={cn('flex items-start gap-3 rounded-xl border p-3 text-left transition-colors hover:border-primary/50 hover:bg-muted/50', sel && 'border-primary bg-primary/5', isDone && !sel && 'border-emerald-500/40 bg-emerald-500/5')}
+                >
+                  <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl', COLUMN_TONE[step.id])}><ItemIcon name={it.icon} className="size-5" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <span className="text-xs tabular-nums text-muted-foreground">{step.step}-{idx + 1}</span>
+                      <span className="truncate">{it.title}</span>
+                      {isDone && <CircleCheck className="size-4 shrink-0 text-emerald-500" />}
                     </span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <ItemDetail item={it} db={db} done={done.includes(it.id)} onToggleDone={() => toggleDone(it.id)} />
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
+                    <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{it.summary}</span>
+                    <span className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-0.5"><Clock className="size-3" />약 {it.minutes}분</span>
+                      {it.after && <span className="text-amber-600 dark:text-amber-400">· {it.after}</span>}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {current && (
+            <div id="item-detail" className="mt-5 scroll-mt-20 border-t pt-5">
+              <div className="mb-4 flex items-center gap-3">
+                <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-xl', COLUMN_TONE[step.id])}><ItemIcon name={current.icon} className="size-5" /></span>
+                <div className="min-w-0">
+                  <h3 className="flex flex-wrap items-center gap-2 text-xl font-bold">
+                    {current.title}
+                    {done.includes(current.id) && <Badge className="bg-emerald-500 text-white hover:bg-emerald-500">완료</Badge>}
+                    {current.after && <Badge variant="outline" className="font-normal">{current.after}</Badge>}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">{current.summary}</p>
+                </div>
+              </div>
+              <ItemDetail key={current.id} item={current} db={db} done={done.includes(current.id)} onToggleDone={() => toggleDone(current.id)} onTop={() => scrollToId('step-panel')} />
             </div>
-          </section>
-        ))}
-      </Accordion>
+          )}
+        </section>
+      )}
+
+      {!boardVisible && (
+        <Button onClick={toTop} className="fixed bottom-20 right-4 z-40 gap-1.5 rounded-full shadow-lg md:bottom-6 md:right-6">
+          <ArrowUp className="size-4" />맨 위로
+        </Button>
+      )}
 
       <p className="mt-8 text-center text-[11px] text-muted-foreground">
         화면 구성은 2026년 10월 기준으로 단순화해 다시 그린 것이에요. 실제 버튼 이름 · 위치가 조금 다를 수 있으니 공식 매뉴얼 링크도 함께 확인하세요.
@@ -180,12 +212,14 @@ export default function VibeSetupView() {
   );
 }
 
-function ItemDetail({ item, db, done, onToggleDone }: { item: GuideItem; db: DbChoice; done: boolean; onToggleDone: () => void }) {
+function ItemDetail({ item, db, done, onToggleDone, onTop }: { item: GuideItem; db: DbChoice; done: boolean; onToggleDone: () => void; onTop: () => void }) {
   const [step, setStep] = useState(0);
   return (
     <div className="space-y-5 pt-1">
+      {item.widget === 'ps-setup' && <PsSetupWidget script={PS_ALL} />}
+
       {/* download / manual links */}
-      <div className="flex flex-wrap gap-2">
+      {item.links.length > 0 && <div className="flex flex-wrap gap-2">
         {item.links.map((l) => (
           <Button key={l.href} asChild size="sm" variant={l.primary ? 'default' : 'outline'} className="gap-1.5">
             <a href={l.href} target="_blank" rel="noopener noreferrer">
@@ -194,7 +228,7 @@ function ItemDetail({ item, db, done, onToggleDone }: { item: GuideItem; db: DbC
             </a>
           </Button>
         ))}
-      </div>
+      </div>}
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <MotionGuide steps={item.steps} step={step} onStep={setStep} />
@@ -259,7 +293,8 @@ function ItemDetail({ item, db, done, onToggleDone }: { item: GuideItem; db: DbC
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex justify-between gap-2">
+        <Button variant="ghost" onClick={onTop} className="gap-1.5"><ArrowUp className="size-4" />항목 목록으로</Button>
         <Button variant={done ? 'outline' : 'default'} onClick={onToggleDone} className="gap-1.5">
           <CircleCheck className="size-4" />{done ? '완료 취소' : '이 단계 완료!'}
         </Button>

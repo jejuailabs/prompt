@@ -33,6 +33,8 @@ export interface GuideStep {
   target?: string;
   /** "기본값 그대로 Next" 구간 — 빨리감기 배지 */
   fast?: boolean;
+  /** 터미널 화면의 복사 내용. 생략=화면 속 명령, ''=복사 버튼 숨김(아래 입력기 사용) */
+  copy?: string;
 }
 
 export interface GuideLink { label: string; href: string; primary?: boolean }
@@ -52,16 +54,16 @@ export interface GuideItem {
   verify?: { code: string; expect: string };
   troubles?: { q: string; a: string }[];
   notes?: string[];
-  widget?: 'git-identity' | 'repo-commands' | 'env-vars';
+  widget?: 'git-identity' | 'repo-commands' | 'env-vars' | 'ps-setup';
   /** 다른 항목을 먼저 끝내야 하는 경우 */
   after?: string;
 }
 
-export const COLUMNS: { id: ColumnId; title: string; desc: string }[] = [
-  { id: 'pc', title: 'PC에 1번만 설치', desc: '컴퓨터를 바꾸지 않는 한 다시 할 일 없음' },
-  { id: 'ai', title: 'AI 코딩 도구', desc: '하나 이상 골라서 설치 (여러 개도 OK)' },
-  { id: 'account', title: '계정은 1번만 가입', desc: '한 번 만들면 모든 프로젝트에서 재사용' },
-  { id: 'project', title: '프로젝트마다 반복', desc: '새 서비스를 만들 때마다 이 순서대로' },
+export const COLUMNS: { id: ColumnId; step: number; title: string; desc: string }[] = [
+  { id: 'pc', step: 1, title: 'PC에 설치할 것들', desc: '컴퓨터당 한 번만 하면 끝' },
+  { id: 'ai', step: 2, title: '내가 쓸 AI 도구 골라 설치', desc: '하나만 골라도 OK' },
+  { id: 'account', step: 3, title: '회원가입이 필요한 것들', desc: '계정은 한 번만 만들면 계속 사용' },
+  { id: 'project', step: 4, title: '프로젝트마다 새로 만들 것', desc: '새 서비스를 만들 때마다 반복' },
 ];
 
 // ─── shared mock helpers ───
@@ -72,23 +74,14 @@ const inst = (app: string, heading: string, extra: Partial<MockBody> = {}): Mock
 const term = (...lines: { cmd?: string; out?: string[] }[]): MockScreen => ({ kind: 'terminal', lines });
 
 // ─── PowerShell commands (copy-ready) ───
-export const PS_EXEC_POLICY = 'Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force';
-export const PS_PATH = `$add = @(
-  "C:\\Program Files\\Git\\cmd",
-  "C:\\Program Files\\nodejs",
-  "$env:APPDATA\\npm",
-  "$env:LOCALAPPDATA\\Programs\\Microsoft VS Code\\bin",
-  "$env:USERPROFILE\\.local\\bin"
-)
+// 한 번에 붙여넣는 전체 설정 스크립트 (실행 허용 → PATH 등록 → 바로 적용 → 확인)
+export const PS_ALL = `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
+$add = @("C:\\Program Files\\Git\\cmd", "C:\\Program Files\\nodejs", "$env:APPDATA\\npm", "$env:LOCALAPPDATA\\Programs\\Microsoft VS Code\\bin", "$env:USERPROFILE\\.local\\bin")
 $user = [Environment]::GetEnvironmentVariable("Path", "User")
-foreach ($p in $add) {
-  if ((Test-Path $p) -and ($user -notlike "*$p*")) { $user = "$user;$p" }
-}
+foreach ($p in $add) { if ((Test-Path $p) -and ($user -notlike "*$p*")) { $user = "$user;$p" } }
 [Environment]::SetEnvironmentVariable("Path", $user.Trim(";"), "User")
-Write-Host "PATH 등록 완료" -ForegroundColor Green`;
-export const PS_REFRESH = '$env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")';
-export const PS_VERIFY = 'git --version; node -v; npm -v; code -v';
-export const PS_WINGET = 'winget install -e --id Git.Git; winget install -e --id OpenJS.NodeJS.LTS; winget install -e --id Microsoft.VisualStudioCode';
+$env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+git --version; node -v; npm -v; code -v`;
 
 // ─── DB-dependent pieces ───
 function dbAccount(db: DbChoice): GuideItem {
@@ -244,26 +237,15 @@ export function getItems(db: DbChoice): GuideItem[] {
       notes: ['프로젝트 폴더에서 우클릭 → "Code(으)로 열기" 하면 바로 그 폴더가 열려요.'],
     },
     {
-      id: 'powershell', column: 'pc', order: 4, icon: 'terminal', minutes: 2,
+      id: 'powershell', column: 'pc', order: 4, icon: 'terminal', minutes: 1,
       title: 'PowerShell 설정',
       summary: '어느 폴더에서든 git · node · code · claude 명령이 먹히게 하는 1회 설정',
-      links: [{ label: 'PATH 설명 (MS 문서)', href: 'https://learn.microsoft.com/ko-kr/powershell/module/microsoft.powershell.core/about/about_environment_variables' }],
+      links: [],
+      widget: 'ps-setup',
       steps: [
-        { text: '시작(⊞) 버튼 → "powershell" 입력 → Windows PowerShell 열기. 관리자 권한은 필요 없어요.', target: 'l0', screen: { kind: 'app', app: '검색', fields: [{ label: '', value: '🔍 powershell' }], list: [{ label: 'Windows PowerShell', meta: '앱', action: '열기' }, { label: '관리자 권한으로 실행' }] } },
-        { text: '① 스크립트 실행 허용 — npm · claude 실행 시 나는 빨간 에러를 미리 막아요.', screen: term({ cmd: PS_EXEC_POLICY }, { cmd: 'Get-ExecutionPolicy', out: ['RemoteSigned'] }) },
-        { text: '② PATH 등록 — 설치된 프로그램 경로를 "사용자 환경변수"에 추가해요. (기존 값은 지우지 않아요)', screen: term({ cmd: '$add = @( "C:\\Program Files\\Git\\cmd", ... )', out: [] }, { cmd: '[Environment]::SetEnvironmentVariable("Path", ...)', out: ['PATH 등록 완료'] }) },
-        { text: '③ 지금 창에 바로 적용하고 확인 — 네 줄 모두 버전이 나오면 성공!', screen: term({ cmd: '$env:Path = [Environment]::GetEnvironmentVariable(...)' }, { cmd: PS_VERIFY, out: ['git version 2.xx.x.windows.1', 'v24.x.x', '11.x.x', '1.xx.x'] }) },
-      ],
-      commands: [
-        { label: '① 스크립트 실행 허용 (1회)', code: PS_EXEC_POLICY, note: '"이 시스템에서 스크립트를 실행할 수 없으므로…" 에러 해결' },
-        { label: '② PATH 등록 — 어느 폴더에서든 명령이 먹히게', code: PS_PATH, note: '설치된 경로만 골라 사용자 PATH 뒤에 추가해요. 중복 추가는 자동으로 건너뛰어요.' },
-        { label: '③ 창 닫지 않고 바로 적용', code: PS_REFRESH },
-        { label: '④ 확인', code: PS_VERIFY },
-        { label: '(선택) 다운로드 버튼 대신 명령 한 줄로 3개 설치', code: PS_WINGET, note: 'Windows 10/11 기본 winget 사용. 설치 후 PowerShell을 새로 여세요.' },
-      ],
-      verify: { code: PS_VERIFY, expect: '버전 숫자 4줄' },
-      troubles: [
-        { q: '여전히 명령을 못 찾아요', a: 'VS Code까지 포함해 열려 있는 터미널을 모두 닫고 새로 여세요. 환경변수는 "새로 연 창"부터 적용돼요.' },
+        { text: '시작(⊞) 버튼 → "powershell" 입력 → Windows PowerShell 열기. (관리자 권한 필요 없음)', target: 'l0', screen: { kind: 'app', app: '검색', fields: [{ label: '', value: '🔍 powershell' }], list: [{ label: 'Windows PowerShell', meta: '앱', action: '열기' }] } },
+        { text: '아래 "전체 복사" 버튼 → PowerShell 창에 마우스 오른쪽 클릭(붙여넣기) → Enter.', copy: PS_ALL, screen: term({ cmd: 'Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force' }, { cmd: '$add = @("C:\\Program Files\\Git\\cmd", "C:\\Program Files\\nodejs", ...)' }, { cmd: 'git --version; node -v; npm -v; code -v', out: ['git version 2.xx.x.windows.1', 'v24.x.x', '11.x.x', '1.xx.x'] }) },
+        { text: '마지막에 버전 숫자 4줄이 나오면 끝! 빨간 글씨가 나오면 PowerShell을 닫고 새로 열어 한 번 더 붙여넣으세요.', screen: term({ out: ['git version 2.xx.x.windows.1', 'v24.x.x', '11.x.x', '1.xx.x'] }) },
       ],
     },
     {
@@ -274,7 +256,7 @@ export function getItems(db: DbChoice): GuideItem[] {
       widget: 'git-identity',
       steps: [
         { text: '(선택) 이메일을 숨기려면 GitHub → Settings → Emails에서 "Keep my email addresses private"를 켜고 noreply 주소를 복사해요.', target: 'f0', screen: { kind: 'browser', url: 'github.com/settings/emails', heading: 'Emails', options: [{ label: 'Keep my email addresses private', checked: true, type: 'check' }], fields: [{ label: 'We will use this address for git operations', value: '12345678+my-id@users.noreply.github.com', mono: true }] } },
-        { text: '아래 입력칸에 GitHub 아이디와 이메일을 넣으면 명령이 자동 완성돼요 → 복사해서 PowerShell에 붙여넣기.', screen: term({ cmd: 'git config --global user.name "my-id"' }, { cmd: 'git config --global user.email "me@example.com"' }) },
+        { copy: '', text: '아래 입력칸에 GitHub 아이디와 이메일을 넣으면 명령이 자동 완성돼요 → 복사해서 PowerShell에 붙여넣기.', screen: term({ cmd: 'git config --global user.name "my-id"' }, { cmd: 'git config --global user.email "me@example.com"' }) },
         { text: '등록됐는지 확인해요.', screen: term({ cmd: 'git config --global --list', out: ['user.name=my-id', 'user.email=me@example.com'] }) },
       ],
       notes: ['"--global"이라 이 PC의 모든 프로젝트에 적용돼요. 프로젝트마다 다시 할 필요 없어요.'],
@@ -282,25 +264,17 @@ export function getItems(db: DbChoice): GuideItem[] {
     // ═══ AI ═══
     {
       id: 'claude-code', column: 'ai', order: 7, icon: 'sparkles', minutes: 3,
-      title: 'Claude Code',
-      summary: '터미널에서 한국어로 말하면 코드를 직접 만들고 고쳐주는 AI 코딩 에이전트',
-      links: [{ label: 'Claude Code 소개', href: 'https://claude.com/product/claude-code', primary: true }, { label: '설치 문서', href: 'https://code.claude.com/docs/en/setup' }],
+      title: 'Claude 데스크톱 (Claude Code)',
+      summary: 'Claude 앱의 "Code" 탭에서 한국어로 말하면 내 폴더의 코드를 직접 만들고 고쳐줘요',
+      links: [{ label: 'Claude 데스크톱 다운로드', href: 'https://claude.ai/download', primary: true }, { label: '사용 안내', href: 'https://code.claude.com/docs/en/desktop' }],
       steps: [
-        { text: 'PowerShell에 설치 명령을 붙여넣어요. (Node.js 없이도 설치돼요)', screen: term({ cmd: 'irm https://claude.ai/install.ps1 | iex', out: ['Setting up Claude Code...', '✔ Claude Code successfully installed!'] }) },
-        { text: 'PowerShell을 닫고 새로 연 뒤 버전을 확인해요.', screen: term({ cmd: 'claude --version', out: ['2.x.x (Claude Code)'] }) },
-        { text: '프로젝트 폴더로 이동해 claude 실행 → 로그인 방식에서 "Claude account with subscription" 선택.', screen: term({ cmd: 'cd C:\\projects\\my-first-app' }, { cmd: 'claude', out: ['Select login method:', '❯ 1. Claude account with subscription', '  2. Anthropic Console account'] }) },
-        { text: '브라우저가 열리면 "Authorize"를 누르고 터미널로 돌아와요.', target: 'b0', screen: { kind: 'browser', url: 'claude.ai/oauth/authorize', heading: 'Claude Code would like to connect to your Claude account', buttons: [{ label: 'Authorize', primary: true }, { label: 'Decline' }] } },
-        { text: '이제 말하듯 요청하면 끝! 예: "이 폴더에 Next.js 랜딩페이지 만들어줘"', screen: term({ cmd: '> 이 폴더에 Next.js 랜딩페이지 만들어줘', out: ['● 프로젝트 구조를 만들게요…', '  Write(app/page.tsx)'] }) },
+        { text: 'claude.ai/download 에서 "Windows용 다운로드"를 눌러요.', target: 'b0', screen: { kind: 'browser', url: 'claude.ai/download', heading: 'Claude 데스크톱 앱 다운로드', sub: 'Windows · macOS', buttons: [{ label: 'Windows용 다운로드', primary: true }, { label: 'macOS' }] } },
+        { text: '받은 설치 파일(Claude Setup)을 더블클릭. 따로 누를 것 없이 자동으로 설치되고 앱이 열려요.', fast: true, screen: { kind: 'app', app: 'Claude Setup', heading: 'Claude 설치 중…', sub: '잠시만 기다려 주세요', buttons: [] } },
+        { text: '로그인(구글 계정 또는 이메일). Code 기능은 Pro 이상 요금제가 필요해요.', target: 'b0', screen: { kind: 'app', app: 'Claude', heading: 'Claude에 로그인', buttons: [{ label: 'Google로 계속하기', primary: true }, { label: '이메일로 계속하기' }] } },
+        { text: '왼쪽 위에서 "Code" 탭을 선택해요. (Chat = 대화, Code = 코딩)', target: 'o1', screen: { kind: 'app', app: 'Claude', heading: '탭 선택', options: [{ label: 'Chat', type: 'radio' }, { label: 'Code', checked: true, type: 'radio' }] } },
+        { text: '작업할 프로젝트 폴더를 고르고, 하고 싶은 걸 한국어로 입력하면 끝! 예: "이 폴더에 Next.js 랜딩페이지 만들어줘"', target: 'b0', screen: { kind: 'app', app: 'Claude · Code', heading: '폴더 선택', list: [{ label: 'C:\projects\my-first-app' }], buttons: [{ label: '폴더 열기', primary: true }] } },
       ],
-      commands: [
-        { label: '설치 (PowerShell)', code: 'irm https://claude.ai/install.ps1 | iex' },
-        { label: '실행 (프로젝트 폴더에서)', code: 'claude' },
-      ],
-      verify: { code: 'claude --version', expect: '2.x.x (Claude Code)' },
-      notes: ['Claude Pro 이상 구독 또는 Anthropic Console(API) 계정이 필요해요.', 'Windows에서는 Git이 먼저 설치돼 있어야 해요.', 'VS Code 확장(Claude Code)으로 에디터 안에서도 쓸 수 있어요.'],
-      troubles: [
-        { q: "'claude' 용어가 인식되지 않습니다", a: '새 창을 열어보고, 안 되면 "PowerShell 설정"의 ② PATH 등록을 실행하세요(%USERPROFILE%\\.local\\bin 포함).' },
-      ],
+      notes: ['Claude Pro 이상 구독이 필요해요.', 'Windows에서는 Git이 먼저 설치돼 있어야 해요.', '앱 안에서 미리보기 브라우저 · 터미널도 같이 쓸 수 있어요.'],
     },
     {
       id: 'chatgpt', column: 'ai', order: 8, icon: 'message-circle', minutes: 3,
@@ -368,7 +342,7 @@ export function getItems(db: DbChoice): GuideItem[] {
       steps: [
         { text: '리포지토리 이름(영문 소문자-하이픈) 입력, Public/Private 선택. 내 PC에 이미 코드가 있다면 "Add README"는 체크하지 않아요 → Create repository.', target: 'b0', screen: { kind: 'browser', url: 'github.com/new', heading: 'Create a new repository', fields: [{ label: 'Repository name *', value: 'my-first-app' }], options: [{ label: 'Public', type: 'radio' }, { label: 'Private', checked: true, type: 'radio' }, { label: 'Add a README file', checked: false, type: 'check' }], buttons: [{ label: 'Create repository', primary: true }] } },
         { text: '나타난 Quick setup 화면의 주소(…/my-first-app.git)를 확인해요. 아래 입력칸이 이 주소를 자동으로 만들어줘요.', target: 'f0', screen: { kind: 'browser', url: 'github.com/my-id/my-first-app', heading: 'Quick setup', fields: [{ label: 'HTTPS', value: 'https://github.com/my-id/my-first-app.git', mono: true }] } },
-        { text: 'VS Code에서 프로젝트 폴더를 열고 터미널(Ctrl+`)에 아래 명령을 붙여넣어요.', screen: term({ cmd: 'git init' }, { cmd: 'git add .' }, { cmd: 'git commit -m "first commit"' }, { cmd: 'git branch -M main' }, { cmd: 'git remote add origin https://github.com/my-id/my-first-app.git' }, { cmd: 'git push -u origin main', out: ['To https://github.com/my-id/my-first-app.git', ' * [new branch]  main -> main'] }) },
+        { copy: '', text: 'VS Code에서 프로젝트 폴더를 열고 터미널(Ctrl+`)에 아래 명령을 붙여넣어요.', screen: term({ cmd: 'git init' }, { cmd: 'git add .' }, { cmd: 'git commit -m "first commit"' }, { cmd: 'git branch -M main' }, { cmd: 'git remote add origin https://github.com/my-id/my-first-app.git' }, { cmd: 'git push -u origin main', out: ['To https://github.com/my-id/my-first-app.git', ' * [new branch]  main -> main'] }) },
         { text: '첫 push 때 로그인 창이 뜨면 "Sign in with your browser" → 브라우저에서 승인. (PC당 한 번)', target: 'b0', screen: { kind: 'installer', app: 'Connect to GitHub', heading: 'GitHub', sub: 'Git Credential Manager', buttons: [{ label: 'Sign in with your browser', primary: true }, { label: 'Token' }] } },
       ],
       troubles: [

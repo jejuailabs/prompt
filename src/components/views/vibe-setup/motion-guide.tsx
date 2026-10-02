@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, FastForward, Lock, Pause, Play, RotateCcw } 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { GuideStep, MockScreen } from './data';
+import { CopyButton } from './widgets';
 
 type Rect = { x: number; y: number; w: number; h: number };
 
@@ -104,6 +105,14 @@ export function MotionGuide({ steps, step, onStep }: { steps: GuideStep[]; step:
               <path d="M4 2l15 9.5-6.6 1.4 3.8 7.4-2.9 1.5-3.8-7.4L4 19z" fill="white" stroke="black" strokeWidth="1.4" strokeLinejoin="round" />
             </motion.svg>
           </motion.div>
+        )}
+
+        {current.screen.kind === 'terminal' && current.copy !== '' && (current.copy || current.screen.lines.some((l) => l.cmd)) && (
+          <CopyButton
+            text={current.copy ?? current.screen.lines.filter((l) => l.cmd).map((l) => l.cmd).join('\n')}
+            label={current.copy ? '전체 복사' : '명령 복사'}
+            className="absolute right-5 top-[18px] z-20 sm:right-6 sm:top-[22px]"
+          />
         )}
 
         {current.fast && (
