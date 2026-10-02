@@ -9,6 +9,9 @@ import { uploadBuffer } from '@/lib/server/storage';
 const TERMINAL = new Set(['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT']);
 const MAX_AUDIO_BYTES = 60 * 1024 * 1024;
 const STUCK_QUEUE_MS = 10 * 60 * 1000;
+// standard = XL-Turbo 8 steps; high = XL-SFT 50 steps (official 'highest quality'), ~2x GPU time.
+const QUALITY_MODEL = { standard: 'acestep-v15-xl-turbo', high: 'acestep-v15-xl-sft' } as const;
+const QUALITY_CREDIT_FACTOR = { standard: 1, high: 2 } as const;
 const ALLOWED_LANGUAGES = new Set(['ko', 'en', 'ja', 'zh', 'unknown']);
 
 type MusicMeta = {
@@ -31,6 +34,8 @@ type MusicMeta = {
   delayTimeMs?: number;
   error?: string;
   seed?: string;
+  quality?: 'standard' | 'high';
+  alternateAudioUrl?: string;
 };
 
 function parseMeta(raw: string): MusicMeta {
@@ -75,11 +80,13 @@ function responseFor(artifact: { id: string; fileUrl: string | null; metadata: s
     artifactId: artifact.id,
     status: meta.status ?? 'QUEUED',
     audioUrl: artifact.fileUrl,
+    alternateAudioUrl: meta.alternateAudioUrl ?? null,
+    quality: meta.quality ?? 'standard',
     error: meta.error ?? null,
     executionTimeMs: meta.executionTimeMs ?? null,
     delayTimeMs: meta.delayTimeMs ?? null,
     durationSec: meta.durationSec ?? null,
-    model: meta.model ?? 'acestep-v15-xl-turbo',
+    model: meta.model ?? QUALITY_MODEL[meta.quality ?? 'standard'],
   };
 }
 
@@ -91,6 +98,17 @@ function outputAudio(output: unknown): { audio: Buffer; seed?: string } | null {
   const audio = Buffer.from(encoded, 'base64');
   if (!audio.length || audio.length > MAX_AUDIO_BYTES) return null;
   return { audio, seed: typeof record.seed === 'string' ? record.seed : undefined };
+}
+
+/** Second take of a batch (the worker returns every song in `songs`). */
+function alternateAudio(output: unknown): Buffer | null {
+  if (!output || typeof output !== 'object' || Array.isArray(output)) return null;
+  const songs = (output as { songs?: unknown }).songs;
+  if (!Array.isArray(songs) || songs.length < 2) return null;
+  const encoded = (songs[1] as { audio_base64?: unknown })?.audio_base64;
+  if (typeof encoded !== 'string' || !encoded || encoded.length > MAX_AUDIO_BYTES * 1.4) return null;
+  const audio = Buffer.from(encoded, 'base64');
+  return audio.length && audio.length <= MAX_AUDIO_BYTES ? audio : null;
 }
 
 export async function POST(req: NextRequest) {
@@ -123,9 +141,10 @@ export async function POST(req: NextRequest) {
     const durationSec = integer(body.durationSec, 30, 10, 240, '길이');
     const bpm = body.bpm === null || body.bpm === undefined || body.bpm === '' ? null : integer(body.bpm, 120, 30, 300, 'BPM');
     const title = (asText(body.title, '제목', 120) || prompt).slice(0, 120);
+    const quality: 'standard' | 'high' = body.quality === 'high' && mode === 'song' ? 'high' : 'standard';
     const sourceUrl = mode === 'cover' ? coverSourceUrl(body.coverSourceUrl, user.id) : undefined;
 
-    const ledger = await beginMeteredOperation({ userId: user.id, engine: 'ace_music', prompt, aspect: 'audio', style: instrumental ? 'instrumental' : vocalLanguage, creditCharge: Math.ceil((durationSec / 30) * 40) });
+    const ledger = await beginMeteredOperation({ userId: user.id, engine: 'ace_music', prompt, aspect: 'audio', style: instrumental ? 'instrumental' : vocalLanguage, creditCharge: Math.ceil((durationSec / 30) * 40 * QUALITY_CREDIT_FACTOR[quality]) });
     const queuedAt = new Date().toISOString();
     let artifact;
     try {
@@ -138,7 +157,7 @@ export async function POST(req: NextRequest) {
           sourceModule: 'tool-ace-music',
           visibility: 'private',
           status: 'draft',
-          metadata: JSON.stringify({ engine: 'ace_music', model: 'acestep-v15-xl-turbo', status: 'QUEUED', prompt, lyrics, instrumental, vocalLanguage, durationSec, bpm, mode, ...(sourceUrl ? { coverSourceUrl: sourceUrl } : {}), queuedAt, accountingJobId: ledger.operationId } satisfies MusicMeta),
+          metadata: JSON.stringify({ engine: 'ace_music', model: QUALITY_MODEL[quality], quality, status: 'QUEUED', prompt, lyrics, instrumental, vocalLanguage, durationSec, bpm, mode, ...(sourceUrl ? { coverSourceUrl: sourceUrl } : {}), queuedAt, accountingJobId: ledger.operationId } satisfies MusicMeta),
         },
       });
       await db.generationJob.update({ where: { id: ledger.operationId }, data: { resultArtifactId: artifact.id } });
@@ -151,8 +170,8 @@ export async function POST(req: NextRequest) {
         bpm,
         task_type: mode === 'cover' ? 'cover' : 'text2music',
         ...(sourceUrl ? { cover_audio_url: sourceUrl } : {}),
-        model: 'acestep-v15-xl-turbo',
-        inference_steps: 8,
+        quality,
+        batch_size: 2,
         thinking: true,
       });
       const next: MusicMeta = { ...parseMeta(artifact.metadata), runpodJobId: job.id, status: job.status || 'IN_QUEUE' };
@@ -189,7 +208,9 @@ export async function GET(req: NextRequest) {
         return ok(responseFor(artifact));
       }
       const fileUrl = await uploadBuffer(`music-renders/${user.id}/${artifact.id}-${meta.runpodJobId}.mp3`, result.audio, 'audio/mpeg');
-      const completed: MusicMeta = { ...meta, status: 'COMPLETED', completedAt: new Date().toISOString(), executionTimeMs: job.executionTime, delayTimeMs: job.delayTime, ...(result.seed ? { seed: result.seed } : {}) };
+      const alternate = alternateAudio(job.output);
+      const alternateAudioUrl = alternate ? await uploadBuffer(`music-renders/${user.id}/${artifact.id}-${meta.runpodJobId}-2.mp3`, alternate, 'audio/mpeg') : undefined;
+      const completed: MusicMeta = { ...meta, status: 'COMPLETED', ...(alternateAudioUrl ? { alternateAudioUrl } : {}), completedAt: new Date().toISOString(), executionTimeMs: job.executionTime, delayTimeMs: job.delayTime, ...(result.seed ? { seed: result.seed } : {}) };
       artifact = await db.artifact.update({ where: { id: artifact.id }, data: { fileUrl, metadata: JSON.stringify(completed), status: 'draft' } });
       await finishMeteredOperation({ operationId: meta.accountingJobId, engine: 'ace_music', status: job.status, executionTimeMs: job.executionTime });
       return ok(responseFor(artifact));

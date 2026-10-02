@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=ghcr.io/astral-sh/uv:0.8.8 /uv /uvx /bin/
 WORKDIR /opt
-ARG ACE_STEP_REF=v0.1.6
+ARG ACE_STEP_REF=v0.1.8
 RUN git clone --branch ${ACE_STEP_REF} --depth 1 https://github.com/ACE-Step/ACE-Step-1.5.git ace-step
 WORKDIR /opt/ace-step
 RUN uv sync --no-dev
@@ -41,7 +41,8 @@ ENV PATH="/opt/ace-step/.venv/bin:${PATH}"
 
 # Default components supply VAE, embedding model and the 1.7B LM. XL-Turbo is
 # added explicitly and selected at startup; no paid or gated model is used.
-RUN acestep-download && acestep-download --model acestep-v15-xl-turbo
+# XL-SFT (50 steps, CFG) backs the 'high' quality preset; swapped in via /v1/init.
+RUN acestep-download && acestep-download --model acestep-v15-xl-turbo && acestep-download --model acestep-v15-xl-sft
 
 COPY handler.py /opt/worker/handler.py
 WORKDIR /opt/worker

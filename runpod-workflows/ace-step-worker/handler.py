@@ -29,6 +29,18 @@ MAX_AUDIO_BYTES = 60 * 1024 * 1024
 MAX_SOURCE_BYTES = 256 * 1024 * 1024
 MAX_DURATION_SECONDS = 240
 MAX_WAIT_SECONDS = 25 * 60
+# standard: XL-Turbo 8 steps (fast). high: XL-SFT 50 steps, the official guide's
+# "highest quality" model with CFG.
+QUALITY_PRESETS: dict[str, dict[str, Any]] = {
+    'standard': {'model': 'acestep-v15-xl-turbo', 'inference_steps': 8},
+    'high': {'model': 'acestep-v15-xl-sft', 'inference_steps': 50, 'guidance_scale': 7.0},
+}
+OVERRIDABLE = {
+    'model', 'inference_steps', 'guidance_scale', 'shift', 'infer_method', 'use_adg',
+    'cfg_interval_start', 'cfg_interval_end', 'thinking', 'use_format', 'use_cot_caption',
+    'use_cot_language', 'lm_temperature', 'lm_cfg_scale', 'lm_top_p', 'lm_top_k',
+    'lm_repetition_penalty', 'keyscale', 'timesignature', 'seed', 'use_random_seed',
+}
 server: subprocess.Popen | None = None
 server_lock = threading.Lock()
 generation_lock = threading.Lock()
@@ -72,6 +84,8 @@ runpy.run_module('acestep.api_server', run_name='__main__', alter_sys=True)
 
 server_log: collections.deque[str] = collections.deque(maxlen=200)
 startup_error: str | None = None
+# DiT currently loaded in slot 1; XL-Turbo is preloaded at startup (ACESTEP_CONFIG_PATH).
+loaded_model = 'acestep-v15-xl-turbo'
 
 
 def request_json(path: str, payload: dict[str, Any] | None = None, timeout: int = 30) -> dict[str, Any]:
@@ -161,6 +175,18 @@ def ensure_server() -> None:
             except RuntimeError:
                 time.sleep(2)
         raise RuntimeError(f'ACE-Step API did not become ready within 8 minutes\n{log_tail(40)}')
+
+
+def ensure_model(name: str) -> None:
+    """Swap the slot-1 DiT only when a different quality preset is requested.
+
+    Two XL DiTs plus the LM do not fit in 24 GB together, so one is loaded at a time.
+    """
+    global loaded_model
+    if name == loaded_model:
+        return
+    request_json('/v1/init', {'model': name, 'slot': 1}, timeout=900)
+    loaded_model = name
 
 
 def get_audio(path: str) -> bytes:
@@ -275,6 +301,10 @@ def generate(job: dict[str, Any]) -> dict[str, Any]:
     if task_type not in {'text2music', 'cover'}:
         raise ValueError('unsupported task_type')
     cover_audio_url = as_string(payload.get('cover_audio_url'), 'cover_audio_url', 2_000)
+    quality_name = as_string(payload.get('quality'), 'quality', 20) or 'standard'
+    if quality_name not in QUALITY_PRESETS:
+        raise ValueError('unsupported quality')
+    batch_size = as_integer(payload.get('batch_size'), 'batch_size', 2, 1, 4)
     if task_type == 'cover' and not cover_audio_url:
         raise ValueError('cover_audio_url is required for a cover task')
 
@@ -284,23 +314,32 @@ def generate(job: dict[str, Any]) -> dict[str, Any]:
         ensure_server()
         temporary_cover: str | None = download_cover_audio(cover_audio_url) if task_type == 'cover' else None
         try:
-            task = request_json('/release_task', timeout=300, payload={
+            quality = QUALITY_PRESETS[quality_name]
+            ensure_model(str(quality['model']))
+            request_payload: dict[str, Any] = {
                 'prompt': prompt,
-                'lyrics': '' if instrumental or task_type == 'cover' else lyrics,
+                # Official guide: instrumental pieces use the [Instrumental] lyric tag.
+                'lyrics': '' if task_type == 'cover' else ('[Instrumental]' if instrumental else lyrics),
                 'thinking': task_type != 'cover' and payload.get('thinking') is not False,
-                'use_format': task_type != 'cover',
-                'vocal_language': language,
+                # use_format lets the LM rewrite (and often drop) the user's lyrics, which
+                # produced instrumental-only songs. Keep the user's lyrics verbatim.
+                'use_format': False,
+                'use_cot_language': language == 'unknown',
+                'vocal_language': 'unknown' if instrumental else language,
                 'audio_duration': duration,
                 'audio_format': 'wav',
-                'model': 'acestep-v15-xl-turbo',
-                'inference_steps': 8,
-                'shift': 3.0,
+                'batch_size': batch_size,
                 'lm_model_path': 'acestep-5Hz-lm-1.7B',
                 'lm_backend': 'vllm',
                 'bpm': bpm,
                 'task_type': task_type,
+                **quality,
                 **({'src_audio_path': temporary_cover, 'audio_cover_strength': 1.0} if temporary_cover else {}),
-            })
+            }
+            # Whitelisted tuning knobs so quality can be tuned without rebuilding the image.
+            overrides = payload.get('ace_overrides') if isinstance(payload.get('ace_overrides'), dict) else {}
+            request_payload.update({key: value for key, value in overrides.items() if key in OVERRIDABLE})
+            task = request_json('/release_task', timeout=300, payload=request_payload)
             task_id = task.get('data', {}).get('task_id')
             if not isinstance(task_id, str) or not task_id:
                 raise RuntimeError('ACE-Step did not return a task ID')
@@ -324,18 +363,29 @@ def generate(job: dict[str, Any]) -> dict[str, Any]:
                         files = json.loads(raw) if isinstance(raw, str) else raw
                     except json.JSONDecodeError as error:
                         raise RuntimeError('ACE-Step returned invalid result JSON') from error
-                    item = files[0] if isinstance(files, list) and files else {}
-                    path = item.get('file') if isinstance(item, dict) else None
-                    if not isinstance(path, str):
+                    items = [item for item in files if isinstance(item, dict)] if isinstance(files, list) else []
+                    songs = []
+                    for item in items:
+                        path = item.get('file')
+                        if not isinstance(path, str) or not path:
+                            continue
+                        audio = wav_to_mp3(get_audio(path))
+                        songs.append({
+                            'audio_base64': base64.b64encode(audio).decode('ascii'),
+                            'seed': str(item.get('seed_value', '')),
+                            'metadata': item.get('metas') if isinstance(item.get('metas'), dict) else {},
+                        })
+                    if not songs:
                         raise RuntimeError(f'ACE-Step saved no audio file\n{log_tail(30)}')
-                    audio = wav_to_mp3(get_audio(path))
-                    metadata = item.get('metas') if isinstance(item, dict) and isinstance(item.get('metas'), dict) else {}
                     return {
-                        'audio_base64': base64.b64encode(audio).decode('ascii'),
+                        # First song kept at the top level for existing callers.
+                        'audio_base64': songs[0]['audio_base64'],
+                        'seed': songs[0]['seed'],
+                        'metadata': songs[0]['metadata'],
+                        'songs': songs,
                         'content_type': 'audio/mpeg',
-                        'seed': str(item.get('seed_value', '')) if isinstance(item, dict) else '',
-                        'metadata': metadata,
-                        'model': 'acestep-v15-xl-turbo',
+                        'model': request_payload.get('model'),
+                        'quality': quality_name,
                         'duration_sec': duration,
                         'elapsed_ms': round((time.perf_counter() - started) * 1000),
                     }
