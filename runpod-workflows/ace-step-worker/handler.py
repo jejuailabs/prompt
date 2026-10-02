@@ -5,7 +5,9 @@ adapter validates the public job input, waits for completion, then returns a
 bounded MP3 payload for the PLAYLAB server to persist in Supabase Storage.
 """
 import base64
+import collections
 import contextlib
+import traceback
 import json
 import os
 from pathlib import Path
@@ -28,6 +30,10 @@ MAX_WAIT_SECONDS = 25 * 60
 server: subprocess.Popen | None = None
 server_lock = threading.Lock()
 generation_lock = threading.Lock()
+# Last lines printed by the ACE-Step server, returned with any failure so the
+# cause is visible through the RunPod job API (console logs are not retained).
+server_log: collections.deque[str] = collections.deque(maxlen=200)
+startup_error: str | None = None
 
 
 def request_json(path: str, payload: dict[str, Any] | None = None, timeout: int = 30) -> dict[str, Any]:
@@ -46,6 +52,46 @@ def request_json(path: str, payload: dict[str, Any] | None = None, timeout: int 
     return decoded
 
 
+def pump_server_output(process: subprocess.Popen) -> None:
+    assert process.stdout is not None
+    for line in process.stdout:
+        line = line.rstrip()
+        server_log.append(line)
+        print(f'[acestep] {line}', flush=True)
+
+
+def log_tail(lines: int = 60) -> str:
+    return '\n'.join(list(server_log)[-lines:])
+
+
+def prewarm() -> None:
+    """Load models as soon as the worker boots instead of after the first job arrives."""
+    global startup_error
+    try:
+        ensure_server()
+        print('[worker] ACE-Step server ready', flush=True)
+    except BaseException as error:  # noqa: BLE001 - surfaced to the next job
+        startup_error = f'{type(error).__name__}: {error}'
+        print(f'[worker] ACE-Step prewarm failed: {startup_error}', flush=True)
+
+
+def diagnose() -> dict[str, Any]:
+    def run(cmd: list[str]) -> str:
+        try:
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=30).stdout[-3000:]
+        except Exception as error:  # noqa: BLE001
+            return f'{type(error).__name__}: {error}'
+    alive = server is not None and server.poll() is None
+    return {
+        'diagnose': True,
+        'server_alive': alive,
+        'server_returncode': None if server is None else server.poll(),
+        'startup_error': startup_error,
+        'nvidia_smi': run(['nvidia-smi', '--query-gpu=name,memory.used,memory.total', '--format=csv']),
+        'log_tail': log_tail(120),
+    }
+
+
 def ensure_server() -> None:
     global server
     with server_lock:
@@ -62,18 +108,21 @@ def ensure_server() -> None:
         server = subprocess.Popen(
             [sys.executable, '-u', '-m', 'acestep.api_server'],
             cwd='/opt/ace-step', env=environment,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
+            start_new_session=True,
         )
+        threading.Thread(target=pump_server_output, args=(server,), daemon=True).start()
         deadline = time.monotonic() + 8 * 60
         while time.monotonic() < deadline:
             if server.poll() is not None:
-                raise RuntimeError(f'ACE-Step API exited during startup ({server.returncode})')
+                raise RuntimeError(f'ACE-Step API exited during startup ({server.returncode})\n{log_tail(40)}')
             try:
                 health = request_json('/health', timeout=5)
                 if health.get('data', {}).get('status') == 'ok':
                     return
             except RuntimeError:
                 time.sleep(2)
-        raise RuntimeError('ACE-Step API did not become ready within 8 minutes')
+        raise RuntimeError(f'ACE-Step API did not become ready within 8 minutes\n{log_tail(40)}')
 
 
 def get_audio(path: str) -> bytes:
@@ -146,7 +195,7 @@ def as_integer(value: Any, field: str, default: int, low: int, high: int) -> int
     return value
 
 
-def handler(job: dict[str, Any]) -> dict[str, Any]:
+def generate(job: dict[str, Any]) -> dict[str, Any]:
     started = time.perf_counter()
     payload = job.get('input') or {}
     if not isinstance(payload, dict):
@@ -231,5 +280,17 @@ def handler(job: dict[str, Any]) -> dict[str, Any]:
     raise TimeoutError(f'ACE-Step generation exceeded {MAX_WAIT_SECONDS // 60} minutes')
 
 
+def handler(job: dict[str, Any]) -> dict[str, Any]:
+    payload = job.get('input') or {}
+    if isinstance(payload, dict) and payload.get('diagnose') is True:
+        return diagnose()
+    try:
+        return generate(job)
+    except BaseException as error:  # noqa: BLE001 - never let a job crash the worker silently
+        traceback.print_exc()
+        return {'error': f'{type(error).__name__}: {error}', 'log_tail': log_tail(60)}
+
+
 if __name__ == '__main__':
+    threading.Thread(target=prewarm, daemon=True).start()
     runpod.serverless.start({'handler': handler})

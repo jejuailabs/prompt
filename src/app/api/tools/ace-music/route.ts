@@ -8,6 +8,7 @@ import { uploadBuffer } from '@/lib/server/storage';
 
 const TERMINAL = new Set(['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT']);
 const MAX_AUDIO_BYTES = 60 * 1024 * 1024;
+const STUCK_QUEUE_MS = 10 * 60 * 1000;
 const ALLOWED_LANGUAGES = new Set(['ko', 'en', 'ja', 'zh', 'unknown']);
 
 type MusicMeta = {
@@ -199,6 +200,18 @@ export async function GET(req: NextRequest) {
       const failed: MusicMeta = { ...meta, status: job.status, error, completedAt: new Date().toISOString(), executionTimeMs: job.executionTime, delayTimeMs: job.delayTime };
       artifact = await db.artifact.update({ where: { id: artifact.id }, data: { metadata: JSON.stringify(failed), status: 'draft' } });
       await finishMeteredOperation({ operationId: meta.accountingJobId, engine: 'ace_music', status: job.status, executionTimeMs: job.executionTime, error });
+      return ok(responseFor(artifact));
+    }
+
+    // A job that never leaves the queue means no healthy GPU worker could start:
+    // stop paying for retries, tell the user, and refund instead of spinning forever.
+    const queuedMs = meta.queuedAt ? Date.now() - new Date(meta.queuedAt).getTime() : 0;
+    if (job.status === 'IN_QUEUE' && queuedMs > STUCK_QUEUE_MS) {
+      await cancelRunpodJob('ace_music', meta.runpodJobId).catch(() => null);
+      const error = 'GPU 워커가 10분 동안 시작되지 않아 작업을 취소했습니다. 크레딧은 차감되지 않습니다. 잠시 후 다시 시도해주세요.';
+      const failed: MusicMeta = { ...meta, status: 'CANCELLED', error, completedAt: new Date().toISOString() };
+      artifact = await db.artifact.update({ where: { id: artifact.id }, data: { metadata: JSON.stringify(failed), status: 'draft' } });
+      await finishMeteredOperation({ operationId: meta.accountingJobId, engine: 'ace_music', status: 'CANCELLED', error });
       return ok(responseFor(artifact));
     }
 
