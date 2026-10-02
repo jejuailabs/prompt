@@ -60,8 +60,56 @@ async function fetchYoutubeData(videoId: string) {
   return { title: snippet?.title ?? '', channelTitle: snippet?.channelTitle ?? '', description: snippet?.description ?? '', thumbnailUrl: snippet?.thumbnails?.high?.url ?? null, comments: (commentData.items ?? []).map((c) => c.snippet?.topLevelComment?.snippet?.textDisplay ?? '').filter(Boolean).join('\n') };
 }
 
-async function fetchTranscriptFromProvider(videoId: string): Promise<{ text: string; language?: string; source?: string } | null> {
-  // 1) youtube-transcript (no API key needed — scrapes YouTube captions directly)
+type TranscriptResult = { text: string; timed?: string; language?: string; source?: string };
+
+interface SocialKitTranscript {
+  success?: boolean;
+  message?: string;
+  data?: { transcript?: string; transcriptSegments?: { text?: string; start?: number; timestamp?: string }[] };
+}
+
+/** Transcript text with a [mm:ss] marker roughly every minute, so chapter timestamps are real. */
+function withTimestamps(segments: { text?: string; start?: number; timestamp?: string }[]): string {
+  let nextMark = 0;
+  return segments.map((s) => {
+    const start = s.start ?? 0;
+    const text = (s.text ?? '').trim();
+    if (start >= nextMark && s.timestamp) { nextMark = start + 60; return `[${s.timestamp}] ${text}`; }
+    return text;
+  }).join(' ').replace(/\s+/g, ' ').trim();
+}
+
+// SocialKit — https://docs.socialkit.dev/api-reference/youtube-transcript-api
+// GET /youtube/transcript?url=<youtube url>, key in the x-access-key header.
+async function fetchSocialKitTranscript(videoId: string): Promise<TranscriptResult | null> {
+  const key = process.env.SOCIALKIT_API_KEY;
+  if (!key) return null;
+  const url = `https://www.youtube.com/watch?v=${videoId}`;
+  try {
+    const res = await fetch(`https://api.socialkit.dev/youtube/transcript?url=${encodeURIComponent(url)}`, {
+      headers: { 'x-access-key': key }, cache: 'no-store', signal: AbortSignal.timeout(45_000),
+    });
+    const body = await res.json().catch(() => ({})) as SocialKitTranscript;
+    if (!res.ok || !body.success) {
+      console.warn(`[youtube] SocialKit transcript failed for ${videoId}: ${res.status} ${body.message ?? ''}`);
+      return null;
+    }
+    const text = (body.data?.transcript ?? '').replace(/\s+/g, ' ').trim();
+    if (!isTranscriptQualityAcceptable(text)) return null;
+    const segments = body.data?.transcriptSegments ?? [];
+    return { text, timed: segments.length ? withTimestamps(segments) : undefined, source: 'socialkit' };
+  } catch (e) {
+    console.warn(`[youtube] SocialKit transcript error for ${videoId}:`, e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+async function fetchTranscriptFromProvider(videoId: string): Promise<TranscriptResult | null> {
+  // 1) SocialKit first: direct caption scraping is usually blocked from cloud (Vercel) IPs.
+  const socialKit = await fetchSocialKitTranscript(videoId);
+  if (socialKit) return socialKit;
+
+  // 2) youtube-transcript fallback (no key — scrapes YouTube captions directly; works locally)
   try {
     const items = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'ko' }).catch(() =>
       YoutubeTranscript.fetchTranscript(videoId)
@@ -70,20 +118,7 @@ async function fetchTranscriptFromProvider(videoId: string): Promise<{ text: str
       const text = items.map((i) => i.text).join(' ').replace(/\s+/g, ' ').trim();
       if (isTranscriptQualityAcceptable(text)) return { text, language: 'ko', source: 'youtube-captions' };
     }
-  } catch { /* fallback to SocialKit */ }
-
-  // 2) SocialKit fallback (if API key is available)
-  const socialKitKey = process.env.SOCIALKIT_API_KEY;
-  if (socialKitKey) {
-    const res = await fetch(`https://api.socialkit.dev/youtube/transcript?video_id=${encodeURIComponent(videoId)}`, {
-      headers: { Authorization: `Bearer ${socialKitKey}` }, cache: 'no-store',
-    }).catch(() => null);
-    if (res?.ok) {
-      const data = await res.json() as { transcript?: string; text?: string; language?: string };
-      const text = data.transcript ?? data.text ?? '';
-      if (isTranscriptQualityAcceptable(text)) return { text, language: data.language, source: 'socialkit' };
-    }
-  }
+  } catch { /* no captions available */ }
   return null;
 }
 
@@ -138,7 +173,7 @@ export async function processYoutubeAnalysis(jobId: string) {
       title: youtube.title || oembed.title || job.analysis.title || job.analysis.videoId,
       channel: youtube.channelTitle || oembed.channelTitle || job.analysis.channelTitle,
       description: youtube.description || job.analysis.description,
-      transcript: transcript?.text ?? '',
+      transcript: transcript?.timed ?? transcript?.text ?? '',
       comments: youtube.comments,
     });
     const warning = transcript ? null : '자막을 확보하지 못해 제목·설명 중심으로 요약했습니다. 정확도가 제한될 수 있습니다.';

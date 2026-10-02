@@ -3,10 +3,13 @@ import { db } from '@/lib/db';
 import { requireAdmin, HttpError } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { parseYoutubeVideoId } from '@/lib/server/youtube-analysis';
+import { analyzeAcademyVideo } from '@/lib/server/academy';
+
+export const maxDuration = 300;
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; videoId: string }> }) {
   try {
-    await requireAdmin(); const { videoId: id } = await params;
+    const admin = await requireAdmin(); const { videoId: id } = await params;
     const body = await readJson<{ url?: string; title?: string; description?: string; sortOrder?: number }>(req);
     const nextVideoId = body.url ? parseYoutubeVideoId(body.url) : undefined;
     if (body.url && !nextVideoId) throw new HttpError('유효한 YouTube URL을 입력해주세요');
@@ -17,6 +20,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(body.description !== undefined ? { description: body.description.slice(0, 500) } : {}),
       ...(body.sortOrder !== undefined ? { sortOrder: body.sortOrder } : {}),
     } });
+    // A changed URL points at a new video: analyze it right away (no-op if already analyzed).
+    if (analysis && analysis.status !== 'done') await analyzeAcademyVideo(video.id, admin.id);
     return ok(video);
   } catch (e) { return fail(e); }
 }
