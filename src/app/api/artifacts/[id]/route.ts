@@ -4,6 +4,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { getSessionUserFast, HttpError, requireUser } from '@/lib/auth';
+import { linkPromptOnPublish } from '@/lib/server/publish-to-prompt';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { parseJson, serializeArtifactSingle } from '@/lib/server/serialize';
 import { logEvent } from '@/lib/events';
@@ -73,6 +74,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     });
 
     if (data.status === 'published' && artifact.status !== 'published') {
+      // Video / music results become a prompt-gallery entry with the result attached.
+      await linkPromptOnPublish(updated.id, user.id);
       await logEvent('artifact.published', {
         artifactId: updated.id,
         title: updated.title,

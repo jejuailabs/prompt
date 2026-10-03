@@ -1,13 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Loader2, Music2, Square, Sparkles } from 'lucide-react';
+import { CheckCircle2, Download, FolderOpen, Loader2, Music2, Share2, Square, Sparkles } from 'lucide-react';
+import { useAppStore } from '@/lib/store';
 
 type MusicJob = {
   artifactId: string;
   status: string;
   audioUrl: string | null;
   alternateAudioUrl?: string | null;
+  published?: boolean;
+  promptId?: string | null;
   quality?: 'standard' | 'high';
   error: string | null;
   executionTimeMs: number | null;
@@ -57,6 +60,8 @@ export function AceMusicTool() {
   const [job, setJob] = useState<MusicJob | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [publishing, setPublishing] = useState<number | null>(null);
+  const navigate = useAppStore((s) => s.navigate);
 
   const refresh = useCallback(async (id: string) => {
     try {
@@ -128,6 +133,20 @@ export function AceMusicTool() {
     }
   }
 
+  // Publishing creates a prompt-gallery entry (style + lyrics) with this song attached.
+  async function publish(version: number) {
+    if (!job) return;
+    setPublishing(version);
+    setError('');
+    try {
+      setJob(await request('/api/tools/ace-music', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'publish', artifactId: job.artifactId, version, title }) }));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : '게시하지 못했습니다.');
+    } finally {
+      setPublishing(null);
+    }
+  }
+
   const active = Boolean(job && !TERMINAL.has(job.status));
   function selectCover(file: File | null) {
     setCoverFile(file);
@@ -168,6 +187,6 @@ export function AceMusicTool() {
     </div>
     <div className="mt-6 flex flex-wrap gap-3"><button onClick={() => void generate()} disabled={submitting || active || !prompt.trim() || (mode === 'cover' && (!coverFile || !coverRightsConfirmed))} className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">{submitting ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}{active ? '생성 진행 중' : mode === 'cover' ? '커버곡 만들기' : '노래 만들기'}</button>{active && <button onClick={() => void cancel()} disabled={submitting} className="inline-flex items-center gap-2 rounded-md border px-5 py-3 font-semibold text-destructive disabled:opacity-50"><Square className="size-4 fill-current" />생성 중지</button>}</div>
     {error && <p className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-    {job && <div className="mt-6 rounded-xl border bg-muted/30 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-semibold">{statusLabel[job.status] ?? `현재 상태: ${job.status}`}</p><p className="mt-1 text-xs text-muted-foreground">대기 {formatMs(job.delayTimeMs)} · GPU 실행 {formatMs(job.executionTimeMs)} · {job.durationSec ?? duration}초 출력</p></div><span className="rounded-full border bg-background px-3 py-1 text-xs font-medium">{job.model}</span></div>{job.audioUrl && <div className="mt-4 grid gap-4">{[job.audioUrl, job.alternateAudioUrl].filter((url): url is string => Boolean(url)).map((url, index) => <div key={url}><p className="mb-1.5 text-sm font-semibold">버전 {index + 1}</p><audio controls className="w-full" src={url} /><a className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-primary" href={url} download={`playlab-song-${index + 1}.mp3`}><Download className="size-4" />MP3 다운로드</a></div>)}</div>}</div>}
+    {job && <div className="mt-6 rounded-xl border bg-muted/30 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="font-semibold">{statusLabel[job.status] ?? `현재 상태: ${job.status}`}</p><p className="mt-1 text-xs text-muted-foreground">대기 {formatMs(job.delayTimeMs)} · GPU 실행 {formatMs(job.executionTimeMs)} · {job.durationSec ?? duration}초 출력</p></div><span className="rounded-full border bg-background px-3 py-1 text-xs font-medium">{job.model}</span></div>{job.audioUrl && <div className="mt-4 grid gap-4">{[job.audioUrl, job.alternateAudioUrl].filter((url): url is string => Boolean(url)).map((url, index) => <div key={url}><p className="mb-1.5 text-sm font-semibold">버전 {index + 1}{job.published && index === 0 && <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-600">게시됨</span>}</p><audio controls className="w-full" src={url} /><div className="mt-2 flex flex-wrap items-center gap-4"><a className="inline-flex items-center gap-2 text-sm font-semibold text-primary" href={url} download={`playlab-song-${index + 1}.mp3`}><Download className="size-4" />MP3 다운로드</a>{!job.published && <button type="button" onClick={() => void publish(index + 1)} disabled={publishing !== null} className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-50">{publishing === index + 1 ? <Loader2 className="size-4 animate-spin" /> : <Share2 className="size-4" />}이 버전으로 갤러리에 게시</button>}</div></div>)}<div className="flex flex-wrap items-center gap-3 rounded-lg border bg-background p-3 text-sm"><CheckCircle2 className="size-4 text-emerald-500" /><span>내 프로젝트에 자동 저장됨</span><button type="button" onClick={() => navigate('my-projects')} className="inline-flex items-center gap-1 font-semibold text-primary"><FolderOpen className="size-4" />내 프로젝트 열기</button>{job.published && job.promptId && <button type="button" onClick={() => navigate('prompt', { id: job.promptId! })} className="inline-flex items-center gap-1 font-semibold text-primary"><Share2 className="size-4" />프롬프트 갤러리에서 보기</button>}</div></div>}</div>}
   </section>;
 }

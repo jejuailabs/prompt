@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Gamepad2, Pause, Play, RotateCcw, Sparkles } from 'lucide-react';
+import { Gamepad2, Music2, Pause, Play, RotateCcw, Sparkles } from 'lucide-react';
 import type { ArtifactDTO, LandingContent } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -299,6 +299,27 @@ function LandingPageRenderer({ artifact, expanded = false }: { artifact: Artifac
   );
 }
 
+// ─── audio (AI music) ───────────────────────────────────────────────────────
+
+/** Music card: cover art when present, otherwise a gradient, with an inline player. */
+function AudioPreview({ artifact }: { artifact: ArtifactDTO }) {
+  const cover = artifact.metadata?.previewUrl;
+  return (
+    <div className="relative flex h-full w-full flex-col justify-end bg-gradient-to-br from-violet-600 via-fuchsia-500 to-amber-400">
+      {cover && <ImgCover src={cover} alt={artifact.title} />}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <Music2 className="size-10 text-white/80 drop-shadow" />
+      </div>
+      {artifact.fileUrl && (
+        // Clicks on the player must not open the card link underneath.
+        <div className="relative z-10 bg-black/35 p-2 backdrop-blur-sm" onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}>
+          <audio controls preload="none" src={artifact.fileUrl} className="h-8 w-full" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── main renderer ──────────────────────────────────────────────────────────
 
 export function PreviewRenderer({
@@ -320,6 +341,8 @@ export function PreviewRenderer({
       {artifact.type === 'image' && (artifact.fileUrl ? <ImgCover src={artifact.fileUrl} alt={artifact.title} /> : <FallbackPreview />)}
 
       {artifact.type === 'video' && <VideoPlayer artifact={artifact} />}
+
+      {artifact.type === 'audio' && <AudioPreview artifact={artifact} />}
 
       {artifact.type === '3d_asset' && <ThreeDViewer textureUrl={meta.previewUrl ?? artifact.fileUrl} alt={artifact.title} />}
 

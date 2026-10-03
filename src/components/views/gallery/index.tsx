@@ -25,14 +25,15 @@ type SortKey = 'new' | 'popular' | 'forked';
 const CATEGORY_EN: Record<string, string> = {
   이미지: 'Image',
   영상: 'Video',
+  음악: 'Music',
   코딩: 'Coding',
   마케팅: 'Marketing',
   게임: 'Game',
   기타: 'Other',
 };
 
-const CATEGORY_KEYS = ['catImage', 'catVideo', 'catCoding', 'catMarketing', 'catGame', 'catOther'] as const;
-const CATEGORY_VALUES = ['이미지', '영상', '코딩', '마케팅', '게임', '기타'] as const;
+const CATEGORY_KEYS = ['catImage', 'catVideo', 'catMusic', 'catCoding', 'catMarketing', 'catGame', 'catOther'] as const;
+const CATEGORY_VALUES = ['이미지', '영상', '음악', '코딩', '마케팅', '게임', '기타'] as const;
 
 function ListSkeleton() {
   return null;
@@ -41,6 +42,7 @@ function ListSkeleton() {
 const CATEGORY_COLORS: Record<string, string> = {
   이미지: 'from-pink-500/20 to-violet-500/20',
   영상: 'from-blue-500/20 to-cyan-500/20',
+  음악: 'from-fuchsia-500/20 to-amber-500/20',
   코딩: 'from-emerald-500/20 to-teal-500/20',
   마케팅: 'from-orange-500/20 to-amber-500/20',
   게임: 'from-purple-500/20 to-indigo-500/20',
@@ -48,7 +50,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
-  이미지: '🎨', 영상: '🎬', 코딩: '💻', 마케팅: '📊', 게임: '🎮', 기타: '✨',
+  이미지: '🎨', 영상: '🎬', 음악: '🎵', 코딩: '💻', 마케팅: '📊', 게임: '🎮', 기타: '✨',
 };
 
 function PromptCard({

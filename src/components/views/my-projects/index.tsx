@@ -82,7 +82,8 @@ export default function MyProjectsView() {
   const publishDraft = async (a: ArtifactDTO) => {
     setPendingId(a.id);
     try {
-      await api.patch(`/api/artifacts/${a.id}`, { status: 'published' });
+      // Gallery feed lists only public items, so publishing also makes the item public.
+      await api.patch(`/api/artifacts/${a.id}`, { status: 'published', visibility: 'public' });
       await qc.invalidateQueries({ queryKey: ['artifacts'] });
       toast({ title: t('publishedToast') });
     } catch (e) {

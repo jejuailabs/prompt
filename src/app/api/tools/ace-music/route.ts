@@ -5,6 +5,7 @@ import { cancelRunpodJob, getRunpodEndpointId, getRunpodJobStatus, queueRunpodJo
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { beginMeteredOperation, failMeteredOperation, finishMeteredOperation } from '@/lib/server/operation-ledger';
 import { uploadBuffer } from '@/lib/server/storage';
+import { linkPromptOnPublish } from '@/lib/server/publish-to-prompt';
 
 const TERMINAL = new Set(['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT']);
 const MAX_AUDIO_BYTES = 60 * 1024 * 1024;
@@ -74,13 +75,15 @@ function coverSourceUrl(value: unknown, userId: string): string {
   return parsed.toString();
 }
 
-function responseFor(artifact: { id: string; fileUrl: string | null; metadata: string }) {
+function responseFor(artifact: { id: string; fileUrl: string | null; metadata: string; status?: string; sourcePromptId?: string | null }) {
   const meta = parseMeta(artifact.metadata);
   return {
     artifactId: artifact.id,
     status: meta.status ?? 'QUEUED',
     audioUrl: artifact.fileUrl,
     alternateAudioUrl: meta.alternateAudioUrl ?? null,
+    published: artifact.status === 'published',
+    promptId: artifact.sourcePromptId ?? null,
     quality: meta.quality ?? 'standard',
     error: meta.error ?? null,
     executionTimeMs: meta.executionTimeMs ?? null,
@@ -126,6 +129,30 @@ export async function POST(req: NextRequest) {
       const updated = await db.artifact.update({ where: { id: artifact.id }, data: { metadata: JSON.stringify(next), status: 'draft' } });
       if (meta.accountingJobId) await failMeteredOperation(meta.accountingJobId, next.error);
       return ok(responseFor(updated));
+    }
+
+    // Publish a finished song to the public gallery. Choosing version 2 makes it the
+    // primary file so the gallery card plays the take the user picked.
+    if (body.action === 'publish') {
+      const artifactId = asText(body.artifactId, '작업 ID', 100, true);
+      const artifact = await db.artifact.findFirst({ where: { id: artifactId, ownerId: user.id, sourceModule: 'tool-ace-music' } });
+      if (!artifact) throw new HttpError('음악을 찾을 수 없습니다.', 404);
+      const meta = parseMeta(artifact.metadata);
+      if (meta.status !== 'COMPLETED' || !artifact.fileUrl) throw new HttpError('생성이 끝난 음악만 게시할 수 있습니다.', 400);
+      const swap = body.version === 2 && meta.alternateAudioUrl;
+      const next: MusicMeta = swap ? { ...meta, alternateAudioUrl: artifact.fileUrl } : meta;
+      const updated = await db.artifact.update({
+        where: { id: artifact.id },
+        data: {
+          ...(swap ? { fileUrl: meta.alternateAudioUrl, metadata: JSON.stringify(next) } : {}),
+          ...(typeof body.title === 'string' && body.title.trim() ? { title: body.title.trim().slice(0, 120) } : {}),
+          status: 'published',
+          visibility: 'public',
+        },
+      });
+      await linkPromptOnPublish(updated.id, user.id);
+      const linked = await db.artifact.findUnique({ where: { id: updated.id } });
+      return ok(responseFor(linked ?? updated));
     }
 
     if (!getRunpodEndpointId('ace_music')) {

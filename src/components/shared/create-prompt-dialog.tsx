@@ -21,10 +21,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import type { PromptDTO } from '@/lib/types';
 
-const CATEGORIES = ['이미지', '영상', '코딩', '마케팅', '게임', '기타'] as const;
+const CATEGORIES = ['이미지', '영상', '음악', '코딩', '마케팅', '게임', '기타'] as const;
 const CATEGORY_EN: Record<(typeof CATEGORIES)[number], string> = {
   이미지: 'Image',
   영상: 'Video',
+  음악: 'Music',
   코딩: 'Coding',
   마케팅: 'Marketing',
   게임: 'Game',
