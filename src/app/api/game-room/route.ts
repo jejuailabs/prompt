@@ -4,6 +4,37 @@ import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 
+// Built-in games (/games/<slug>.html) ship a gameplay screenshot at /games/thumbs/<slug>.png.
+// It replaces a missing or legacy seed thumbnail so every built-in card has a real image.
+function thumbnailFor(fileUrl: string | null, contentUrl: string | null): string | null {
+  const builtIn = contentUrl?.match(/^\/games\/([a-z0-9-]+)\.html$/);
+  if (builtIn && (!fileUrl || fileUrl.startsWith('/uploads/seed/thumb-'))) return `/games/thumbs/${builtIn[1]}.png`;
+  return fileUrl;
+}
+
+/** Top 3 players per game: each player's best score, highest first. */
+async function topPlayers(gameIds: string[]) {
+  if (gameIds.length === 0) return new Map<string, { rank: number; username: string; score: number }[]>();
+  const best = await db.gamePlay.groupBy({
+    by: ['artifactId', 'userId'],
+    where: { artifactId: { in: gameIds }, userId: { not: null }, score: { gt: 0 } },
+    _max: { score: true },
+  });
+  const userIds = [...new Set(best.map((b) => b.userId).filter((id): id is string => Boolean(id)))];
+  const users = await db.profile.findMany({ where: { id: { in: userIds } }, select: { id: true, username: true } });
+  const names = new Map(users.map((u) => [u.id, u.username]));
+  const byGame = new Map<string, { rank: number; username: string; score: number }[]>();
+  for (const id of gameIds) {
+    const top = best
+      .filter((b) => b.artifactId === id && b._max.score)
+      .sort((a, b) => (b._max.score ?? 0) - (a._max.score ?? 0))
+      .slice(0, 3)
+      .map((b, index) => ({ rank: index + 1, username: names.get(b.userId ?? '') ?? '익명', score: b._max.score ?? 0 }));
+    byGame.set(id, top);
+  }
+  return byGame;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -29,6 +60,7 @@ export async function GET(req: NextRequest) {
       take: limit,
     });
 
+    const leaders = await topPlayers(games.map((g) => g.id));
     return ok({
       games: games.map((g) => {
         let metadata: Record<string, unknown> = {};
@@ -37,7 +69,8 @@ export async function GET(req: NextRequest) {
           id: g.id,
           title: g.title,
           description: g.description,
-          fileUrl: g.fileUrl,
+          fileUrl: thumbnailFor(g.fileUrl, g.contentUrl),
+          topPlayers: leaders.get(g.id) ?? [],
           contentUrl: g.contentUrl,
           ownerId: g.owner.id,
           ownerName: g.owner.username,

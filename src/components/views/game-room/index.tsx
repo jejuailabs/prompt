@@ -24,6 +24,7 @@ interface GameDTO {
   ownerId: string;
   ownerName: string;
   playCount: number;
+  topPlayers?: { rank: number; username: string; score: number }[];
   likeCount: number;
   createdAt: string;
   metadata: { params?: { palette?: string }; tags?: string[]; emoji?: string };
@@ -175,6 +176,18 @@ export default function GameRoomView() {
                     ) : (
                       <Gamepad2 className="h-12 w-12 text-white/60" />
                     )}
+                  </div>
+                )}
+                {/* Top 3 ranking: best score per player */}
+                {game.topPlayers && game.topPlayers.length > 0 && (
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/60 to-transparent px-2.5 pb-2 pt-6">
+                    {game.topPlayers.map((p) => (
+                      <div key={p.rank} className="flex items-center gap-1.5 text-[11px] leading-5 text-white">
+                        <span className="w-4 shrink-0 text-center">{['🥇', '🥈', '🥉'][p.rank - 1]}</span>
+                        <span className="min-w-0 flex-1 truncate font-medium">{p.username}</span>
+                        <span className="shrink-0 font-mono font-semibold tabular-nums text-amber-300">{p.score.toLocaleString()}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
