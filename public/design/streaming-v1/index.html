@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101010" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>PLAYLAB — 보고, 만들고, 같이 놀자.</title>
+    <link rel="preload" href="./assets/midnight-station.png" as="image" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a href="#content" class="skip-link">본문 바로가기</a>
+    <div class="preview-bar">
+      <span class="preview-label"><span class="live-dot"></span> DESIGN STUDY <b>01</b></span>
+      <nav aria-label="다섯 화면 시안">
+        <a href="#home" data-page="home">01 홈</a>
+        <a href="#prompts" data-page="prompts">02 프롬프트</a>
+        <a href="#films" data-page="films">03 영상</a>
+        <a href="#games" data-page="games">04 게임</a>
+        <a href="#detail" data-page="detail">05 작품 상세</a>
+      </nav>
+      <span class="preview-note">샘플 콘텐츠 · 클릭해서 둘러보세요</span>
+    </div>
+    <header class="site-header">
+      <a class="brand" href="#home" aria-label="PLAYLAB 홈">PLAYLAB<span>®</span></a>
+      <nav class="primary-nav" aria-label="메인 메뉴">
+        <a href="#home" data-page="home">홈</a>
+        <a href="#prompts" data-page="prompts">프롬프트</a>
+        <a href="#films" data-page="films">영상</a>
+        <a href="#games" data-page="games">게임</a>
+        <a href="/#academy" class="secondary-nav">강의</a>
+        <a href="/#tools" class="secondary-nav">AI Tools</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-button" data-action="search" aria-label="작품 검색"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button>
+        <button class="library-button" data-action="library" aria-label="내 보관함"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>내 보관함</span></button>
+        <a class="return-site" href="/#home">기존 사이트 <span>↗</span></a>
+      </div>
+    </header>
+    <main id="content" tabindex="-1"></main>
+    <footer class="site-footer"><a class="brand" href="#home">PLAYLAB<span>®</span></a><p>누군가의 실험이, 다음 사람의 영감이 되는 곳.</p><span>POSTER-FIRST EXPERIENCE / CONCEPT 01</span></footer>
+    <dialog id="modal" aria-labelledby="modal-title"><div class="modal-shell"><button class="modal-close icon-button" aria-label="닫기" data-action="close">×</button><div id="modal-content"></div></div></dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

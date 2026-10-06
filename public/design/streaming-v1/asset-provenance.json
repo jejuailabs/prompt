@@ -1,0 +1,15 @@
+{
+  "createdAt": "2026-10-06",
+  "tool": "image_gen.imagegen",
+  "purpose": "Poster assets for five-page PLAYLAB design prototype",
+  "assets": [
+    {
+      "filename": "assets/midnight-station.png",
+      "prompt": "Create a premium cinematic film still for an independent creative-community website hero. Wide panoramic 16:9 composition, approximately 2048x1152. A solitary young adult woman seen from behind wearing a coral red coat stands on the RIGHT THIRD on a rain-slick Tokyo-style elevated train platform at blue hour; an old amber-lit silver train passing to the far right, countless distant midnight blue towers in mist, soft warm red neon accents, reflections on glossy rainwater. The left 45 percent is beautiful understated dark atmosphere and negative space suitable for overlaying UI text. Visually rich, sophisticated actual cinematography, 35mm anamorphic lens, very subtle film grain, deep ink blacks, restrained cyan and copper complementary colors, delicate highlights. Strong visual storytelling, indie film festival poster quality, not generic cyberpunk concept art, not an illustration, no exaggerated saturation. No words, no text, no logos, no watermark, no UI. This is a website image asset, not a website screenshot."
+    },
+    {
+      "filename": "assets/glass-garden.png",
+      "prompt": "Generate one exquisite editorial art photograph, portrait 2:3 composition, high resolution. A surreal miniature lush forest and a tiny cascading waterfall enclosed inside a large organically sculpted transparent glass pear, on a warm ivory limestone plinth. Architectural natural afternoon sunlight from the upper left, tiny soft caustics and a rich terracotta-orange background. Single monumental subject with sophisticated photography, fine water droplets, realistic tactile surface and perfect delicate leaves visible inside glass. European independent design magazine cover, high-end art direction, poetic and visually surprising. Bottom 20 percent subtly darker for a title overlay but do NOT render any text. Gallery exhibit, physically plausible refraction, no futuristic circuits, no gradients or stock tech symbols, no logos, no watermark, no letters. Used as a tall poster of a community image-prompt result."
+    }
+  ]
+}
