@@ -39,6 +39,14 @@ model Profile {
   gamePlays          GamePlay[]
   youtubeAnalysisJobs YoutubeAnalysisJob[]
   savedYoutubeAnalyses SavedYoutubeAnalysis[]
+  mcpToken          McpToken?
+}
+
+model McpToken {
+  ownerId   String  @id
+  tokenHash String  @unique
+  createdAt DateTime @default(now())
+  owner     Profile @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 }
 
 // ────────────────────────────── Academy / YouTube learning ────────────────

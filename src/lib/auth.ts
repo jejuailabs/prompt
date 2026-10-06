@@ -1,6 +1,8 @@
 // Server-only session helpers — Supabase Auth (Google OAuth)
 import { createClient } from '@/lib/supabase/server';
 import { db } from '@/lib/db';
+import { headers } from 'next/headers';
+import { createHash } from 'node:crypto';
 
 export interface DbSessionUser {
   id: string;
@@ -13,6 +15,19 @@ export interface DbSessionUser {
 }
 
 export async function getSessionUser(): Promise<DbSessionUser | null> {
+  const bearer = (await headers()).get('authorization');
+  if (bearer?.startsWith('Bearer pl_mcp_')) {
+    if ((await headers()).get('x-playlab-mcp-allowed') !== '1') return null;
+    const token = bearer.slice(7);
+    if (!/^pl_mcp_[a-f0-9]{64}$/.test(token)) return null;
+    const credential = await db.mcpToken.findUnique({
+      where: { tokenHash: createHash('sha256').update(token).digest('hex') },
+      include: { owner: { include: { credits: true } } },
+    });
+    const profile = credential?.owner;
+    if (!profile || profile.banned) return null;
+    return { id: profile.id, username: profile.username, avatarUrl: profile.avatarUrl, role: profile.role, banned: profile.banned, title: profile.title, credits: profile.credits?.balance ?? 0 };
+  }
   const supabase = await createClient();
   const { data: { user: supaUser } } = await supabase.auth.getUser();
   if (!supaUser) return null;
@@ -34,14 +49,13 @@ export async function getSessionUser(): Promise<DbSessionUser | null> {
   };
 }
 
-// Ultrafast path for read-only GET routes: JWT parse only, zero DB queries.
-// Returns a minimal user object with just the ID — enough for social queries (likedByMe).
+// Verify the identity with Auth before using it for ownership checks.
+// getSession() only reads cookies and cannot establish a trusted server identity.
 export async function getSessionUserFast(): Promise<DbSessionUser | null> {
+  if ((await headers()).get('authorization')?.startsWith('Bearer pl_mcp_')) return getSessionUser();
   const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user) return null;
-
-  const u = session.user;
+  const { data: { user: u }, error } = await supabase.auth.getUser();
+  if (error || !u) return null;
   return {
     id: u.id,
     username: u.user_metadata?.name ?? u.email?.split('@')[0] ?? '',
