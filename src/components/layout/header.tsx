@@ -153,9 +153,14 @@ function AccountMenu({ onCredits }: { onCredits: () => void }) {
 
   if (!session) {
     return (
-      <Button className="header-login" variant="ghost" size="sm" onClick={() => setLoginOpen(true)}>
-        {t('login')}
-      </Button>
+      <div className="header-auth">
+        <Button className="header-login" variant="ghost" size="sm" onClick={() => setLoginOpen(true)}>
+          {t('login')}
+        </Button>
+        <Button className="header-signup" size="sm" onClick={() => setLoginOpen(true, 'signup')}>
+          {locale === 'en' ? 'Sign up' : '회원가입'}
+        </Button>
+      </div>
     );
   }
 

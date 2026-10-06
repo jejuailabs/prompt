@@ -15,6 +15,20 @@ const icons = {
 };
 const icon = (name) => `<svg aria-hidden="true" viewBox="0 0 24 24">${icons[name] || icons.arrow}</svg>`;
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// The poster homepage shares the existing app's cookie-based account session.
+async function refreshHeaderAccount() {
+  const target = $('#header-auth');
+  if (!target) return;
+  try {
+    const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
+    if (!response.ok) return;
+    const result = await response.json();
+    target.innerHTML = result.ok && result.data
+      ? '<a class="auth-signup" href="/app#my-projects">내 계정</a>'
+      : '<a class="auth-login" href="/app?auth=login#ai-tools">로그인</a><a class="auth-signup" href="/app?auth=signup#ai-tools">회원가입</a>';
+  } catch { /* Keep the visible account links when the session request fails. */ }
+}
+window.addEventListener('pageshow', refreshHeaderAccount);
 const seed = '/uploads/seed/';
 const works = [
   {id:'midnight',title:'도시가 잠든 사이',en:'AFTER\nMIDNIGHT',kind:'영상',category:'시네마틱',image:'/design/streaming-v1/assets/midnight-station.png',by:'morrow',tag:'CINEMATIC FILM',line:'마지막 열차가 떠난 뒤, 비로소 시작되는 이야기.',description:'비가 내리는 도시, 마지막 열차를 기다리는 한 사람. 하나의 프롬프트에서 시작된 짧은 영화의 첫 장면.',prompt:'A cinematic wide shot of a solitary woman in a coral red coat on a rain-slick elevated train platform at blue hour. Warm amber train lights, a midnight-blue city skyline, atmospheric mist, 35mm anamorphic photography, understated film grain.'},

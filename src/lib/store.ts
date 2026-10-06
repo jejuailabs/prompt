@@ -34,12 +34,13 @@ interface AppState {
   locale: Locale;
   session: SessionUser | null;
   loginOpen: boolean;
+  loginMode: 'login' | 'signup';
   booted: boolean;
   navigate: (view: ViewKey, params?: Record<string, string>) => void;
   hydrateFromHash: () => void;
   setLocale: (l: Locale) => void;
   setSession: (s: SessionUser | null) => void;
-  setLoginOpen: (open: boolean) => void;
+  setLoginOpen: (open: boolean, mode?: 'login' | 'signup') => void;
   setBooted: (b: boolean) => void;
   refreshSession: () => Promise<void>;
   requireLogin: () => boolean; // true if logged in; else opens login dialog
@@ -51,6 +52,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   locale: 'ko',
   session: null,
   loginOpen: false,
+  loginMode: 'login',
   booted: false,
 
   navigate: (view, params) => {
@@ -78,7 +80,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setSession: (session) => set({ session }),
 
-  setLoginOpen: (loginOpen) => set({ loginOpen }),
+  setLoginOpen: (loginOpen, loginMode = 'login') => set({ loginOpen, loginMode }),
 
   setBooted: (booted) => set({ booted }),
 
@@ -94,7 +96,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   requireLogin: () => {
     if (get().session) return true;
-    set({ loginOpen: true });
+    set({ loginOpen: true, loginMode: 'login' });
     return false;
   },
 }));

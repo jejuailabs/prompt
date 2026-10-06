@@ -20,6 +20,7 @@ export default function LoginDialog() {
   const t = useTranslations('core');
   const locale = useAppStore((s) => s.locale);
   const open = useAppStore((s) => s.loginOpen);
+  const mode = useAppStore((s) => s.loginMode);
   const setOpen = useAppStore((s) => s.setLoginOpen);
   const { toast } = useToast();
   const [pending, setPending] = useState(false);
@@ -50,15 +51,15 @@ export default function LoginDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="dark sm:max-w-sm">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
               <Icon name="zap" className="size-5" />
             </span>
             <div className="text-left">
-              <DialogTitle className="text-lg font-extrabold tracking-tight">{t('brand')}</DialogTitle>
-              <DialogDescription className="text-xs">{t('tagline')}</DialogDescription>
+              <DialogTitle className="text-lg font-extrabold tracking-tight">{mode === 'signup' ? (locale === 'en' ? 'Join PLAYLAB' : 'PLAYLAB 회원가입') : (locale === 'en' ? 'Sign in to PLAYLAB' : 'PLAYLAB 로그인')}</DialogTitle>
+              <DialogDescription className="text-xs">{locale === 'en' ? 'Continue with your Google account.' : 'Google 계정으로 간편하게 시작하세요.'}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -91,13 +92,19 @@ export default function LoginDialog() {
             </svg>
             {pending
               ? (locale === 'en' ? 'Connecting...' : '연결 중...')
-              : (locale === 'en' ? 'Continue with Google' : 'Google로 계속하기')}
+              : mode === 'signup' ? (locale === 'en' ? 'Sign up with Google' : 'Google로 회원가입') : (locale === 'en' ? 'Sign in with Google' : 'Google로 로그인')}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
             {locale === 'en'
-              ? 'Sign in to save your work and earn credits'
-              : '로그인하면 작업을 저장하고 크레딧을 받을 수 있어요'}
+              ? 'New here? Your account is created on your first Google sign-in.'
+              : '처음이라면 Google 인증 후 계정이 만들어져요.'}
+          </p>
+          <p className="text-xs text-center text-muted-foreground">
+            {mode === 'signup' ? (locale === 'en' ? 'Already a member? ' : '이미 계정이 있나요? ') : (locale === 'en' ? 'New to PLAYLAB? ' : 'PLAYLAB이 처음인가요? ')}
+            <button className="font-semibold text-primary underline underline-offset-4" onClick={() => setOpen(true, mode === 'signup' ? 'login' : 'signup')}>
+              {mode === 'signup' ? (locale === 'en' ? 'Sign in' : '로그인') : (locale === 'en' ? 'Sign up' : '회원가입')}
+            </button>
           </p>
         </div>
       </DialogContent>

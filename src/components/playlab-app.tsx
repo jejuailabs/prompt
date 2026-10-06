@@ -16,6 +16,13 @@ export default function PlaylabApp() {
     const saved = localStorage.getItem('pl_locale');
     if (saved === 'en' || saved === 'ko') setLocale(saved);
     hydrateFromHash();
+    const url = new URL(window.location.href);
+    const auth = url.searchParams.get('auth');
+    if (auth === 'login' || auth === 'signup') {
+      useAppStore.getState().setLoginOpen(true, auth);
+      url.searchParams.delete('auth');
+      window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    }
     const onLocationChange = () => hydrateFromHash();
     window.addEventListener('hashchange', onLocationChange);
     window.addEventListener('popstate', onLocationChange);

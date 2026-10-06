@@ -2,9 +2,13 @@
 .ribbon-header .header-actions { margin-left:auto; display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .ribbon-header .header-account { display:flex; align-items:center; margin-left:4px; margin-right:6px; }
 .ribbon-header .header-login { height:36px; padding:0 13px; white-space:nowrap; }
+.ribbon-header .header-auth { display:flex; align-items:center; gap:4px; white-space:nowrap; }
+.ribbon-header .header-signup { height:36px; padding:0 14px; border-radius:30px; font-size:12px; }
 .ribbon-header .header-create { height:36px; padding:0 16px; gap:6px; white-space:nowrap; border-radius:30px; }
 .ribbon-header .header-actions > button:not(.header-create) { width:36px; height:36px; }
 @media(min-width:768px) and (max-width:1100px) { .ribbon-header .ribbon-header-inner { padding-left:24px; padding-right:24px; gap:8px; } .ribbon-header .ribbon-nav { gap:12px; margin-left:18px; } .ribbon-header .ribbon-nav button { font-size:11px; } .ribbon-header .header-actions { gap:5px; } }
 @media(max-width:900px) { .ribbon-header .ribbon-nav { display:none; } }
 @media(max-width:767px) { .ribbon-header .header-actions { gap:3px; } .ribbon-header .header-account { margin:0 2px; } .ribbon-header .header-login { padding:0 8px; font-size:12px; } .ribbon-header .header-create { width:34px; height:34px; padding:0; } .ribbon-header .header-actions > button:not(.header-create) { width:30px; height:34px; } }
 @media(max-width:380px) { .ribbon-header .ribbon-header-inner { padding-left:12px; padding-right:12px; gap:4px; } .ribbon-header .brand-wordmark { font-size:18px; letter-spacing:.13em; } .ribbon-header .header-actions { gap:2px; } }
+@media(max-width:767px){.ribbon-header .header-signup{height:34px;padding:0 10px;font-size:11px}.ribbon-header .header-auth{gap:0}.ribbon-header .header-login{padding-inline:6px;font-size:11px}.ribbon-header-inner:has(.header-auth) .header-create{display:none}}
+@media(max-width:380px){.poster-app .ribbon-header-inner:has(.header-auth){padding-inline:14px}.poster-app .ribbon-header-inner:has(.header-auth) .brand-wordmark{font-size:18px}}

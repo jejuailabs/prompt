@@ -36,7 +36,10 @@
       <div class="header-actions">
         <button class="icon-button" data-action="search" aria-label="작품 검색"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg></button>
         <button class="library-button" data-action="library" aria-label="내 보관함"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span>내 보관함</span></button>
-        <a class="return-site" href="/app#home">기존 사이트 <span>↗</span></a>
+        <div class="header-auth" id="header-auth" aria-label="계정">
+          <a class="auth-login" href="/app?auth=login#ai-tools">로그인</a>
+          <a class="auth-signup" href="/app?auth=signup#ai-tools">회원가입</a>
+        </div>
       </div>
     </header>
     <main id="content" tabindex="-1"></main>
