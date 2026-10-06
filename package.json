@@ -3,6 +3,8 @@
   "version": "0.2.1",
   "private": true,
   "scripts": {
+    "predev": "tsx scripts/generate-site-navigation.ts",
+    "prebuild": "tsx scripts/generate-site-navigation.ts",
     "dev": "next dev -p 3000",
     "build": "prisma generate && next build",
     "start": "next start",

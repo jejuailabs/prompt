@@ -15,6 +15,44 @@ const icons = {
 };
 const icon = (name) => `<svg aria-hidden="true" viewBox="0 0 24 24">${icons[name] || icons.arrow}</svg>`;
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let spaceNavigation = { sections: [], entries: [] };
+let navigationRole = null;
+function renderSpaces() {
+  const entries = spaceNavigation.entries.filter(m => m.enabled && (!m.adminOnly || navigationRole === 'admin')).sort((a,b) => a.navOrder - b.navOrder);
+  $('#creation-links').innerHTML = entries.filter(m => m.quick).sort((a,b) => a.quick.order - b.quick.order)
+    .map(m => `<a href="${esc(m.href)}">${esc(m.quick.label)}</a>`).join('');
+  $('#spaces-content').innerHTML = spaceNavigation.sections.map(section => {
+    const items = entries.filter(m => m.section === section.id);
+    if (!items.length) return '';
+    return `<section class="spaces-group"><h3>${esc(section.ko)}</h3>${items.map(m => `<a class="space-link" href="${esc(m.href)}"><span><strong>${esc(m.titleKo)}</strong><small>${esc(m.descKo)}</small></span><span class="space-arrow" aria-hidden="true">↗</span></a>`).join('')}</section>`;
+  }).join('');
+}
+async function loadSpaceNavigation() {
+  try {
+    const response = await fetch('/design/streaming-v1/navigation.json');
+    if (!response.ok) throw new Error('navigation unavailable');
+    spaceNavigation = await response.json();
+    renderSpaces();
+  } catch {
+    $('#spaces-content').innerHTML = '<p class="spaces-loading">메뉴를 불러오지 못했어요. <button data-action="retry-spaces">다시 불러오기</button></p>';
+    return;
+  }
+  try {
+    const response = await fetch('/api/modules', { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+    const result = await response.json();
+    if (!response.ok || !result.ok || !Array.isArray(result.data)) return;
+    const runtime = new Map(result.data.map(m => [m.id, m]));
+    spaceNavigation.entries = spaceNavigation.entries.map(m => ({ ...m, ...(runtime.get(m.id) || {}) }));
+    renderSpaces();
+  } catch { /* Keep registry-generated links available if the API is offline. */ }
+}
+void loadSpaceNavigation();
+const spacesDialog = $('#spaces-menu');
+spacesDialog.addEventListener('close', () => {
+  document.body.style.overflow = '';
+  $$('[data-action="spaces"]').forEach(button => button.setAttribute('aria-expanded','false'));
+});
+spacesDialog.addEventListener('click', e => { if (e.target === spacesDialog || e.target.closest('a')) spacesDialog.close(); });
 // The poster homepage shares the existing app's cookie-based account session.
 async function refreshHeaderAccount() {
   const target = $('#header-auth');
@@ -23,6 +61,8 @@ async function refreshHeaderAccount() {
     const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store' });
     if (!response.ok) return;
     const result = await response.json();
+    navigationRole = result.ok && result.data ? result.data.role : null;
+    if (spaceNavigation.entries.length) renderSpaces();
     target.innerHTML = result.ok && result.data
       ? '<a class="auth-signup" href="/app#my-projects">내 계정</a>'
       : '<a class="auth-login" href="/app?auth=login#ai-tools">로그인</a><a class="auth-signup" href="/app?auth=signup#ai-tools">회원가입</a>';
@@ -115,6 +155,9 @@ function toggleSave(id) {
 }
 document.addEventListener('click',async e=>{
   const el=e.target.closest('button,a');if(!el)return;
+  if(el.dataset.action==='spaces'){spacesDialog.showModal();document.body.style.overflow='hidden';$$('[data-action="spaces"]').forEach(button=>button.setAttribute('aria-expanded','true'));return;}
+  if(el.dataset.action==='close-spaces'){spacesDialog.close();return;}
+  if(el.dataset.action==='retry-spaces'){void loadSpaceNavigation();return;}
   if(el.dataset.save){toggleSave(el.dataset.save);return;}
   if(el.dataset.scroll){const rail=$('#'+el.dataset.scroll);rail.scrollBy({left:rail.clientWidth*.75*Number(el.dataset.direction),behavior:'smooth'});return;}
   if(el.dataset.filter){activeFilter=el.dataset.filter;const top=window.scrollY;render();window.scrollTo({top,behavior:'instant'});return;}

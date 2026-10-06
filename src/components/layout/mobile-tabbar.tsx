@@ -40,7 +40,7 @@ export default function MobileTabbar() {
     return locale === 'en' ? tab.en : tab.ko;
   };
 
-  const studioModules = modules.filter((m) => !m.adminOnly && m.group === 'studio');
+  const studioModules = modules.filter((m) => !m.adminOnly && (m.group === 'studio' || m.id === 'tool-ace-music'));
   const moreModules = modules.filter((m) => !m.adminOnly && !m.group && !TAB_VIEWS.includes(m.entryView));
   const moreActive = [...studioModules, ...moreModules].some((m) => m.entryView === view);
 

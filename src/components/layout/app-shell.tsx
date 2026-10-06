@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useSession } from '@/hooks/use-session';
 import ViewRouter from '@/components/views/view-router';
 import Header from './header';
+import { CreationNav } from './creation-nav';
 import MobileTabbar from './mobile-tabbar';
 import { StudioSwitcher } from '@/components/experience/studio-switcher';
 import { useAppStore } from '@/lib/store';
@@ -28,6 +29,7 @@ export default function AppShell() {
 
       <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col">
         <Header poster={poster} />
+        <CreationNav />
         <main id="main-content" className="w-full min-w-0 flex-1 pb-20 md:pb-0">
           <StudioSwitcher />
           <ViewRouter />
