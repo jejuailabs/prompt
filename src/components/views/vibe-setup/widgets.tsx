@@ -119,10 +119,10 @@ function Preview({ parts }: { parts: (string | { v: string; ok: boolean })[][] }
 function CopyStep({ n, ready, text, waitMsg, children }: { n: number; ready: boolean; text: string; waitMsg: string; children: ReactNode }) {
   return (
     <div className={cn('rounded-xl border-2 p-4 transition-colors', ready ? 'border-primary bg-primary/5' : 'border-dashed opacity-80')}>
-      <StepLabel n={n}>복사해서 PowerShell에 붙여넣기</StepLabel>
+      <StepLabel n={n}>복사해서 VS Code 터미널에 붙여넣기</StepLabel>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <CopyButton text={text} label="명령어 전체 복사" primary disabled={!ready} className="h-11 px-6 text-base" />
-        <span className={cn('text-sm', ready ? 'font-medium text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground')}>{ready ? '✓ 준비 완료! 버튼을 누르고 붙여넣기(오른쪽 클릭) → Enter' : waitMsg}</span>
+        <span className={cn('text-sm', ready ? 'font-medium text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground')}>{ready ? '✓ VS Code에서 Ctrl+`로 터미널 열기 → 붙여넣기 → Enter' : waitMsg}</span>
       </div>
       {children}
     </div>
@@ -145,7 +145,7 @@ export function GitIdentityWidget() {
         <StepLabel n={1}>내 정보 입력 <span className="text-sm font-normal text-muted-foreground">— 입력하면 아래 명령어에 자동으로 들어가요</span></StepLabel>
         <div className="grid gap-4 sm:grid-cols-2">
           <BigField label="GitHub 아이디" value={user.name} placeholder="예: my-id" onChange={(v) => setUser({ ...user, name: v })} error={name && !nameOk ? '영문 · 숫자 · 하이픈(-)만 사용해요' : undefined} hint="github.com/ 뒤에 붙는 내 아이디" />
-          <BigField label="이메일" type="email" value={user.email} placeholder="예: me@gmail.com" onChange={(v) => setUser({ ...user, email: v })} error={email && !emailOk ? '이메일 형식을 확인해 주세요' : undefined} hint={<>GitHub 가입 이메일. 숨기고 싶다면 <a href="https://github.com/settings/emails" target="_blank" rel="noopener noreferrer" className="underline">noreply 주소</a> 사용</>} />
+          <BigField label="이메일" type="email" value={user.email} placeholder="예: me@gmail.com" onChange={(v) => setUser({ ...user, email: v })} error={email && !emailOk ? '이메일 형식을 확인해 주세요' : undefined} hint="GitHub에 가입할 때 사용한 이메일" />
         </div>
       </div>
       <CopyStep n={2} ready={ready} text={text} waitMsg="↑ 아이디와 이메일을 먼저 입력하세요">
@@ -241,10 +241,11 @@ export function PsSetupWidget({ script }: { script: string }) {
   const [show, setShow] = useState(false);
   return (
     <div className="rounded-xl border-2 border-primary/40 bg-primary/5 p-4">
+      <p className="mb-3 text-sm text-muted-foreground">설치 후 명령이 잘 실행되면 이 설정은 건너뛰세요.</p>
       <ol className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-sm font-medium">
-        <li>① PowerShell 열기</li>
-        <li>② 아래 버튼으로 전체 복사</li>
-        <li>③ 창에 오른쪽 클릭(붙여넣기) → Enter</li>
+        <li>① PowerShell을 새로 열어도 오류가 나는지 확인</li>
+        <li>② 계속 오류가 날 때만 "전체 한번에 복사" 누르기</li>
+        <li>③ PowerShell에 붙여넣고 Enter</li>
       </ol>
       <div className="flex flex-wrap items-center gap-2">
         <CopyButton text={script} label="전체 한번에 복사" primary className="h-10 px-5 text-sm" />

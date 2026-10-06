@@ -54,11 +54,11 @@ export default function VibeSetupView() {
   const toTop = () => scrollToId('vibe-top');
 
   // AI 도구는 하나 이상만 설치하면 되므로 진행률에선 1칸으로 계산
-  const required = items.filter((i) => i.column !== 'ai');
+  const required = items.filter((i) => i.column !== 'ai' && !i.optional);
   const aiDone = items.some((i) => i.column === 'ai' && done.includes(i.id));
   const total = required.length + 1;
   const completed = required.filter((i) => done.includes(i.id)).length + (aiDone ? 1 : 0);
-  const nextItem = items.find((i) => !done.includes(i.id) && !(i.column === 'ai' && aiDone));
+  const nextItem = items.find((i) => !i.optional && !done.includes(i.id) && !(i.column === 'ai' && aiDone));
 
   const toggleDone = (id: string) => setDone(done.includes(id) ? done.filter((d) => d !== id) : [...done, id]);
   const toggleStep = (col: ColumnId) => {
@@ -126,7 +126,8 @@ export default function VibeSetupView() {
       <section ref={boardRef} aria-label="4단계" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {COLUMNS.map((col) => {
           const colItems = items.filter((i) => i.column === col.id);
-          const colDone = colItems.filter((i) => done.includes(i.id)).length;
+          const colDone = colItems.filter((i) => !i.optional && done.includes(i.id)).length;
+          const colRequired = colItems.filter((i) => !i.optional).length;
           const active = openStep === col.id;
           return (
             <button
@@ -139,7 +140,7 @@ export default function VibeSetupView() {
               <span className="text-xl font-bold leading-snug">{col.title}</span>
               <span className="text-sm text-muted-foreground">{col.desc}</span>
               <span className="mt-1 flex w-full items-center justify-between text-xs text-muted-foreground">
-                <span>항목 {colItems.length}개 · {colDone}개 완료</span>
+                <span>항목 {colRequired}개 · {colDone}개 완료{colItems.length > colRequired && ' · 문제 해결 안내'}</span>
                 <ChevronDown className={cn('size-5 transition-transform', active && 'rotate-180 text-primary')} />
               </span>
             </button>
@@ -169,6 +170,7 @@ export default function VibeSetupView() {
                     <span className="flex items-center gap-1.5 font-semibold">
                       <span className="text-xs tabular-nums text-muted-foreground">{step.step}-{idx + 1}</span>
                       <span className="truncate">{it.title}</span>
+                      {it.optional && <Badge variant="outline" className="shrink-0 text-[10px]">선택</Badge>}
                       {isDone && <CircleCheck className="size-4 shrink-0 text-emerald-500" />}
                     </span>
                     <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{it.summary}</span>
@@ -223,6 +225,7 @@ function ItemDetail({ item, db, done, onToggleDone, onTop }: { item: GuideItem; 
   return (
     <div className="space-y-5 pt-1">
       {item.widget === 'ps-setup' && <PsSetupWidget script={PS_ALL} />}
+      {item.widget === 'git-identity' && <GitIdentityWidget />}
 
       {/* download / manual links */}
       <div className="flex flex-wrap gap-2">
@@ -239,7 +242,7 @@ function ItemDetail({ item, db, done, onToggleDone, onTop }: { item: GuideItem; 
         </Button>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+      {item.widget !== 'git-identity' && <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <MotionGuide steps={item.steps} step={step} onStep={setStep} />
         <div>
           <h3 className="mb-2 text-sm font-semibold">단계별 매뉴얼 <span className="font-normal text-muted-foreground">— 누르면 해당 화면으로 이동</span></h3>
@@ -259,9 +262,8 @@ function ItemDetail({ item, db, done, onToggleDone, onTop }: { item: GuideItem; 
             ))}
           </ol>
         </div>
-      </div>
+      </div>}
 
-      {item.widget === 'git-identity' && <GitIdentityWidget />}
       {item.widget === 'repo-commands' && <RepoCommandsWidget />}
       {item.widget === 'env-vars' && <EnvVarsWidget db={db} />}
 

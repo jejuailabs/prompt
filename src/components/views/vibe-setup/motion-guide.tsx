@@ -110,7 +110,7 @@ export function MotionGuide({ steps, step, onStep }: { steps: GuideStep[]; step:
         {current.screen.kind === 'terminal' && current.copy !== '' && (current.copy || current.screen.lines.some((l) => l.cmd)) && (
           <CopyButton
             text={current.copy ?? current.screen.lines.filter((l) => l.cmd).map((l) => l.cmd).join('\n')}
-            label={current.copy ? '전체 복사' : '명령 복사'}
+            label={current.copy ? '전체 한번에 복사' : '명령 복사'}
             className="absolute right-5 top-[18px] z-20 sm:right-6 sm:top-[22px]"
           />
         )}
@@ -153,7 +153,7 @@ export function MotionGuide({ steps, step, onStep }: { steps: GuideStep[]; step:
 
 function Screen({ screen, typing }: { screen: MockScreen; typing: boolean }) {
   switch (screen.kind) {
-    case 'terminal': return <Terminal lines={screen.lines} typing={typing} />;
+    case 'terminal': return <Terminal lines={screen.lines} typing={typing} app={screen.app} />;
     case 'editor': return <Editor {...screen} />;
     case 'browser':
       return (
@@ -265,7 +265,7 @@ function Editor({ files, active, code, palette }: Extract<MockScreen, { kind: 'e
   );
 }
 
-function Terminal({ lines, typing }: { lines: { cmd?: string; out?: string[] }[]; typing: boolean }) {
+function Terminal({ lines, typing, app }: { lines: { cmd?: string; out?: string[] }[]; typing: boolean; app?: string }) {
   // Remounted per step (parent is keyed by step), so the typing counter always starts at 0.
   const total = lines.reduce((n, l) => n + (l.cmd?.length ?? 0), 0);
   const [count, setCount] = useState(0);
@@ -281,7 +281,7 @@ function Terminal({ lines, typing }: { lines: { cmd?: string; out?: string[] }[]
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 font-mono text-[11.5px] text-zinc-100 shadow-sm">
       <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-[11px] text-zinc-400">
-        <span className="rounded bg-[#012456] px-1.5 text-white">PS</span> Windows PowerShell
+        <span className="rounded bg-[#012456] px-1.5 text-white">PS</span> {app ?? 'Windows PowerShell'}
       </div>
       <div className="flex-1 space-y-1 overflow-hidden p-3">
         {lines.map((l, i) => {

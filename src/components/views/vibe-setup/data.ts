@@ -24,7 +24,7 @@ export type MockScreen =
   | ({ kind: 'browser'; url: string } & MockBody)
   | ({ kind: 'installer'; app: string } & MockBody)
   | ({ kind: 'app'; app: string } & MockBody)
-  | { kind: 'terminal'; lines: { cmd?: string; out?: string[] }[] }
+  | { kind: 'terminal'; app?: string; lines: { cmd?: string; out?: string[] }[] }
   | { kind: 'editor'; files: string[]; active?: number; code?: string[]; palette?: { query: string; items: string[] } };
 
 export interface GuideStep {
@@ -55,6 +55,8 @@ export interface GuideItem {
   troubles?: { q: string; a: string }[];
   notes?: string[];
   widget?: 'git-identity' | 'repo-commands' | 'env-vars' | 'ps-setup';
+  /** 문제 해결처럼 준비 완료 조건에 포함하지 않는 안내 */
+  optional?: boolean;
   /** 다른 항목을 먼저 끝내야 하는 경우 */
   after?: string;
 }
@@ -69,7 +71,6 @@ export const COLUMNS: { id: ColumnId; step: number; title: string; desc: string 
 // ─── shared mock helpers ───
 const NEXT: MockButton[] = [{ label: '< Back' }, { label: 'Next >', primary: true }, { label: 'Cancel' }];
 const INSTALL: MockButton[] = [{ label: '< Back' }, { label: 'Install', primary: true }, { label: 'Cancel' }];
-const FINISH: MockButton[] = [{ label: 'Finish', primary: true }];
 const inst = (app: string, heading: string, extra: Partial<MockBody> = {}): MockScreen => ({ kind: 'installer', app, heading, buttons: NEXT, ...extra });
 const term = (...lines: { cmd?: string; out?: string[] }[]): MockScreen => ({ kind: 'terminal', lines });
 
@@ -183,19 +184,13 @@ export function getItems(db: DbChoice): GuideItem[] {
       links: [{ label: 'Git 다운로드 (Windows)', href: 'https://git-scm.com/downloads/win', primary: true }, { label: '공식 매뉴얼', href: 'https://git-scm.com/book/ko/v2' }],
       steps: [
         { text: '공식 사이트에서 "Click here to download"를 눌러 설치 파일을 받아요.', target: 'b0', screen: { kind: 'browser', url: 'git-scm.com/downloads/win', heading: 'Download for Windows', sub: 'The latest version is automatically selected (x64)', buttons: [{ label: 'Click here to download', primary: true }] } },
-        { text: '받은 파일 실행 → 라이선스 화면에서 Next.', target: 'b1', screen: inst('Git Setup', 'Information', { sub: 'GNU General Public License' }) },
-        { text: '설치 위치 · 구성요소 · 시작 메뉴 화면은 손대지 말고 Next.', target: 'b1', fast: true, screen: inst('Git Setup', 'Select Components', { options: [{ label: 'Windows Explorer integration', checked: true, type: 'check' }, { label: 'Git LFS (Large File Support)', checked: true, type: 'check' }, { label: 'Associate .sh files to be run with Bash', checked: true, type: 'check' }] }) },
-        { text: '기본 편집기: 드롭다운을 "Use Visual Studio Code as Git\'s default editor"로 바꾸고 Next.', target: 'f0', screen: inst('Git Setup', 'Choosing the default editor used by Git', { fields: [{ label: '', value: "Use Visual Studio Code as Git's default editor ▾" }] }) },
-        { text: '"Override the default branch name"을 선택하고 이름이 main 인지 확인 → Next. (GitHub 기본값과 맞춰요)', target: 'o1', screen: inst('Git Setup', 'Adjusting the name of the initial branch', { options: [{ label: 'Let Git decide', type: 'radio' }, { label: 'Override the default branch name for new repositories  →  main', checked: true, type: 'radio' }] }) },
-        { text: 'PATH 화면: 가운데 "(Recommended)"가 선택돼 있는지 확인 → Next. 이게 "어느 폴더에서나 git 명령" 설정이에요.', target: 'o1', screen: inst('Git Setup', 'Adjusting your PATH environment', { options: [{ label: 'Use Git from Git Bash only', type: 'radio' }, { label: 'Git from the command line and also from 3rd-party software (Recommended)', checked: true, type: 'radio' }, { label: 'Use Git and optional Unix tools from the Command Prompt', type: 'radio' }] }) },
-        { text: '나머지 화면(SSH · HTTPS · 줄바꿈 · 터미널 · 추가 옵션)은 전부 기본값 그대로 Next.', target: 'b1', fast: true, screen: inst('Git Setup', 'Configuring the line ending conversions', { options: [{ label: 'Checkout Windows-style, commit Unix-style line endings', checked: true, type: 'radio' }, { label: 'Checkout as-is, commit Unix-style line endings', type: 'radio' }, { label: 'Checkout as-is, commit as-is', type: 'radio' }] }) },
-        { text: 'Install을 누르고 끝날 때까지 기다려요.', target: 'b1', screen: inst('Git Setup', 'Ready to Install', { sub: 'Setup is now ready to begin installing Git on your computer.', buttons: INSTALL }) },
-        { text: 'Finish로 마무리.', target: 'b0', screen: inst('Git Setup', 'Completing the Git Setup Wizard', { options: [{ label: 'Launch Git Bash', type: 'check' }, { label: 'View Release Notes', type: 'check' }], buttons: FINISH }) },
-        { text: '새 PowerShell 창을 열고 git --version 으로 확인해요.', screen: term({ cmd: 'git --version', out: ['git version 2.xx.x.windows.1'] }) },
+        { text: '받은 파일을 실행하고 옵션은 바꾸지 말고 Next를 계속 눌러요.', target: 'b1', fast: true, screen: inst('Git Setup', 'Installing Git', { sub: '기본 설정 그대로 진행하세요.' }) },
+        { text: 'Install → Finish를 누르면 설치 끝.', target: 'b0', screen: inst('Git Setup', 'Ready to Install', { buttons: INSTALL }) },
+        { text: '새 PowerShell에서 git --version을 입력해 버전이 나오면 완료예요.', screen: term({ cmd: 'git --version', out: ['git version 2.xx.x.windows.1'] }) },
       ],
       verify: { code: 'git --version', expect: 'git version 2.xx.x.windows.1' },
       troubles: [
-        { q: "'git' 용어가 cmdlet... 으로 인식되지 않습니다", a: 'PowerShell 창을 닫고 새로 열어보세요. 그래도 안 되면 아래 "PowerShell 설정"의 PATH 등록 명령을 실행하세요.' },
+        { q: "'git' 용어가 cmdlet... 으로 인식되지 않습니다", a: 'PowerShell 창을 닫고 새로 열어보세요. 그래도 안 되면 "PowerShell 오류 해결" 안내를 확인하세요.' },
       ],
     },
     {
@@ -205,17 +200,13 @@ export function getItems(db: DbChoice): GuideItem[] {
       links: [{ label: 'Node.js LTS 다운로드', href: 'https://nodejs.org/ko/download', primary: true }, { label: '공식 문서', href: 'https://nodejs.org/ko/learn' }],
       steps: [
         { text: '다운로드 페이지에서 꼭 "LTS(장기 지원)" 버전을 고르고 Windows 설치 프로그램(.msi)을 받아요.', target: 'b0', screen: { kind: 'browser', url: 'nodejs.org/ko/download', heading: 'Node.js® 다운로드', options: [{ label: 'LTS (장기 지원) — 추천', checked: true, type: 'radio' }, { label: 'Current (최신 기능)', type: 'radio' }], buttons: [{ label: 'Windows 설치 프로그램 (.msi)', primary: true }] } },
-        { text: '설치 파일 실행 → Welcome 화면에서 Next.', target: 'b1', screen: inst('Node.js Setup', 'Welcome to the Node.js Setup Wizard') },
-        { text: '"I accept the terms…"에 체크하고 Next.', target: 'o0', screen: inst('Node.js Setup', 'End-User License Agreement', { options: [{ label: 'I accept the terms in the License Agreement', checked: true, type: 'check' }] }) },
-        { text: '설치 위치 · Custom Setup은 그대로 Next. (PATH 추가가 기본 포함돼 있어요)', target: 'b1', fast: true, screen: inst('Node.js Setup', 'Custom Setup', { list: [{ label: 'Node.js runtime' }, { label: 'npm package manager' }, { label: 'Add to PATH', meta: '포함됨 ✓' }] }) },
-        { text: '"Tools for Native Modules" 체크박스는 비워둔 채 Next. (초보자는 필요 없고, 체크하면 설치가 30분 넘게 걸려요)', target: 'b1', screen: inst('Node.js Setup', 'Tools for Native Modules', { options: [{ label: 'Automatically install the necessary tools…', checked: false, type: 'check' }] }) },
-        { text: 'Install → "이 앱이 변경하도록 허용?" 창이 뜨면 "예".', target: 'b1', screen: inst('Node.js Setup', 'Ready to install Node.js', { buttons: INSTALL }) },
-        { text: 'Finish.', target: 'b0', screen: inst('Node.js Setup', 'Completed the Node.js Setup Wizard', { buttons: FINISH }) },
-        { text: '새 PowerShell 창에서 node -v, npm -v 로 확인해요.', screen: term({ cmd: 'node -v', out: ['v24.x.x'] }, { cmd: 'npm -v', out: ['11.x.x'] }) },
+        { text: '설치 파일을 실행하고 약관에 동의한 뒤, 옵션은 기본값 그대로 Next를 눌러요.', target: 'b1', fast: true, screen: inst('Node.js Setup', 'Custom Setup', { list: [{ label: 'Node.js runtime' }, { label: 'npm package manager' }, { label: 'Add to PATH' }] }) },
+        { text: 'Install → Finish를 누르면 설치 끝.', target: 'b0', screen: inst('Node.js Setup', 'Ready to install Node.js', { buttons: INSTALL }) },
+        { text: '새 PowerShell에서 node -v와 npm -v를 입력해 버전을 확인해요.', screen: term({ cmd: 'node -v', out: ['v24.x.x'] }, { cmd: 'npm -v', out: ['11.x.x'] }) },
       ],
       verify: { code: 'node -v; npm -v', expect: 'v24.x.x / 11.x.x (숫자는 달라도 OK)' },
       troubles: [
-        { q: 'npm : 이 시스템에서 스크립트를 실행할 수 없으므로…', a: '가장 흔한 에러예요. 아래 "PowerShell 설정"의 ① 실행 정책 명령을 한 번 실행하면 해결돼요.' },
+        { q: 'npm : 이 시스템에서 스크립트를 실행할 수 없으므로…', a: '설치는 끝난 상태예요. "PowerShell 오류 해결" 안내를 확인하세요.' },
       ],
     },
     {
@@ -225,41 +216,35 @@ export function getItems(db: DbChoice): GuideItem[] {
       links: [{ label: 'VS Code 다운로드', href: 'https://code.visualstudio.com/download', primary: true }, { label: '공식 문서', href: 'https://code.visualstudio.com/docs' }],
       steps: [
         { text: '다운로드 페이지에서 "Windows 10, 11" 버튼을 눌러요.', target: 'b0', screen: { kind: 'browser', url: 'code.visualstudio.com/download', heading: 'Download Visual Studio Code', sub: 'Free and built on open source', buttons: [{ label: '⊞ Windows 10, 11', primary: true }, { label: '.deb' }, { label: 'Mac' }] } },
-        { text: '"I accept the agreement" 선택 → Next.', target: 'o0', screen: inst('Visual Studio Code Setup', 'License Agreement', { options: [{ label: 'I accept the agreement', checked: true, type: 'radio' }, { label: 'I do not accept the agreement', type: 'radio' }] }) },
-        { text: '설치 위치 · 시작 메뉴는 그대로 Next.', target: 'b1', fast: true, screen: inst('Visual Studio Code Setup', 'Select Start Menu Folder', { fields: [{ label: '', value: 'Visual Studio Code' }] }) },
-        { text: '★ 중요: 체크박스 전부 체크! 특히 "Add to PATH"와 "Open with Code"(폴더 우클릭으로 열기).', target: 'o4', screen: inst('Visual Studio Code Setup', 'Select Additional Tasks', { options: [{ label: 'Create a desktop icon', checked: true, type: 'check' }, { label: 'Add "Open with Code" action to file context menu', checked: true, type: 'check' }, { label: 'Add "Open with Code" action to directory context menu', checked: true, type: 'check' }, { label: 'Register Code as an editor for supported file types', checked: true, type: 'check' }, { label: 'Add to PATH (requires shell restart)', checked: true, type: 'check' }] }) },
-        { text: 'Install.', target: 'b1', screen: inst('Visual Studio Code Setup', 'Ready to Install', { buttons: INSTALL }) },
-        { text: '"Launch Visual Studio Code" 체크된 채 Finish.', target: 'b0', screen: inst('Visual Studio Code Setup', 'Completing the Setup Wizard', { options: [{ label: 'Launch Visual Studio Code', checked: true, type: 'check' }], buttons: FINISH }) },
-        { text: '한국어로 바꾸기: Ctrl+Shift+P → "Configure Display Language" 입력 → 한국어 선택 → 재시작.', target: 'p0', screen: { kind: 'editor', files: ['Welcome'], palette: { query: '> Configure Display Language', items: ['한국어 (ko)', 'English (en)'] } } },
-        { text: '터미널 열기는 Ctrl + ` (숫자 1 왼쪽 키). code -v 로 확인해요.', screen: term({ cmd: 'code -v', out: ['1.xx.x', 'abc1234...', 'x64'] }) },
+        { text: '파일을 실행하고 약관에 동의한 뒤, 옵션은 바꾸지 말고 Next를 눌러요.', target: 'b1', fast: true, screen: inst('Visual Studio Code Setup', 'Select Additional Tasks', { sub: '기본 설정 그대로 진행하세요.' }) },
+        { text: 'Install → Finish를 누르고 VS Code가 열리면 완료예요.', target: 'b0', screen: inst('Visual Studio Code Setup', 'Ready to Install', { buttons: INSTALL }) },
       ],
-      verify: { code: 'code -v', expect: '1.xx.x' },
-      notes: ['프로젝트 폴더에서 우클릭 → "Code(으)로 열기" 하면 바로 그 폴더가 열려요.'],
+      notes: ['한국어 화면이 필요하면 설치 후 VS Code에서 표시 언어를 바꾸면 돼요.'],
     },
     {
       id: 'powershell', column: 'pc', order: 4, icon: 'terminal', minutes: 1,
-      title: 'PowerShell 설정',
-      summary: '어느 폴더에서든 git · node · code · claude 명령이 먹히게 하는 1회 설정',
+      title: 'PowerShell 오류 해결 (필요할 때만)', optional: true,
+      summary: '설치 후 git · node · npm · code 명령이 안 될 때만 확인해요',
       links: [],
       widget: 'ps-setup',
       steps: [
-        { text: '시작(⊞) 버튼 → "powershell" 입력 → Windows PowerShell 열기. (관리자 권한 필요 없음)', target: 'l0', screen: { kind: 'app', app: '검색', fields: [{ label: '', value: '🔍 powershell' }], list: [{ label: 'Windows PowerShell', meta: '앱', action: '열기' }] } },
-        { text: '아래 "전체 복사" 버튼 → PowerShell 창에 마우스 오른쪽 클릭(붙여넣기) → Enter.', copy: PS_ALL, screen: term({ cmd: 'Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force' }, { cmd: '$add = @("C:\\Program Files\\Git\\cmd", "C:\\Program Files\\nodejs", ...)' }, { cmd: 'git --version; node -v; npm -v; code -v', out: ['git version 2.xx.x.windows.1', 'v24.x.x', '11.x.x', '1.xx.x'] }) },
-        { text: '마지막에 버전 숫자 4줄이 나오면 끝! 빨간 글씨가 나오면 PowerShell을 닫고 새로 열어 한 번 더 붙여넣으세요.', screen: term({ out: ['git version 2.xx.x.windows.1', 'v24.x.x', '11.x.x', '1.xx.x'] }) },
+        { text: '명령이 안 될 때만 PowerShell을 모두 닫고 새로 열어 다시 확인해요. 설치 직후라면 이것만으로 해결될 수 있어요.', target: 'l0', screen: { kind: 'app', app: '검색', fields: [{ label: '', value: '🔍 powershell' }], list: [{ label: 'Windows PowerShell', meta: '앱', action: '열기' }] } },
+        { text: '그래도 오류가 날 때만 "전체 한번에 복사" 버튼을 눌러 PowerShell에 붙여넣고 Enter를 눌러요.', copy: PS_ALL, screen: term({ cmd: 'Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force' }, { cmd: '$add = @("C:\\Program Files\\Git\\cmd", "C:\\Program Files\\nodejs", ...)' }, { cmd: 'git --version; node -v; npm -v; code -v', out: ['git version 2.xx.x.windows.1', 'v24.x.x', '11.x.x', '1.xx.x'] }) },
+        { text: '버전 숫자가 나오면 해결됐어요. 오류가 남으면 설치한 프로그램만 다시 확인해요.', screen: term({ out: ['git version 2.xx.x.windows.1', 'v24.x.x', '11.x.x', '1.xx.x'] }) },
       ],
     },
     {
       id: 'git-identity', column: 'pc', order: 6, icon: 'user-check', minutes: 1, after: 'GitHub 가입 후',
       title: 'Git 사용자 등록',
       summary: '내 커밋에 "누가 저장했는지" 이름표를 붙이는 설정 (PC당 1번)',
-      links: [{ label: 'GitHub 이메일 설정 열기', href: 'https://github.com/settings/emails', primary: true }],
+      links: [],
       widget: 'git-identity',
       steps: [
-        { text: '(선택) 이메일을 숨기려면 GitHub → Settings → Emails에서 "Keep my email addresses private"를 켜고 noreply 주소를 복사해요.', target: 'f0', screen: { kind: 'browser', url: 'github.com/settings/emails', heading: 'Emails', options: [{ label: 'Keep my email addresses private', checked: true, type: 'check' }], fields: [{ label: 'We will use this address for git operations', value: '12345678+my-id@users.noreply.github.com', mono: true }] } },
-        { copy: '', text: '아래 입력칸에 GitHub 아이디와 이메일을 넣으면 명령이 자동 완성돼요 → 복사해서 PowerShell에 붙여넣기.', screen: term({ cmd: 'git config --global user.name "my-id"' }, { cmd: 'git config --global user.email "me@example.com"' }) },
-        { text: '등록됐는지 확인해요.', screen: term({ cmd: 'git config --global --list', out: ['user.name=my-id', 'user.email=me@example.com'] }) },
+        { text: '이 화면의 입력칸에 GitHub 아이디와 이메일을 넣어요. 명령어가 자동으로 만들어져요.', screen: { kind: 'app', app: 'PLAYLAB', heading: 'Git 사용자 등록', fields: [{ label: 'GitHub 아이디', value: 'my-id' }, { label: '이메일', value: 'me@example.com' }] } },
+        { copy: '', text: '"명령어 전체 복사"를 누르고 VS Code 터미널(Ctrl+`)에 붙여넣어 Enter를 눌러요.', screen: { kind: 'terminal', app: 'Visual Studio Code · 터미널', lines: [{ cmd: 'git config --global user.name "my-id"' }, { cmd: 'git config --global user.email "me@example.com"' }] } },
+        { text: '같은 VS Code 터미널에서 git config --global --list를 입력해 등록된 값을 확인해요.', screen: { kind: 'terminal', app: 'Visual Studio Code · 터미널', lines: [{ cmd: 'git config --global --list', out: ['user.name=my-id', 'user.email=me@example.com'] }] } },
       ],
-      notes: ['"--global"이라 이 PC의 모든 프로젝트에 적용돼요. 프로젝트마다 다시 할 필요 없어요.'],
+      notes: ['VS Code에서 터미널은 Ctrl+`로 열어요.', '"--global"이라 이 PC에서 한 번만 설정하면 돼요.'],
     },
     // ═══ AI ═══
     {

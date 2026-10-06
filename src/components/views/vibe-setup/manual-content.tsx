@@ -8,9 +8,9 @@ function docCommands(doc: ManualDoc): { label: string; code: string }[] {
   const base = doc.item.commands?.map((c) => ({ label: c.label, code: c.code })) ?? [];
   switch (doc.slug) {
     case 'powershell-path':
-      return [{ label: 'PowerShell에 한 번에 붙여넣기 (실행 허용 → PATH 등록 → 적용 → 확인)', code: PS_ALL }];
+      return [{ label: '새 PowerShell에서도 오류가 계속 날 때만 실행', code: PS_ALL }];
     case 'git-config-user':
-      return [{ label: '내 아이디·이메일로 바꿔서 실행', code: 'git config --global user.name "내GitHub아이디"\ngit config --global user.email "내이메일@example.com"\ngit config --global --list' }];
+      return [{ label: '아이디와 이메일을 바꿔 VS Code 터미널에 붙여넣기', code: 'git config --global user.name "내GitHub아이디"\ngit config --global user.email "내이메일@example.com"\ngit config --global --list' }];
     case 'github-repo-push':
       return [{ label: '프로젝트 폴더 터미널에서 실행 (아이디·리포지토리 이름만 바꾸기)', code: 'git init\ngit add .\ngit commit -m "first commit"\ngit branch -M main\ngit remote add origin https://github.com/내아이디/my-first-app.git\ngit push -u origin main' }];
     case 'env-firebase':

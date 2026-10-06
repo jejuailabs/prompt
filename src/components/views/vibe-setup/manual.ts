@@ -5,7 +5,7 @@ import { COLUMNS, getItems, type DbChoice, type GuideItem } from './data';
 export const MANUAL_PATH = '/guide/vibe-coding';
 export const MANUAL_TITLE = '바이브코딩 매뉴얼';
 export const MANUAL_DESCRIPTION = '코딩을 몰라도 AI로 웹 서비스를 만드는 바이브코딩 준비 매뉴얼. Git·Node.js·VS Code 설치, PowerShell PATH 설정, Claude·ChatGPT Codex·Antigravity AI 코딩 도구, GitHub·Vercel·Firebase·Supabase 가입과 첫 배포까지 초보자 기준으로 정리했습니다.';
-export const MANUAL_UPDATED = '2026-10-02';
+export const MANUAL_UPDATED = '2026-10-04';
 
 interface DocSeo {
   title: string;
@@ -19,29 +19,29 @@ interface DocSeo {
 const SEO: Record<string, DocSeo> = {
   'git-install': {
     title: '윈도우 Git 설치 방법 (초보자용)',
-    description: 'Windows 10·11에 Git을 설치하는 방법. 설치 화면마다 무엇을 골라야 하는지, VS Code 기본 편집기·main 브랜치·PATH 설정까지 초보자 기준으로 설명합니다.',
+    description: 'Windows 10·11에서 Git 설치 파일을 받아 기본 옵션 그대로 설치하고 버전을 확인하는 방법.',
     keywords: ['깃 설치', 'git 설치 방법', '윈도우 git 설치', 'git for windows', 'git 다운로드', '바이브코딩 git'],
-    answer: 'Git은 git-scm.com에서 Windows 설치 파일을 받아 실행하면 됩니다. 대부분 Next만 누르면 되고, 기본 편집기는 VS Code로, 기본 브랜치 이름은 main으로, PATH는 가운데 (Recommended) 옵션으로 두는 것만 확인하세요. 설치 후 새 PowerShell에서 git --version 으로 버전이 나오면 성공입니다.',
+    answer: 'Git 공식 사이트에서 Windows 설치 파일을 받아 실행하세요. 설치 화면의 옵션은 바꾸지 말고 Next를 눌러 Install과 Finish까지 진행하면 됩니다. 새 PowerShell에서 git --version으로 버전이 나오면 완료입니다.',
     faq: [['Git과 GitHub는 다른가요?', 'Git은 내 PC에서 코드 변경 기록을 남기는 프로그램이고, GitHub는 그 기록을 인터넷에 보관하는 서비스입니다. 둘 다 필요합니다.']],
   },
   'nodejs-install': {
     title: 'Node.js 설치 방법 · LTS 버전 고르기',
-    description: 'Windows에 Node.js LTS를 설치하고 node -v, npm -v로 확인하는 방법. Tools for Native Modules 체크 여부와 npm 스크립트 실행 오류 해결법까지.',
+    description: 'Windows에 Node.js LTS 설치 파일을 받아 기본 옵션 그대로 설치하고 node -v, npm -v로 확인하는 방법.',
     keywords: ['node.js 설치', '노드js 설치 방법', 'nodejs lts', 'npm 설치', 'node -v', 'npm 스크립트를 실행할 수 없으므로'],
-    answer: 'Node.js는 nodejs.org에서 LTS(장기 지원) 버전의 Windows 설치 프로그램(.msi)을 받아 설치합니다. 약관 동의 후 기본값으로 Next를 누르되, Tools for Native Modules 체크박스는 비워두세요. 설치 후 node -v와 npm -v에 버전이 나오면 성공입니다.',
+    answer: 'Node.js 공식 사이트에서 LTS 버전의 Windows 설치 파일을 받으세요. 약관에 동의하고 나머지 옵션은 기본값 그대로 Next, Install, Finish를 누르면 됩니다. 새 PowerShell에서 node -v와 npm -v로 버전을 확인하세요.',
     faq: [['LTS와 Current 중 무엇을 받아야 하나요?', '초보자는 무조건 LTS를 받으세요. 오래 지원되고 대부분의 라이브러리가 LTS 기준으로 동작합니다.']],
   },
   'vscode-install': {
     title: 'VS Code 설치 방법과 한국어 설정',
-    description: 'Visual Studio Code를 설치할 때 꼭 체크해야 할 Add to PATH, Open with Code 옵션과 한국어 언어팩 설정, code -v 확인 방법.',
+    description: 'Visual Studio Code Windows 설치 파일을 받아 기본 옵션 그대로 설치하고 실행하는 간단한 방법.',
     keywords: ['vs code 설치', 'visual studio code 설치 방법', 'vscode 한국어 설정', 'vscode add to path', 'code 명령어'],
-    answer: 'VS Code는 code.visualstudio.com에서 Windows 설치 파일을 받아 설치합니다. 추가 작업 화면에서 Add to PATH와 Open with Code 체크박스를 모두 체크하는 것이 핵심입니다. 한국어는 Ctrl+Shift+P → Configure Display Language → 한국어로 바꿀 수 있습니다.',
+    answer: 'VS Code 공식 사이트에서 Windows 설치 파일을 받으세요. 약관에 동의하고 옵션은 바꾸지 않은 채 Next, Install, Finish를 누르면 됩니다. VS Code가 열리면 설치가 완료된 것입니다.',
   },
   'powershell-path': {
-    title: 'PowerShell 환경변수 PATH 등록 · 스크립트 실행 오류 해결',
-    description: '어느 폴더에서든 git, node, npm, code, claude 명령이 먹히도록 PowerShell에서 사용자 PATH를 등록하고, "이 시스템에서 스크립트를 실행할 수 없으므로" 오류를 해결하는 한 번에 복사용 명령.',
+    title: 'PowerShell 명령 오류 해결 (필요할 때만)',
+    description: '설치 후 git, node, npm, code 명령이 안 되거나 스크립트 실행 오류가 날 때만 확인하는 문제 해결 안내.',
     keywords: ['powershell path 설정', '환경변수 path 추가', '이 시스템에서 스크립트를 실행할 수 없으므로', 'set-executionpolicy remotesigned', "용어가 cmdlet 함수 스크립트 파일 또는 실행할 수 있는 프로그램 이름으로 인식되지 않습니다", 'npm.ps1 오류'],
-    answer: 'PowerShell을 열고 실행 정책을 RemoteSigned로 바꾼 뒤, Git·Node.js·VS Code·npm 경로를 사용자 PATH에 추가하면 어느 폴더에서든 명령이 동작합니다. 아래 스크립트를 한 번에 붙여넣으면 실행 허용, PATH 등록, 즉시 적용, 버전 확인까지 끝납니다. 관리자 권한은 필요 없습니다.',
+    answer: 'Git·Node.js·VS Code를 기본 옵션으로 설치했다면 먼저 PowerShell을 새로 열어 명령을 다시 실행해 보세요. 그래도 명령을 찾지 못하거나 npm 스크립트 오류가 나면 이 문제 해결 안내를 사용하면 됩니다. 설치 직후에는 별도 PowerShell 설정이 필요하지 않을 수 있습니다.',
     faq: [
       ['"이 시스템에서 스크립트를 실행할 수 없으므로" 오류는 왜 나나요?', 'Windows 기본 실행 정책이 .ps1 스크립트를 막기 때문입니다. Set-ExecutionPolicy -Scope CurrentUser RemoteSigned 로 현재 사용자만 허용하면 해결됩니다.'],
       ["'git' 용어가 cmdlet... 으로 인식되지 않는다고 나와요", '프로그램 경로가 PATH에 없거나 창을 새로 열지 않아서입니다. 이 문서의 스크립트를 실행한 뒤 터미널을 모두 닫고 새로 여세요.'],
@@ -49,9 +49,9 @@ const SEO: Record<string, DocSeo> = {
   },
   'git-config-user': {
     title: 'git config user.name / user.email 설정 방법',
-    description: 'Git 커밋에 이름표를 붙이는 git config --global user.name, user.email 설정 방법과 GitHub noreply 이메일로 이메일을 숨기는 법. Author identity unknown 오류 해결.',
-    keywords: ['git config user.name', 'git config user.email', 'git 사용자 설정', 'author identity unknown', 'github noreply 이메일', 'git config --global'],
-    answer: 'PowerShell에서 git config --global user.name "GitHub아이디"와 git config --global user.email "이메일" 두 줄을 실행하면 됩니다. --global 옵션이라 PC당 한 번만 하면 모든 프로젝트에 적용됩니다. 이메일을 공개하기 싫다면 GitHub Settings → Emails의 noreply 주소를 쓰세요.',
+    description: 'GitHub 아이디와 이메일을 입력해 git config 명령을 만들고 VS Code 터미널에서 Git 사용자 정보를 등록하는 방법.',
+    keywords: ['git config user.name', 'git config user.email', 'git 사용자 설정', 'author identity unknown', 'git config --global', 'VS Code 터미널'],
+    answer: '이 화면에 GitHub 아이디와 이메일을 입력하고 "명령어 전체 복사"를 누르세요. VS Code에서 Ctrl+`로 터미널을 열어 붙여넣고 Enter를 누르면 Git 사용자 정보가 등록됩니다. --global 옵션이라 이 PC에서 한 번만 하면 됩니다.',
     faq: [['Author identity unknown 오류가 나요', '사용자 이름과 이메일이 등록되지 않은 상태에서 커밋했기 때문입니다. 위 두 줄을 실행한 뒤 다시 커밋하세요.']],
   },
   'claude-desktop': {
