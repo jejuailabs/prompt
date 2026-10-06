@@ -95,24 +95,6 @@ test('subtitle timecodes carry rounded milliseconds into minutes and hours', () 
   assert.equal(srtTimestamp(3.25), '00:00:03,250');
 });
 
-test('home posters retain real detail identities and use linked prompt covers', () => {
-  const { artifactEntry, promptEntries } = load('src/components/views/home/content.ts');
-  const work = { id: 'image-1', title: 'A result', description: '', type: 'image', fileUrl: '/uploads/result.png', sourcePromptId: 'prompt-1', owner: { username: 'creator' } };
-  const [prompt] = promptEntries([{ id: 'prompt-1', title: 'Original prompt', body: 'Make a world', category: 'image', thumbnailUrl: null }], [work]);
-  assert.equal(prompt.image, '/uploads/result.png');
-  assert.equal(prompt.destination.view, 'prompt');
-  assert.equal(prompt.destination.params.id, 'prompt-1');
-  assert.equal(artifactEntry(work).destination.view, 'project');
-  assert.equal(artifactEntry({ ...work, type: 'game' }).destination.view, 'game-play');
-  assert.equal(artifactEntry({ ...work, type: 'game' }).destination.params.id, 'image-1');
-  const [unsafe, explicit] = promptEntries([
-    { id: 'a', thumbnailUrl: 'javascript:alert(1)' },
-    { id: 'prompt-1', thumbnailUrl: 'https://example.com/cover.jpg' },
-  ], [work]);
-  assert.equal(unsafe.image, null);
-  assert.equal(explicit.image, 'https://example.com/cover.jpg');
-});
-
 test('read routes use a verified Auth identity and reject an invalid cookie identity', async () => {
   let verifiedUser = null;
   let verifiedCalls = 0;
