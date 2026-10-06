@@ -107,6 +107,7 @@ export interface AcademyVideoDTO {
   thumbnailUrl?: string | null;
   sortOrder: number;
   analysis?: YoutubeAnalysisDTO | null;
+  sampleNote?: string;
 }
 
 export interface AcademyPlaylistDTO {
@@ -116,6 +117,7 @@ export interface AcademyPlaylistDTO {
   thumbnailUrl?: string | null;
   sortOrder: number;
   videos: AcademyVideoDTO[];
+  isExample?: boolean;
 }
 
 // ─── Artifact metadata JSON shapes ───

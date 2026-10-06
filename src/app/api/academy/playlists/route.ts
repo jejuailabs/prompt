@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { requireAdmin, HttpError } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { toYoutubeAnalysisDTO } from '@/lib/server/youtube-analysis';
+import { createCourseSchema } from '@/modules/academy/curriculum';
 
 type PlaylistRow = Prisma.AcademyPlaylistGetPayload<{ include: { videos: { include: { analysis: true } } } }>;
 function serializePlaylist(p: PlaylistRow | null) {
@@ -25,9 +26,23 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     await requireAdmin();
-    const body = await readJson<{ title?: string; description?: string; sortOrder?: number }>(req);
-    if (!body.title?.trim()) throw new HttpError('강의 과정 이름을 입력해주세요');
-    const p = await db.academyPlaylist.create({ data: { title: body.title.trim().slice(0, 120), description: (body.description ?? '').slice(0, 1000), sortOrder: body.sortOrder ?? 0, published: true }, include: { videos: { include: { analysis: true } } } });
+    const parsed = createCourseSchema.safeParse(await readJson<unknown>(req));
+    if (!parsed.success) throw new HttpError(parsed.error.issues[0]?.message ?? '과정 내용을 확인해주세요.');
+    const { videos, ...course } = parsed.data;
+    // One nested transaction: no partially saved course if an entry fails.
+    const p = await db.academyPlaylist.create({ data: {
+      ...course, published: true,
+      thumbnailUrl: videos[0] ? `https://i.ytimg.com/vi/${videos[0].videoId}/hqdefault.jpg` : null,
+      videos: { create: videos.map((video, sortOrder) => ({
+        videoId: video.videoId, title: video.title, description: video.description.slice(0, 500), sortOrder,
+        thumbnailUrl: `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`,
+        analysis: { connectOrCreate: { where: { videoId: video.videoId }, create: {
+          videoId: video.videoId, sourceUrl: `https://www.youtube.com/watch?v=${video.videoId}`,
+          title: video.title, channelTitle: video.channelTitle, description: video.description,
+          durationSeconds: video.durationSeconds, thumbnailUrl: `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`,
+        } } },
+      })) },
+    }, include: { videos: { orderBy: { sortOrder: 'asc' }, include: { analysis: true } } } });
     return ok(serializePlaylist(p), 201);
   } catch (e) { return fail(e); }
 }
