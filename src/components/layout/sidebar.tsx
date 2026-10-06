@@ -42,7 +42,7 @@ function errorMessage(e: unknown): string {
 
 // ─── credits widget + top-up dialog ────────────────────────────────────────
 
-export function CreditsWidget() {
+export function CreditsWidget({ className, dark = false }: { className?: string; dark?: boolean } = {}) {
   const t = useTranslations('core');
   const locale = useAppStore((s) => s.locale);
   const session = useAppStore((s) => s.session);
@@ -71,7 +71,7 @@ export function CreditsWidget() {
   };
 
   return (
-    <Card className="gap-2 rounded-lg p-3 py-3 shadow-sm">
+    <Card className={cn('gap-2 rounded-lg p-3 py-3 shadow-sm', className)}>
       <div className="flex items-center justify-between">
         <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <Icon name="credit-card" className="size-3.5" />
@@ -84,7 +84,7 @@ export function CreditsWidget() {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-xs">
+        <DialogContent className={cn('sm:max-w-xs', dark && 'dark')}>
           <DialogHeader>
             <DialogTitle>{t('charge')}</DialogTitle>
             <DialogDescription className="text-xs">500크레딧 충전을 관리자에게 요청합니다. 승인 전에는 지급되지 않습니다.</DialogDescription>

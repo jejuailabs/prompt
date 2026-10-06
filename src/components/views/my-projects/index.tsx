@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Clapperboard, Heart, Loader2, Trash2, Upload, User, Film, CheckCircle2, XCircle, Play } from 'lucide-react';
+import { ArrowUpRight, Clapperboard, Heart, Loader2, LogOut, Trash2, Upload, User, Film, CheckCircle2, XCircle, Play } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { CancelVideo } from '@/components/shared/cancel-video';
 import { useAppStore } from '@/lib/store';
@@ -13,11 +13,13 @@ import type { ArtifactDTO, PromptDTO, YoutubeAnalysisDTO } from '@/lib/types';
 import { ArtifactCard } from '@/components/shared/artifact-card';
 import { EmptyState } from '@/components/shared/empty-state';
 import { UploadArtifactDialog } from '@/components/shared/upload-artifact-dialog';
-import { ViewHeader } from '@/components/shared/view-header';
+import { CreditsWidget } from '@/components/layout/sidebar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import styles from './account.module.css';
 
 const CATEGORY_EN: Record<string, string> = {
   이미지: 'Image',
@@ -29,7 +31,7 @@ const CATEGORY_EN: Record<string, string> = {
 };
 
 function GridSkeleton() {
-  return null;
+  return <div className={styles.loading} role="status"><Loader2 className="size-5 animate-spin" /><span>작업을 불러오는 중</span></div>;
 }
 
 export default function MyProjectsView() {
@@ -45,6 +47,7 @@ export default function MyProjectsView() {
   const [tab, setTab] = useState('published');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const artifacts = useQuery({
     queryKey: ['artifacts', 'mine'],
@@ -79,6 +82,19 @@ export default function MyProjectsView() {
   const published = (artifacts.data ?? []).filter((a) => a.status === 'published');
   const drafts = (artifacts.data ?? []).filter((a) => a.status === 'draft');
 
+  const logout = async () => {
+    setLoggingOut(true);
+    try {
+      await api.post('/api/auth/logout');
+      useAppStore.getState().setSession(null);
+      qc.clear();
+      window.location.assign('/#home');
+    } catch (e) {
+      toastError(e);
+      setLoggingOut(false);
+    }
+  };
+
   const publishDraft = async (a: ArtifactDTO) => {
     setPendingId(a.id);
     try {
@@ -109,7 +125,8 @@ export default function MyProjectsView() {
   // ── logged out ────────────────────────────────────────────
   if (!session) {
     return (
-      <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
+      <div className={styles.page}>
+        <div className={styles.heading}><div><p className={styles.eyebrow}>YOUR SPACE / PLAYLAB</p><h1>{locale === 'en' ? 'My account' : '내 계정'}<span>.</span></h1></div></div>
         <EmptyState
           icon={<User className="size-5" aria-hidden="true" />}
           title={t('needLoginTitle')}
@@ -125,20 +142,34 @@ export default function MyProjectsView() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
-      <ViewHeader
-        title={t('title')}
-        subtitle={t('subtitle')}
-        actions={
-          <Button size="sm" onClick={() => setUploadOpen(true)}>
+    <div className={styles.page}>
+      <div className={styles.heading}>
+        <div><p className={styles.eyebrow}>YOUR SPACE / PLAYLAB</p><h1>{locale === 'en' ? 'My account' : '내 계정'}<span>.</span></h1><p className={styles.description}>{locale === 'en' ? 'Your profile, creative fuel, and everything you make.' : '내 정보와 크레딧, 만들어둔 작업을 한곳에서.'}</p></div>
+        <button className={styles.logout} onClick={() => void logout()} disabled={loggingOut}><LogOut size={14} />{loggingOut ? tc('loading') : tc('logout')}</button>
+      </div>
+
+      <section className={styles.overview} aria-label={locale === 'en' ? 'Account overview' : '내 계정 정보'}>
+        <div className={styles.profile}>
+          <Avatar className={styles.avatar}>
+            {session.avatarUrl && <AvatarImage src={session.avatarUrl} alt="" />}
+            <AvatarFallback>{session.username.charAt(0).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <div className={styles.profileInfo}><p className={styles.eyebrow}>{session.role === 'admin' ? 'PLAYLAB ADMIN' : 'PLAYLAB CREATOR'}</p><h2>{session.username}</h2><p>{session.title || (locale === 'en' ? 'Creator' : '크리에이터')}</p><button onClick={() => navigate('ai-tools')}>{locale === 'en' ? 'Create with AI Tools' : 'AI Tools로 새 작업 시작'}<ArrowUpRight size={14} /></button></div>
+        </div>
+        <div className={styles.creditPanel}><p className={styles.eyebrow}>YOUR CREATIVE FUEL</p><CreditsWidget className={styles.credits} dark /><p className={styles.creditNote}>{locale === 'en' ? 'Use credits in AI Tools and the creative studios.' : 'AI 도구와 실험실에서 사용할 수 있어요.'}</p></div>
+      </section>
+
+      <section className={styles.collection} aria-labelledby="account-work-heading">
+        <div className={styles.collectionHeading}>
+          <div><p className={styles.eyebrow}>MADE BY YOU</p><h2 id="account-work-heading">{locale === 'en' ? 'My work' : '내 작업'}</h2></div>
+          <Button size="sm" className={styles.uploadButton} onClick={() => setUploadOpen(true)}>
             <Upload className="size-4" aria-hidden="true" />
             {t('upload')}
           </Button>
-        }
-      />
+        </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="mb-4">
+      <Tabs value={tab} onValueChange={setTab} className={styles.tabs}>
+        <TabsList className={styles.tabList} aria-label={locale === 'en' ? 'My work collections' : '내 작업 종류'}>
           <TabsTrigger value="published">{t('tabPublished')}</TabsTrigger>
           <TabsTrigger value="drafts">{t('tabDrafts')}</TabsTrigger>
           <TabsTrigger value="prompts">{t('tabPrompts')}</TabsTrigger>
@@ -221,7 +252,7 @@ export default function MyProjectsView() {
 
         {/* my prompts */}
         <TabsContent value="prompts" className="mt-0">
-          {prompts.isLoading && null}
+          {prompts.isLoading && <GridSkeleton />}
           {prompts.isError && (
             <EmptyState
               title={t('loadError')}
@@ -310,6 +341,7 @@ export default function MyProjectsView() {
         </TabsContent>
 
         <TabsContent value="youtube" className="mt-0">
+          {savedYoutube.isLoading && <GridSkeleton />}
           {savedYoutube.isError && <EmptyState title="저장한 영상 요약을 불러오지 못했습니다" />}
           {!savedYoutube.isLoading && !savedYoutube.isError && (savedYoutube.data?.length ?? 0) === 0 && (
             <EmptyState title="저장한 영상 요약이 없습니다" description="YouTube 영상 요약하기에서 분석한 내용을 저장해보세요." />
@@ -328,8 +360,9 @@ export default function MyProjectsView() {
           </div>
         </TabsContent>
       </Tabs>
+      </section>
 
-      <UploadArtifactDialog open={uploadOpen} onOpenChange={setUploadOpen} />
+      <UploadArtifactDialog open={uploadOpen} onOpenChange={setUploadOpen} dark />
     </div>
   );
 }

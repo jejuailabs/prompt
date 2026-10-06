@@ -29,7 +29,7 @@ function errorMessage(e: unknown): string {
  * Upload an image/text artifact to the gallery (prompt-wiki module).
  * Image type requires a file (uploaded on submit); publish toggle defaults to ON.
  */
-export function UploadArtifactDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+export function UploadArtifactDialog({ open, onOpenChange, dark = false }: { open: boolean; onOpenChange: (v: boolean) => void; dark?: boolean }) {
   const t = useTranslations('core');
   const locale = useAppStore((s) => s.locale);
   const requireLogin = useAppStore((s) => s.requireLogin);
@@ -99,7 +99,7 @@ export function UploadArtifactDialog({ open, onOpenChange }: { open: boolean; on
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className={`max-h-[85vh] overflow-y-auto sm:max-w-md ${dark ? 'dark' : ''}`}>
         <DialogHeader>
           <DialogTitle>{t('uploadTitle')}</DialogTitle>
           <DialogDescription className="text-xs">{t('uploadDesc')}</DialogDescription>

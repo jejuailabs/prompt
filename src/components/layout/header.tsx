@@ -142,7 +142,7 @@ function NotificationBell() {
 
 // ─── account dropdown (desktop) ─────────────────────────────────────────────
 
-function AccountMenu({ onCredits }: { onCredits: () => void }) {
+function AccountMenu({ onCredits, poster = false }: { onCredits: () => void; poster?: boolean }) {
   const t = useTranslations('core');
   const locale = useAppStore((s) => s.locale);
   const session = useAppStore((s) => s.session);
@@ -172,7 +172,8 @@ function AccountMenu({ onCredits }: { onCredits: () => void }) {
     }
     setSession(null);
     refreshSession();
-    navigate('home');
+    if (poster) window.location.assign('/#home');
+    else navigate('home');
   };
 
   return (
@@ -196,7 +197,7 @@ function AccountMenu({ onCredits }: { onCredits: () => void }) {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate('my-projects')}>
           <Icon name="folder-kanban" className="size-4" />
-          {locale === 'en' ? 'My Projects' : '내 프로젝트'}
+          {locale === 'en' ? 'My account & work' : '내 계정 · 작업'}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onCredits}>
@@ -313,7 +314,7 @@ export default function Header({ poster = false }: { poster?: boolean }) {
             <NotificationBell />
           </div>
           <div className="header-account">
-            <AccountMenu onCredits={() => setCreditsOpen(true)} />
+            <AccountMenu poster={poster} onCredits={() => setCreditsOpen(true)} />
           </div>
 
           <CreateMenu />

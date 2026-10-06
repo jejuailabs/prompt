@@ -21,7 +21,7 @@ export default function AppShell() {
   useSession(); // boot: fetch session cookie → store (also used by sidebar/header)
   const t = useTranslations('core');
   const view = useAppStore(s => s.view);
-  const poster = ['academy', 'ai-tools', 'tool'].includes(view);
+  const poster = ['academy', 'ai-tools', 'tool', 'my-projects', 'project', 'prompt'].includes(view);
 
   return (
     <div className={`ribbon-app flex flex-1 ${poster ? 'poster-app dark' : ''}`}>
