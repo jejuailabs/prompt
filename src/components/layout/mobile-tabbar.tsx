@@ -56,7 +56,7 @@ export default function MobileTabbar() {
             <button
               key={tab.view}
               type="button"
-              onClick={() => navigate(tab.view as ViewKey)}
+              onClick={() => tab.view === 'home' && ['academy', 'ai-tools', 'tool'].includes(view) ? window.location.assign('/#home') : navigate(tab.view as ViewKey)}
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex flex-col items-center gap-1 py-2.5 text-[10px] transition-colors',

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, ListVideo, Play, Search } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, ListVideo, Play, Search } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
@@ -23,6 +23,7 @@ export default function AcademyView() {
   const [search, setSearch] = useState('');
   const courses = useQuery({ queryKey: ['academy', 'playlists'], queryFn: () => api.get<AcademyPlaylistDTO[]>('/api/academy/playlists') });
   const selected = courses.data?.find(p => p.id === params.course);
+  const featured = courses.data?.[0];
   function openCourse(course: AcademyPlaylistDTO) {
     let lesson = [...course.videos].sort((a, b) => a.sortOrder - b.sortOrder)[0]?.id;
     try { lesson = readCourseProgress(localStorage.getItem(progressKey(course, session?.id ?? 'guest')), course.videos.map(v => v.id)).lastLesson ?? lesson; } catch { /* storage unavailable */ }
@@ -31,14 +32,21 @@ export default function AcademyView() {
   const filtered = courses.data?.filter(course => `${course.title} ${course.description}`.toLowerCase().includes(search.toLowerCase().trim())) ?? [];
   return <div className={styles.academy}>
     {selected ? <Classroom key={`${selected.id}:${session?.id ?? 'guest'}`} course={selected} user={session?.id ?? 'guest'} lessonId={params.lesson} /> : <>
-      <header className={styles.intro}><div><span className={styles.eyebrow}>PLAYLAB LEARNING CLUB / 가이드 & 튜토리얼</span><h1>보고, 만들고.<br /><em>내 것으로.</em></h1><p>흩어진 영상을 하나의 배움으로.<br />순서대로 보고, 직접 만들며 나만의 결과물을 완성하세요.</p></div><div className={styles.editorial} aria-hidden="true"><span>WATCH.<br />MAKE.<br />REPEAT.</span><ArrowDownRight strokeWidth={1} /><small>한 차시씩, 한 걸음 더.</small></div></header>
+      <header className={styles.intro}>
+        <img className={styles.heroBackground} src="/uploads/seed/thumb-fantasy.png" alt="" fetchPriority="high" />
+        <div className={styles.introCopy}><span className={styles.eyebrow}>P / PLAYLAB LEARNING CLUB</span><h1>보고, 만들고.<br /><em>내 것으로.</em></h1><p>흩어진 영상을 하나의 배움으로.<br />한 차시씩 따라가며, 나만의 결과물을 완성하세요.</p>
+          {featured && <button className={styles.startLearning} onClick={() => openCourse(featured)}><Play size={15} fill="currentColor" />강의 시작하기</button>}
+          <span className={styles.heroCaption}>WATCH. MAKE. REPEAT.</span>
+        </div>
+        {featured && <button className={styles.featureNote} onClick={() => openCourse(featured)}><span>지금 시작하기 좋은 강의</span><strong>{featured.title}</strong><small>{featured.videos.length}개 차시 · 영상 + 학습노트 <ArrowUpRight size={16} /></small></button>}
+      </header>
       {previewMode && <p className={styles.notice}>커리큘럼 구조 미리보기 · 아래 과정은 구성 예시이며, 실제 유튜브 강의는 아직 연결하지 않았어요.</p>}
       <div className={styles.catalogueHeading}><div><span className={styles.eyebrow}>CHOOSE YOUR NEXT CHAPTER</span><h2>강의 커리큘럼 <small>{courses.data?.length ?? 0}</small></h2></div><label className={styles.search}><Search size={17} /><input aria-label="강의 검색" placeholder="배우고 싶은 내용 찾기" value={search} onChange={e => setSearch(e.target.value)} /></label></div>
       {courses.isLoading && <p className={styles.state} role="status">강의 목록을 불러오고 있어요…</p>}
       {courses.isError && <div className={styles.state}><h3>강의 목록을 불러오지 못했어요.</h3><Button variant="outline" onClick={() => void courses.refetch()}>다시 불러오기</Button></div>}
       {params.course && !selected && courses.isSuccess && <p role="alert" className={styles.notice}>해당 강의를 찾을 수 없어요. 목록에서 강의를 선택해주세요.</p>}
       <div className={styles.courses}>{filtered.map((course, i) => <button className={styles.courseCard} key={course.id} onClick={() => openCourse(course)}>
-        <div className={styles.courseCover}>{course.thumbnailUrl || course.videos[0]?.thumbnailUrl ? <img alt="" src={course.thumbnailUrl || course.videos[0]?.thumbnailUrl || ''} /> : <div className={styles.coverArt} aria-hidden="true"><span>FROM<br />IDEA<br /><i>TO REAL.</i></span><ArrowUpRight /></div>}<span className={styles.coverLabel}>{course.isExample ? '커리큘럼 구성 예시' : `${course.videos.length}개 차시`}</span></div>
+        <div className={styles.courseCover}>{course.thumbnailUrl || course.videos[0]?.thumbnailUrl ? <img alt="" src={course.thumbnailUrl || course.videos[0]?.thumbnailUrl || ''} /> : <div className={styles.coverArt} aria-hidden="true"><span>FROM<br />IDEA<br /><i>TO REAL.</i></span><ArrowUpRight /></div>}<span className={styles.coverLabel}>{course.isExample ? '커리큘럼 구성 예시' : `${course.videos.length}개 차시`}</span><span className={styles.cardPlay}><Play size={17} fill="currentColor" /></span></div>
         <div className={styles.courseCopy}><span className={styles.eyebrow}>COURSE {String(i + 1).padStart(2, '0')} / {course.videos.length} LESSONS</span><h3>{course.title}</h3><p>{course.description}</p><div><span><ListVideo size={15} />영상 커리큘럼</span><span><BookOpen size={15} />학습노트</span></div><strong>{course.isExample ? '강의 화면 살펴보기' : '이어서 배우기'} <ArrowRight size={19} /></strong></div>
       </button>)}</div>
       {courses.isSuccess && !filtered.length && <div className={styles.state}><h3>{search ? '검색에 맞는 강의가 없어요.' : '첫 번째 커리큘럼을 준비하고 있어요.'}</h3><p>{search ? '다른 검색어로 찾아보세요.' : '공개된 강의는 이곳에서 영상과 학습노트로 만날 수 있어요.'}</p></div>}

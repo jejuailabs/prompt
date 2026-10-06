@@ -253,7 +253,7 @@ function CreateMenu() {
 // ─── header ─────────────────────────────────────────────────────────────────
 
 /** Sticky top header. Desktop: search + bell + theme + account + create. Mobile: compact. */
-export default function Header() {
+export default function Header({ poster = false }: { poster?: boolean }) {
   const t = useTranslations('core');
   const navigate = useAppStore((s) => s.navigate);
 
@@ -277,12 +277,18 @@ export default function Header() {
     <header data-home={view === 'home' || undefined} className="ribbon-header sticky top-0 z-40 border-b bg-background/90 backdrop-blur-xl">
       <div className="ribbon-header-inner flex items-center gap-2">
         {/* mobile logo */}
-        <button type="button" className="shrink-0" aria-label="PLAYLAB 홈" onClick={() => navigate('home')}>
+        <button type="button" className="shrink-0" aria-label="PLAYLAB 홈" onClick={() => poster ? window.location.assign('/#home') : navigate('home')}>
           <Logo />
         </button>
 
         <nav className="ribbon-nav" aria-label="주요 공간">
-          {modules.filter(m => ['gallery', 'prompt-wiki', 'community', 'ai-tools', 'lab'].includes(m.entryView) && !m.group).map(m => <button key={m.id} aria-current={view === m.entryView ? 'page' : undefined} onClick={() => navigate(m.entryView as ViewKey, m.entryView === 'gallery' ? { tab: 'artifacts' } : undefined)}>{moduleTitle(m, locale)}</button>)}
+          {poster ? ['home', 'prompt-wiki', 'gallery', 'game-room', 'academy', 'ai-tools'].map(key => {
+            const m = modules.find(item => item.entryView === key && !item.group && item.enabled && !item.adminOnly);
+            if (!m) return null;
+            const destination = ({ home: '/#home', 'prompt-wiki': '/#prompts', gallery: '/#films', 'game-room': '/#games', academy: '/app#academy', 'ai-tools': '/app#ai-tools' } as Record<string, string>)[key];
+            const label = ({ home: '홈', 'prompt-wiki': '프롬프트', gallery: '영상', 'game-room': '게임', academy: '강의', 'ai-tools': 'AI Tools' } as Record<string, string>)[key];
+            return <a key={m.id} href={destination} aria-current={view === key || (key === 'ai-tools' && view === 'tool') ? 'page' : undefined}>{locale === 'en' ? moduleTitle(m, locale) : label}</a>;
+          }) : modules.filter(m => ['gallery', 'prompt-wiki', 'community', 'ai-tools', 'lab'].includes(m.entryView) && !m.group).map(m => <button key={m.id} aria-current={view === m.entryView ? 'page' : undefined} onClick={() => navigate(m.entryView as ViewKey, m.entryView === 'gallery' ? { tab: 'artifacts' } : undefined)}>{moduleTitle(m, locale)}</button>)}
         </nav>
         <div className="header-actions">
           {/* mobile search trigger */}
@@ -295,7 +301,7 @@ export default function Header() {
             <Icon name="search" className="size-4" />
           </Button>
 
-          <div className="hidden lg:block"><ThemeToggle /></div>
+          {!poster && <div className="hidden lg:block"><ThemeToggle /></div>}
           {session && <button className="header-credits hidden xl:block" onClick={() => setCreditsOpen(true)}>◉ {session.credits.toLocaleString()} <span>크레딧</span></button>}
 
           <div className="hidden md:block">

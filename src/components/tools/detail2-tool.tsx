@@ -174,11 +174,11 @@ export function Detail2Tool() {
   const peopleLikely = modelMode === "without" ? false : modelMode === "with" ? true : catPersona === "with";
   const inCanvasImgs = scenes.filter(s => s.inCanvas && s.image);
   const generatedCount = scenes.filter(s => s.image).length;
-  const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 12px", border: "1.5px solid #E5E7EB", borderRadius: 10, fontSize: 13, fontFamily: "inherit", outline: "none" };
-  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 };
+  const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 12px", border: "1.5px solid var(--border)", borderRadius: 10, fontSize: 13, fontFamily: "inherit", outline: "none" };
+  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: "var(--foreground)", display: "block", marginBottom: 6 };
 
   return (
-    <div className="pl-detail2-tool" style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "'Noto Sans KR',-apple-system,sans-serif" }}>
+    <div className="pl-detail2-tool" style={{ minHeight: "100vh", background: "var(--background)", fontFamily: "'Noto Sans KR',-apple-system,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap');
         .pl-detail2-tool * { box-sizing:border-box; margin:0; padding:0; }
@@ -191,11 +191,11 @@ export function Detail2Tool() {
       `}</style>
 
       {/* Nav */}
-      <nav style={{ background: "white", borderBottom: "1px solid #E5E7EB", padding: "0 24px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+      <nav style={{ background: "var(--card)", borderBottom: "1px solid var(--border)", padding: "0 24px", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 32, height: 32, borderRadius: 9, background: `linear-gradient(135deg,${O},${O2})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "white", fontWeight: 800 }}>🧱</div>
-          <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>AI Studio</span>
-          <div style={{ width: 1, height: 20, background: "#E5E7EB" }} />
+          <span style={{ fontSize: 14, fontWeight: 800, color: "var(--foreground)" }}>AI Studio</span>
+          <div style={{ width: 1, height: 20, background: "var(--border)" }} />
           <span style={{ fontSize: 14, fontWeight: 700, color: O }}>🧱 상세페이지 2</span>
         </div>
       </nav>
@@ -204,9 +204,9 @@ export function Detail2Tool() {
 
         {/* ── 좌측: 입력 ── */}
         <div style={{ flex: "1 1 300px", minWidth: 280, maxWidth: 360, display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ background: "white", borderRadius: 16, border: "1px solid #FEE4D3", padding: 18 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#0F172A", marginBottom: 4 }}>📥 상품 정보</div>
-            <div style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 14 }}>입력만 하면 12장 설득 구조로 설계돼요</div>
+          <div style={{ background: "var(--card)", borderRadius: 16, border: "1px solid #FEE4D3", padding: 18 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "var(--foreground)", marginBottom: 4 }}>📥 상품 정보</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 14 }}>입력만 하면 12장 설득 구조로 설계돼요</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div><label style={labelStyle}>브랜드명 / 상품명</label><input value={brand} onChange={e => setBrand(e.target.value)} placeholder="예: 인터뷰어 토마토즙" style={inputStyle} /></div>
               <div>
@@ -214,16 +214,16 @@ export function Detail2Tool() {
                 <select value={categoryKey} onChange={e => { setCategoryKey(e.target.value); }} style={inputStyle}>
                   {CATEGORY_OPTS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
                 </select>
-                <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 5, lineHeight: 1.5 }}>카테고리에 맞춰 상세정보 항목·톤이 자동 조정돼요</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 5, lineHeight: 1.5 }}>카테고리에 맞춰 상세정보 항목·톤이 자동 조정돼요</div>
               </div>
               <div>
                 <label style={labelStyle}>인물(모델) 포함</label>
                 <div style={{ display: "flex", gap: 6 }}>
                   {([["auto", "자동"], ["with", "포함"], ["without", "제외"]] as const).map(([k, lb]) => (
-                    <button key={k} type="button" onClick={() => setModelMode(k)} style={{ flex: 1, padding: "9px 0", borderRadius: 9, border: `1.5px solid ${modelMode === k ? O : "#E5E7EB"}`, fontSize: 12, fontWeight: 700, cursor: "pointer", background: modelMode === k ? "#FFF7ED" : "white", color: modelMode === k ? O : "#6B7280" }}>{lb}</button>
+                    <button key={k} type="button" onClick={() => setModelMode(k)} style={{ flex: 1, padding: "9px 0", borderRadius: 9, border: `1.5px solid ${modelMode === k ? O : "var(--border)"}`, fontSize: 12, fontWeight: 700, cursor: "pointer", background: modelMode === k ? "var(--muted)" : "white", color: modelMode === k ? O : "var(--muted-foreground)" }}>{lb}</button>
                   ))}
                 </div>
-                <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 5, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 5, lineHeight: 1.5 }}>
                   {modelMode === "without" ? "사람 없이 제품 단독·클로즈업 중심으로 생성" : modelMode === "with" ? "모든 적합 장면에 모델 등장" : "카테고리 기본값(전자·생활용품은 제품 중심)"}
                 </div>
               </div>
@@ -232,10 +232,10 @@ export function Detail2Tool() {
             </div>
           </div>
 
-          <div style={{ background: "white", borderRadius: 16, border: "1px solid #E5E7EB", padding: 18, opacity: peopleLikely ? 1 : 0.5 }}>
+          <div style={{ background: "var(--card)", borderRadius: 16, border: "1px solid var(--border)", padding: 18, opacity: peopleLikely ? 1 : 0.5 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#0F172A" }}>👤 모델 설정</span>
-              {!peopleLikely && <span style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", background: "#F3F4F6", padding: "2px 7px", borderRadius: 100 }}>인물 미포함 — 미적용</span>}
+              <span style={{ fontSize: 14, fontWeight: 800, color: "var(--foreground)" }}>👤 모델 설정</span>
+              {!peopleLikely && <span style={{ fontSize: 10, fontWeight: 700, color: "var(--muted-foreground)", background: "var(--muted)", padding: "2px 7px", borderRadius: 100 }}>인물 미포함 — 미적용</span>}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "flex", gap: 8 }}>
@@ -256,7 +256,7 @@ export function Detail2Tool() {
             </div>
           </div>
 
-          <div style={{ background: "#FFF7ED", borderRadius: 16, border: "1px solid #FED7AA", padding: 16 }}>
+          <div style={{ background: "var(--muted)", borderRadius: 16, border: "1px solid #FED7AA", padding: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: "#9A3412", marginBottom: 4 }}>🔧 이미지 품질</div>
             <div style={{ fontSize: 11, color: "#C2410C", marginBottom: 10 }}>gpt-image-2 생성 품질</div>
             <div style={{ display: "flex", gap: 6 }}>
@@ -266,7 +266,7 @@ export function Detail2Tool() {
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8, lineHeight: 1.5 }}>Low=빠름·저렴 / High=느림·디테일↑</div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 8, lineHeight: 1.5 }}>Low=빠름·저렴 / High=느림·디테일↑</div>
           </div>
 
           <button onClick={generateScenes} disabled={genLoading || (!brand.trim() && !features.trim())}
@@ -275,8 +275,8 @@ export function Detail2Tool() {
           </button>
 
           {strategy && (
-            <div style={{ background: "white", borderRadius: 16, border: "1px solid #E5E7EB", padding: 16, fontSize: 12, color: "#374151", lineHeight: 1.7 }}>
-              <div style={{ fontWeight: 800, color: "#0F172A", marginBottom: 8, fontSize: 13 }}>🎯 전략 분석</div>
+            <div style={{ background: "var(--card)", borderRadius: 16, border: "1px solid var(--border)", padding: 16, fontSize: 12, color: "var(--foreground)", lineHeight: 1.7 }}>
+              <div style={{ fontWeight: 800, color: "var(--foreground)", marginBottom: 8, fontSize: 13 }}>🎯 전략 분석</div>
               {strategy.target && <div><b>타겟</b> · {strategy.target}</div>}
               {strategy.problem && <div><b>핵심문제</b> · {strategy.problem}</div>}
               {strategy.trigger && <div><b>구매트리거</b> · {strategy.trigger}</div>}
@@ -289,52 +289,52 @@ export function Detail2Tool() {
         {/* ── 중앙: 장면 프롬프트 ── */}
         <div style={{ flex: "2 1 460px", minWidth: 320, display: "flex", flexDirection: "column", gap: 14 }}>
           {scenes.length === 0 ? (
-            <div style={{ background: "white", borderRadius: 16, border: "2px dashed #E5E7EB", padding: "60px 24px", textAlign: "center", color: "#9CA3AF" }}>
+            <div style={{ background: "var(--card)", borderRadius: 16, border: "2px dashed var(--border)", padding: "60px 24px", textAlign: "center", color: "var(--muted-foreground)" }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🧱</div>
               <div style={{ fontSize: 15, fontWeight: 700 }}>상품 정보를 입력하고 설계를 시작하세요</div>
               <div style={{ fontSize: 13, marginTop: 8 }}>Hook → 문제공감 → 해결 → 핵심가치5 → 신뢰 → 상세 → 체크 → CTA</div>
             </div>
           ) : (
             <>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", background: "white", borderRadius: 14, border: "1px solid #E5E7EB", padding: "12px 16px", position: "sticky", top: 70, zIndex: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", background: "var(--card)", borderRadius: 14, border: "1px solid var(--border)", padding: "12px 16px", position: "sticky", top: 70, zIndex: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: "#0F172A" }}>🖼️ 장면 {scenes.length}장 · 생성 {generatedCount}/{scenes.length}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "var(--foreground)" }}>🖼️ 장면 {scenes.length}장 · 생성 {generatedCount}/{scenes.length}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <button onClick={resetSession} style={{ padding: "9px 12px", borderRadius: 10, border: "1.5px solid #E5E7EB", background: "white", fontSize: 12, fontWeight: 700, color: "#6B7280", cursor: "pointer" }}>🗑 새로</button>
-                  <button onClick={generateAll} disabled={seqRunning} style={{ padding: "9px 16px", borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, color: "white", cursor: seqRunning ? "not-allowed" : "pointer", background: seqRunning ? "#9CA3AF" : `linear-gradient(135deg,${O},${O2})`, display: "flex", alignItems: "center", gap: 7 }}>
+                  <button onClick={resetSession} style={{ padding: "9px 12px", borderRadius: 10, border: "1.5px solid var(--border)", background: "var(--card)", fontSize: 12, fontWeight: 700, color: "var(--muted-foreground)", cursor: "pointer" }}>🗑 새로</button>
+                  <button onClick={generateAll} disabled={seqRunning} style={{ padding: "9px 16px", borderRadius: 10, border: "none", fontSize: 13, fontWeight: 700, color: "white", cursor: seqRunning ? "not-allowed" : "pointer", background: seqRunning ? "var(--muted-foreground)" : `linear-gradient(135deg,${O},${O2})`, display: "flex", alignItems: "center", gap: 7 }}>
                     {seqRunning ? <><Spin s={14} /> 순차 생성 중...</> : "⚡ 전체 순차 생성"}
                   </button>
                 </div>
               </div>
 
               {scenes.map((s, i) => (
-                <div key={i} style={{ background: "white", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", animation: "plDetailfadeUp 0.3s ease both" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", borderBottom: "1px solid #F3F4F6" }}>
+                <div key={i} style={{ background: "var(--card)", borderRadius: 16, border: "1px solid var(--border)", overflow: "hidden", animation: "plDetailfadeUp 0.3s ease both" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", borderBottom: "1px solid var(--muted)" }}>
                     <span style={{ width: 24, height: 24, borderRadius: 7, background: `linear-gradient(135deg,${O},${O2})`, color: "white", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: "#0F172A" }}>{s.sectionKo}</span>
-                    <span style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 600 }}>{s.size}</span>
-                    {s.hasModel && <span style={{ fontSize: 10, fontWeight: 700, color: O, background: "#FFF7ED", padding: "2px 7px", borderRadius: 100 }}>모델</span>}
+                    <span style={{ fontSize: 13, fontWeight: 800, color: "var(--foreground)" }}>{s.sectionKo}</span>
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontWeight: 600 }}>{s.size}</span>
+                    {s.hasModel && <span style={{ fontSize: 10, fontWeight: 700, color: O, background: "var(--muted)", padding: "2px 7px", borderRadius: 100 }}>모델</span>}
                   </div>
 
                   <div style={{ display: "flex", gap: 14, padding: 16, flexWrap: "wrap" }}>
                     {/* 카피 + 프롬프트 */}
                     <div style={{ flex: "1 1 280px", minWidth: 240 }}>
-                      {s.mainCopy && <div style={{ fontSize: 15, fontWeight: 800, color: "#0F172A", lineHeight: 1.4, marginBottom: 4 }}>{s.mainCopy}</div>}
-                      {s.subCopy && <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6, marginBottom: 8 }}>{s.subCopy}</div>}
+                      {s.mainCopy && <div style={{ fontSize: 15, fontWeight: 800, color: "var(--foreground)", lineHeight: 1.4, marginBottom: 4 }}>{s.mainCopy}</div>}
+                      {s.subCopy && <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.6, marginBottom: 8 }}>{s.subCopy}</div>}
                       {s.points?.length > 0 && (
-                        <ul style={{ margin: "0 0 8px", paddingLeft: 16, fontSize: 12, color: "#374151", lineHeight: 1.7 }}>
+                        <ul style={{ margin: "0 0 8px", paddingLeft: 16, fontSize: 12, color: "var(--foreground)", lineHeight: 1.7 }}>
                           {s.points.map((p, k) => <li key={k}>{p}</li>)}
                         </ul>
                       )}
                       {s.trust && <div style={{ fontSize: 11, color: "#059669", background: "#F0FDF4", borderRadius: 8, padding: "5px 10px", display: "inline-block", fontWeight: 600 }}>✓ {s.trust}</div>}
 
-                      <div style={{ marginTop: 10, background: "#FAFAFA", border: "1px solid #F3F4F6", borderRadius: 10, padding: "10px 12px" }}>
+                      <div style={{ marginTop: 10, background: "var(--muted)", border: "1px solid var(--muted)", borderRadius: 10, padding: "10px 12px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                          <span style={{ fontSize: 10, fontWeight: 800, color: "#9CA3AF", letterSpacing: 0.5 }}>IMAGE 2 PROMPT</span>
+                          <span style={{ fontSize: 10, fontWeight: 800, color: "var(--muted-foreground)", letterSpacing: 0.5 }}>IMAGE 2 PROMPT</span>
                           <button onClick={() => copy(s.imagePrompt, i)} style={{ fontSize: 11, fontWeight: 700, color: O, background: "none", border: "none", cursor: "pointer" }}>{copiedIdx === i ? "✓ 복사됨" : "복사"}</button>
                         </div>
-                        <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.6, maxHeight: 84, overflow: "auto" }} className="d2-scroll">{s.imagePrompt}</div>
+                        <div style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.6, maxHeight: 84, overflow: "auto" }} className="d2-scroll">{s.imagePrompt}</div>
                       </div>
 
                       <button onClick={() => generateImage(i, s)} disabled={s.generating || !s.imagePrompt}
@@ -347,8 +347,8 @@ export function Detail2Tool() {
                     {/* 이미지 미리보기 */}
                     {s.image && (
                       <div style={{ flex: "0 0 130px" }}>
-                        <img src={s.image} alt="" style={{ width: 130, borderRadius: 10, border: "1px solid #E5E7EB", display: "block" }} />
-                        <button onClick={() => toggleCanvas(i)} style={{ marginTop: 6, width: 130, padding: "5px", borderRadius: 7, border: "none", background: s.inCanvas ? "#FEE2E2" : "#FFF7ED", color: s.inCanvas ? "#DC2626" : O, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                        <img src={s.image} alt="" style={{ width: 130, borderRadius: 10, border: "1px solid var(--border)", display: "block" }} />
+                        <button onClick={() => toggleCanvas(i)} style={{ marginTop: 6, width: 130, padding: "5px", borderRadius: 7, border: "none", background: s.inCanvas ? "#FEE2E2" : "var(--muted)", color: s.inCanvas ? "#DC2626" : O, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
                           {s.inCanvas ? "− 캔버스에서 빼기" : "+ 캔버스 추가"}
                         </button>
                       </div>
@@ -362,14 +362,14 @@ export function Detail2Tool() {
 
         {/* ── 우측: 롱 캔버스 ── */}
         <div style={{ flex: "1 1 300px", minWidth: 280, maxWidth: 380, position: "sticky", top: 70 }}>
-          <div style={{ background: "white", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden" }}>
-            <div style={{ padding: "14px 16px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#0F172A" }}>📜 롱 캔버스</div>
-              <span style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 600 }}>{inCanvasImgs.length}장</span>
+          <div style={{ background: "var(--card)", borderRadius: 16, border: "1px solid var(--border)", overflow: "hidden" }}>
+            <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--muted)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "var(--foreground)" }}>📜 롱 캔버스</div>
+              <span style={{ fontSize: 12, color: "var(--muted-foreground)", fontWeight: 600 }}>{inCanvasImgs.length}장</span>
             </div>
-            <div className="d2-scroll" style={{ maxHeight: "calc(100vh - 220px)", overflowY: "auto", background: "#F3F4F6", padding: inCanvasImgs.length ? 10 : 0 }}>
+            <div className="d2-scroll" style={{ maxHeight: "calc(100vh - 220px)", overflowY: "auto", background: "var(--muted)", padding: inCanvasImgs.length ? 10 : 0 }}>
               {inCanvasImgs.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "50px 20px", color: "#9CA3AF", fontSize: 12 }}>
+                <div style={{ textAlign: "center", padding: "50px 20px", color: "var(--muted-foreground)", fontSize: 12 }}>
                   이미지를 생성하면<br />여기에 순서대로 쌓여요
                 </div>
               ) : (
@@ -383,7 +383,7 @@ export function Detail2Tool() {
                 style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", fontSize: 14, fontWeight: 800, color: "white", cursor: (stitching || inCanvasImgs.length === 0) ? "not-allowed" : "pointer", opacity: (stitching || inCanvasImgs.length === 0) ? 0.5 : 1, background: `linear-gradient(135deg,${O},${O2})`, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 {stitching ? <><Spin /> 합치는 중...</> : "⬇ 하나의 이미지로 합치기 (PNG)"}
               </button>
-              <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 8, lineHeight: 1.5 }}>860px 폭으로 세로 결합해 다운로드돼요</div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", textAlign: "center", marginTop: 8, lineHeight: 1.5 }}>860px 폭으로 세로 결합해 다운로드돼요</div>
             </div>
           </div>
         </div>

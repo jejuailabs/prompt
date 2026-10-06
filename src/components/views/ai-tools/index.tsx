@@ -1,28 +1,56 @@
 'use client';
 import { useState } from 'react';
-import { ArrowUpRight, Search } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Search } from 'lucide-react';
 import { useModules } from '@/hooks/use-session';
 import { Icon } from '@/components/layout/icon';
 import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
 import { useAppStore } from '@/lib/store';
-import { Input } from '@/components/ui/input';
 import { PreviewNotice } from '@/components/runtime-context';
+import styles from './tools.module.css';
+
 const LIVE_TOOL_IDS = new Set(['tool-tts', 'tool-suno', 'tool-ace-music', 'tool-metaprompt', 'tool-qr', 'tool-thumbnail', 'tool-storyboard', 'tool-detail', 'tool-detail2', 'tool-converter', 'tool-srt', 'tool-autocut', 'tool-whisper']);
+const GROUPS = { voice: ['음성', 'Voice'], music: ['음악', 'Music'], visual: ['이미지 · 영상', 'Visual'], writing: ['프롬프트', 'Prompts'], utility: ['변환 · 유틸리티', 'Utilities'] } as const;
+type Group = keyof typeof GROUPS;
+function groupFor(id: string): Group {
+  if (['tool-tts','tool-whisper','tool-srt'].includes(id)) return 'voice';
+  if (['tool-suno','tool-ace-music'].includes(id)) return 'music';
+  if (id === 'tool-metaprompt') return 'writing';
+  if (['tool-converter','tool-qr','tool-url'].includes(id)) return 'utility';
+  return 'visual';
+}
+function Artwork({ group, index }: { group: Group; index: number }) {
+  return <div className={`${styles.artwork} ${styles[group]}`} aria-hidden="true">
+    {group === 'visual' ? <img src={index % 2 ? '/design/streaming-v1/assets/midnight-station.png' : '/design/streaming-v1/assets/glass-garden.png'} alt="" loading="lazy" /> : group === 'writing' ? <><span className={styles.promptGlyph}>Aa<span>_</span></span><span className={styles.artCaption}>A FEW WORDS.<br />A WHOLE NEW WORLD.</span></> : group === 'utility' ? <div className={styles.orbit}><i /><i /><i /><span>↗</span></div> : <><div className={styles.wave}>{Array.from({ length: 25 }, (_, i) => <i key={i} style={{ height: `${18 + Math.abs(Math.sin(i * .79 + index)) * (68 - Math.abs(i - 12) * 3)}%` }} />)}</div><span className={styles.artCaption}>{group === 'music' ? 'FIND YOUR FREQUENCY.' : 'GIVE YOUR WORDS A VOICE.'}</span></>}
+    <span className={styles.artType}>{GROUPS[group][1].toUpperCase()} / {String(index + 1).padStart(2, '0')}</span>
+  </div>;
+}
 export default function AiToolsView() {
   const navigate = useAppStore(s => s.navigate);
   const session = useAppStore(s => s.session);
+  const setLoginOpen = useAppStore(s => s.setLoginOpen);
   const en = useAppStore(s => s.locale) === 'en';
   const modules = useModules();
   const [query, setQuery] = useState('');
+  const [group, setGroup] = useState<Group | ''>('');
   const byId = new Map((modules.data ?? []).map(m => [m.id,m]));
-  const items = AI_STUDIO_TOOLS.filter(d => byId.get(d.id)?.enabled && (d.titleKo + d.descKo).toLowerCase().includes(query.toLowerCase()));
-  return <div className="editorial-page">
-    <div className="editorial-page-intro"><div><p className="eyebrow">THE EVERYDAY TOOLBOX / PLAYLAB</p><h1 className="editorial-page-title">Small tools.<br />Big possibilities<span className="text-primary">.</span></h1><p>{en ? 'A voice, an image, the beginning of your next idea.' : '목소리 하나, 이미지 한 장. 다음 아이디어를 완성하는 작은 도구들.'}</p></div><span className="text-sm text-muted-foreground">{session ? `◉ ${session.credits.toLocaleString()} 크레딧` : '가입하면 1,000 크레딧으로 시작'}</span></div>
-    <PreviewNotice />
-    <a href="/mcp-connect" className="mb-8 flex items-center justify-between border border-border px-5 py-4 text-sm hover:border-primary"><span>Codex · Claude Code에서 영상, 3D, 음악 만들기</span><ArrowUpRight size={18} /></a>
-    <div className="mb-8 flex items-center gap-3"><Search size={17} className="text-muted-foreground" /><Input value={query} onChange={e => setQuery(e.target.value)} placeholder={en ? 'Find a tool' : '어떤 도구가 필요하세요?'} aria-label={en ? 'Find a tool' : '도구 검색'} className="max-w-sm border-0 border-b rounded-none bg-transparent" /><span className="ml-auto text-xs text-muted-foreground">{items.length} TOOLS</span></div>
-    {modules.isError && <div className="mb-5 text-sm text-muted-foreground">도구 목록을 갱신하지 못했어요. <button className="underline" onClick={() => void modules.refetch()}>다시 불러오기</button></div>}
-    <div className="tool-catalogue">{items.map((detail,i) => { const tool=byId.get(detail.id)!; const live=LIVE_TOOL_IDS.has(tool.id); return <article key={detail.id} className="tool-tile"><div className="flex items-center justify-between"><Icon name={tool.icon} className="size-7 text-primary" /><span className="eyebrow">{String(i+1).padStart(2,'0')} / {live ? 'READY TO MAKE' : 'COMING SOON'}</span></div><h2>{detail.titleKo}</h2><p>{detail.descKo}</p><button disabled={!live} onClick={() => navigate('tool',{slug:tool.id.replace('tool-','')})}>{live ? (en ? 'Open tool' : '도구 열기') : '준비 중'} <ArrowUpRight size={16} /></button></article>; })}</div>
-    {!items.length && !modules.isError && <p className="py-20 text-center text-muted-foreground">검색한 도구가 없어요. 다른 단어로 찾아보세요.</p>}
+  const available = AI_STUDIO_TOOLS.filter(d => byId.get(d.id)?.enabled && !byId.get(d.id)?.adminOnly);
+  const items = available.filter(d => (!group || groupFor(d.id) === group) && (d.titleKo + d.descKo).toLowerCase().includes(query.toLowerCase().trim()));
+  return <div className={styles.page}>
+    <section className={styles.hero}>
+      <img className={styles.heroImage} src="/design/streaming-v1/assets/glass-garden.png" alt="" fetchPriority="high" />
+      <div className={styles.heroCopy}><p className={styles.eyebrow}>P / THE PLAYLAB TOOLBOX</p><h1>{en ? <>Small tools.<br />Big possibilities<span>.</span></> : <>상상 다음은,<br />만들 차례<span>.</span></>}</h1><p>{en ? 'A voice, an image, the beginning of your next idea.' : '목소리 하나, 이미지 한 장, 나만의 음악까지.'}<br />{en ? 'Choose a tool. Start something.' : '만들고 싶은 것을 고르면, 시작은 가벼워져요.'}</p><div className={styles.heroActions}><a href="#tool-collection" onClick={e => { e.preventDefault(); document.getElementById('tool-collection')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }); }}>{en ? 'Explore tools' : '도구 둘러보기'} <ArrowRight size={16} /></a>{!session && <button onClick={() => setLoginOpen(true)}>{en ? 'Sign in to start' : '로그인하고 시작하기'} <ArrowUpRight size={16} /></button>}</div></div>
+      <div className={styles.creditNote}><span>{session ? 'YOUR CREATIVE FUEL' : 'A LITTLE HELP FOR YOUR NEXT IDEA'}</span><strong>{session ? `${session.credits.toLocaleString()} 크레딧` : '작은 도구, 새로운 가능성.'}</strong><small>{session ? 'AI 도구에서 사용할 수 있는 크레딧' : '무료 변환 · QR부터 AI 생성 도구까지'}</small></div>
+    </section>
+    <div className={styles.body}><PreviewNotice />
+      <div id="tool-collection" className={styles.collectionHead}><div><p className={styles.eyebrow}>CHOOSE YOUR NEXT TOOL</p><h2>{en ? 'What will you make?' : '오늘은 무엇을 만들까요?'} <small>{available.length}</small></h2></div><label className={styles.search}><Search size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder={en ? 'Find a tool' : '어떤 도구가 필요하세요?'} aria-label={en ? 'Find a tool' : '도구 검색'} /></label></div>
+      <div className={styles.filters} aria-label="도구 용도"><button aria-pressed={!group} onClick={() => setGroup('')}>{en ? 'All' : '전체'}</button>{(Object.keys(GROUPS) as Group[]).map(key => <button key={key} aria-pressed={group === key} onClick={() => setGroup(key)}>{GROUPS[key][en ? 1 : 0]}</button>)}</div>
+      {modules.isError && <div className={styles.empty}>도구 목록을 갱신하지 못했어요. <button onClick={() => void modules.refetch()}>다시 불러오기</button></div>}
+      <div className={styles.grid}>{items.map(detail => { const tool = byId.get(detail.id)!; const live = LIVE_TOOL_IDS.has(tool.id); const index = available.findIndex(item => item.id === detail.id); return <article key={detail.id} className={styles.card}>
+        <button className={styles.cardButton} disabled={!live} onClick={() => navigate('tool', { slug: tool.id.replace('tool-', '') })} aria-label={`${detail.titleKo} ${live ? '열기' : '준비 중'}`}><Artwork group={groupFor(detail.id)} index={index} /><span className={styles.cardIcon}><Icon name={tool.icon} className="size-4" /></span><span className={styles.cardArrow}>{live ? <ArrowUpRight size={18} /> : '준비 중'}</span></button>
+        <h3><button disabled={!live} onClick={() => navigate('tool', { slug: tool.id.replace('tool-', '') })}>{detail.titleKo}</button></h3><p>{detail.descKo}</p><span className={styles.cardMeta}>{['tool-qr','tool-converter'].includes(detail.id) ? '무료 · 브라우저에서 바로 사용' : live ? 'AI TOOL · 로그인 후 사용' : 'COMING SOON'}</span>
+      </article>; })}</div>
+      {!items.length && !modules.isError && <p className={styles.empty}>검색한 도구가 없어요. 다른 단어로 찾아보세요.</p>}
+      <a href="/mcp-connect" className={styles.connection}><div><span className={styles.eyebrow}>GO ONE STEP FURTHER / MCP</span><h2>당신의 AI와 직접 연결하세요.</h2><p>Codex · Claude Code에서 영상, 3D, 음악 만들기</p></div><ArrowUpRight size={27} /></a>
+    </div>
   </div>;
 }

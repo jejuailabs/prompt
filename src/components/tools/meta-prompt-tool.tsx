@@ -195,7 +195,7 @@ export function MetaPromptTool() {
   return (
     <div className="pl-meta-tool" style={{
       minHeight: "100vh",
-      background: "#FAFBFF",
+      background: "var(--background)",
       fontFamily: "'Noto Sans KR', -apple-system, sans-serif",
       position: "relative",
     }}>
@@ -224,8 +224,8 @@ export function MetaPromptTool() {
 
       {/* Top bar (restart only, no nav) */}
       {started && (
-        <div style={{ position:"sticky", top:0, zIndex:100, background:"rgba(255,255,255,0.88)", backdropFilter:"blur(12px)", borderBottom:"1px solid rgba(124,58,237,0.08)", padding:"0 28px", height:52, display:"flex", alignItems:"center", justifyContent:"flex-end" }}>
-          <button onClick={reset} style={{ padding:"6px 16px", background:"white", border:"1.5px solid #E5E7EB", borderRadius:8, fontSize:12, fontWeight:600, color:"#6B7280", cursor:"pointer" }}>
+        <div style={{ position:"sticky", top:0, zIndex:100, background: "var(--background)", backdropFilter:"blur(12px)", borderBottom:"1px solid rgba(124,58,237,0.08)", padding:"0 28px", height:52, display:"flex", alignItems:"center", justifyContent:"flex-end" }}>
+          <button onClick={reset} style={{ padding:"6px 16px", background: "var(--card)", border:"1.5px solid var(--border)", borderRadius:8, fontSize:12, fontWeight:600, color:"var(--muted-foreground)", cursor:"pointer" }}>
             ↺ 다시 시작
           </button>
         </div>
@@ -233,7 +233,7 @@ export function MetaPromptTool() {
 
       {/* Progress bar */}
       {started && (
-        <div style={{ position:"sticky", top: started ? 52 : 0, zIndex:99, background:"rgba(255,255,255,0.92)", backdropFilter:"blur(8px)", borderBottom:"1px solid rgba(124,58,237,0.06)", padding:"10px 28px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ position:"sticky", top: started ? 52 : 0, zIndex:99, background: "var(--background)", backdropFilter:"blur(8px)", borderBottom:"1px solid rgba(124,58,237,0.06)", padding:"10px 28px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             {domain && (
               <div style={{ display:"flex", alignItems:"center", gap:6, padding:"3px 12px", background:"rgba(124,58,237,0.07)", border:"1px solid rgba(124,58,237,0.15)", borderRadius:100, fontSize:12, fontWeight:700, color:P }}>
@@ -254,7 +254,7 @@ export function MetaPromptTool() {
               ))}
             </div>
           </div>
-          <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:500 }}>
+          <span style={{ fontSize:12, color:"var(--muted-foreground)", fontWeight:500 }}>
             {questionsDone ? "완료 ✓" : `${questionNum} / ${TOTAL_QUESTIONS}`}
           </span>
         </div>
@@ -269,19 +269,19 @@ export function MetaPromptTool() {
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"6px 18px", background:"rgba(124,58,237,0.07)", border:"1px solid rgba(124,58,237,0.15)", borderRadius:100, fontSize:11, fontWeight:700, color:P, letterSpacing:1.5, marginBottom:28 }}>
               ✦ META PROMPT ENGINE
             </div>
-            <h1 style={{ fontSize:40, fontWeight:800, color:"#0F172A", lineHeight:1.2, letterSpacing:-1.2, marginBottom:16 }}>
+            <h1 style={{ fontSize:40, fontWeight:800, color:"var(--foreground)", lineHeight:1.2, letterSpacing:-1.2, marginBottom:16 }}>
               막연한 아이디어를<br />
               <span style={{ background:`linear-gradient(135deg,${P},${PINK},${CORAL})`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundSize:"200% 200%", animation:"plMetagradShift 4s ease infinite" }}>
                 완벽한 프롬프트
               </span>로
             </h1>
-            <p style={{ fontSize:15, color:"#6B7280", lineHeight:1.7, maxWidth:420, margin:"0 auto 40px" }}>
+            <p style={{ fontSize:15, color:"var(--muted-foreground)", lineHeight:1.7, maxWidth:420, margin:"0 auto 40px" }}>
               10개의 질문으로 아이디어를 구체화하고<br />
               프롬프트 생성 또는 이미지를 바로 만들어드립니다.
             </p>
             <div style={{ display:"flex", flexWrap:"wrap", gap:10, justifyContent:"center" }}>
               {EXAMPLES.map(ex => (
-                <button key={ex} onClick={() => send(ex)} className="example-chip" style={{ padding:"8px 18px", background:"white", border:"1.5px solid #E5E7EB", borderRadius:100, fontSize:13, color:"#4B5563", cursor:"pointer", transition:"all 0.15s", fontFamily:"inherit" }}>
+                <button key={ex} onClick={() => send(ex)} className="example-chip" style={{ padding:"8px 18px", background: "var(--card)", border:"1.5px solid var(--border)", borderRadius:100, fontSize:13, color:"var(--muted-foreground)", cursor:"pointer", transition:"all 0.15s", fontFamily:"inherit" }}>
                   {ex}
                 </button>
               ))}
@@ -305,7 +305,7 @@ export function MetaPromptTool() {
                   maxWidth:"75%", padding:"13px 17px",
                   borderRadius: msg.role==="user" ? "18px 18px 4px 18px" : "4px 18px 18px 18px",
                   background: msg.role==="user" ? `linear-gradient(135deg,${P},${PINK})` : "white",
-                  color: msg.role==="user" ? "white" : "#1F2937",
+                  color: msg.role==="user" ? "white" : "var(--foreground)",
                   fontSize:14, lineHeight:1.7, fontWeight:500,
                   boxShadow: msg.role==="user" ? "0 4px 14px rgba(124,58,237,0.22)" : "0 2px 10px rgba(0,0,0,0.07)",
                   border: msg.role==="assistant" ? "1px solid rgba(124,58,237,0.1)" : "none",
@@ -322,10 +322,10 @@ export function MetaPromptTool() {
           {loading && (
             <div style={{ display:"flex", alignItems:"flex-start", gap:10, animation:"plMetafadeUp 0.3s ease both" }}>
               <div style={{ width:32, height:32, borderRadius:10, flexShrink:0, background:`linear-gradient(135deg,${P},${PINK})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, color:"white", fontWeight:800 }}>✦</div>
-              <div style={{ background:"white", borderRadius:"4px 18px 18px 18px", padding:"13px 17px", border:"1px solid rgba(124,58,237,0.1)", boxShadow:"0 2px 10px rgba(0,0,0,0.07)" }}>
+              <div style={{ background: "var(--card)", borderRadius:"4px 18px 18px 18px", padding:"13px 17px", border:"1px solid rgba(124,58,237,0.1)", boxShadow:"0 2px 10px rgba(0,0,0,0.07)" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom: reasoning ? 6 : 0 }}>
                   <div style={{ width:14, height:14, borderRadius:"50%", border:`2px solid rgba(124,58,237,0.15)`, borderTop:`2px solid ${P}`, animation:"plMetaspin 0.8s linear infinite", flexShrink:0 }} />
-                  <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:500 }}>추론 중</span>
+                  <span style={{ fontSize:12, color:"var(--muted-foreground)", fontWeight:500 }}>추론 중</span>
                 </div>
                 {reasoning && (
                   <div style={{ fontSize:12, color:P, fontStyle:"italic", lineHeight:1.6, opacity:0.8, animation:"plMetafadeUp 0.3s ease both" }}>
@@ -340,7 +340,7 @@ export function MetaPromptTool() {
           {questionsDone && finalPrompt && (
             <div style={{ marginTop:8, animation:"plMetafadeUp 0.4s ease both" }}>
               {/* Prompt card */}
-              <div style={{ background:"white", borderRadius:20, border:"1.5px solid rgba(124,58,237,0.2)", overflow:"hidden", boxShadow:"0 8px 32px rgba(124,58,237,0.12)", marginBottom:16 }}>
+              <div style={{ background: "var(--card)", borderRadius:20, border:"1.5px solid rgba(124,58,237,0.2)", overflow:"hidden", boxShadow:"0 8px 32px rgba(124,58,237,0.12)", marginBottom:16 }}>
                 <div style={{ padding:"16px 24px", background:`linear-gradient(135deg,${P},${PINK})`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                   <span style={{ fontSize:15, fontWeight:800, color:"white" }}>✦ 최종 프롬프트</span>
                   <button onClick={copy} style={{ padding:"6px 18px", background:copied?"rgba(16,185,129,0.9)":"rgba(255,255,255,0.2)", border:"1px solid rgba(255,255,255,0.35)", borderRadius:8, color:"white", fontSize:13, fontWeight:700, cursor:"pointer", transition:"all 0.2s" }}>
@@ -348,7 +348,7 @@ export function MetaPromptTool() {
                   </button>
                 </div>
                 <div style={{ padding:24 }}>
-                  <pre style={{ fontSize:14, color:"#1F2937", lineHeight:1.8, whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0, background:"#F9F5FF", borderRadius:12, padding:16, border:"1px solid rgba(124,58,237,0.08)" }}>
+                  <pre style={{ fontSize:14, color:"var(--foreground)", lineHeight:1.8, whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0, background:"var(--muted)", borderRadius:12, padding:16, border:"1px solid rgba(124,58,237,0.08)" }}>
                     {finalPrompt}
                   </pre>
                 </div>
@@ -356,7 +356,7 @@ export function MetaPromptTool() {
 
               {/* Action buttons */}
               <div style={{ display:"flex", gap:10 }}>
-                <button onClick={copy} style={{ flex:1, padding:"13px", background:"white", border:`2px solid ${P}`, borderRadius:14, fontSize:13, fontWeight:700, color:P, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                <button onClick={copy} style={{ flex:1, padding:"13px", background: "var(--card)", border:`2px solid ${P}`, borderRadius:14, fontSize:13, fontWeight:700, color:P, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
                   📋 복사
                 </button>
                 <button onClick={savePrompt} style={{ flex:1, padding:"13px", background:saved?"#10B981":"white", border:`2px solid ${saved?"#10B981":"#10B981"}`, borderRadius:14, fontSize:13, fontWeight:700, color:saved?"white":"#10B981", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6, transition:"all 0.2s" }}>
@@ -374,14 +374,14 @@ export function MetaPromptTool() {
               {generatedImage && (
                 <div style={{ marginTop:16, borderRadius:20, overflow:"hidden", boxShadow:"0 8px 32px rgba(0,0,0,0.12)", animation:"plMetafadeUp 0.4s ease both" }}>
                   <img src={generatedImage} alt="generated" style={{ width:"100%", display:"block" }} />
-                  <div style={{ padding:"12px 16px", background:"white", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                    <span style={{ fontSize:12, color:"#9CA3AF" }}>Gemini 이미지 생성</span>
+                  <div style={{ padding:"12px 16px", background: "var(--card)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span style={{ fontSize:12, color:"var(--muted-foreground)" }}>Gemini 이미지 생성</span>
                     <a href={generatedImage} download="metaprompt_image.png" style={{ fontSize:12, fontWeight:700, color:P, textDecoration:"none" }}>⬇️ 다운로드</a>
                   </div>
                 </div>
               )}
 
-              <button onClick={reset} style={{ width:"100%", marginTop:16, padding:"12px", background:"transparent", border:"1.5px solid #E5E7EB", borderRadius:12, fontSize:13, fontWeight:600, color:"#6B7280", cursor:"pointer" }}>
+              <button onClick={reset} style={{ width:"100%", marginTop:16, padding:"12px", background:"transparent", border:"1.5px solid var(--border)", borderRadius:12, fontSize:13, fontWeight:600, color:"var(--muted-foreground)", cursor:"pointer" }}>
                 ↺ 새로운 프롬프트 만들기
               </button>
             </div>
@@ -394,7 +394,7 @@ export function MetaPromptTool() {
       {/* Input bar */}
       {!questionsDone && (
         <div className="meta-bar" style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:720, padding:"0 24px", zIndex:200 }}>
-          <div style={{ background:"white", borderRadius:20, border:"1.5px solid rgba(124,58,237,0.2)", boxShadow:"0 8px 40px rgba(124,58,237,0.14), 0 2px 8px rgba(0,0,0,0.05)" }}>
+          <div style={{ background: "var(--card)", borderRadius:20, border:"1.5px solid rgba(124,58,237,0.2)", boxShadow:"0 8px 40px rgba(124,58,237,0.14), 0 2px 8px rgba(0,0,0,0.05)" }}>
 
             {/* Attachment preview */}
             {(attachImage || attachUrl) && (
@@ -409,7 +409,7 @@ export function MetaPromptTool() {
                   <div style={{ display:"flex", alignItems:"center", gap:6, padding:"4px 12px", background:"rgba(124,58,237,0.07)", border:"1px solid rgba(124,58,237,0.2)", borderRadius:8, fontSize:12, color:P, fontWeight:600, flex:1, minWidth:0 }}>
                     <span style={{ fontSize:14 }}>🔗</span>
                     <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{attachUrl}</span>
-                    <button onClick={clearAttach} style={{ marginLeft:"auto", background:"none", border:"none", color:"#9CA3AF", cursor:"pointer", fontSize:14, fontWeight:800, flexShrink:0 }}>×</button>
+                    <button onClick={clearAttach} style={{ marginLeft:"auto", background:"none", border:"none", color:"var(--muted-foreground)", cursor:"pointer", fontSize:14, fontWeight:800, flexShrink:0 }}>×</button>
                   </div>
                 )}
               </div>
@@ -438,16 +438,16 @@ export function MetaPromptTool() {
                 <button
                   onClick={() => setShowAttachMenu(p => !p)}
                   disabled={loading}
-                  style={{ width:36, height:36, borderRadius:10, flexShrink:0, background:showAttachMenu?"rgba(124,58,237,0.1)":"#F3F4F6", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, transition:"all 0.15s" }}
+                  style={{ width:36, height:36, borderRadius:10, flexShrink:0, background:showAttachMenu?"rgba(124,58,237,0.1)":"var(--muted)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, transition:"all 0.15s" }}
                   title="이미지 또는 URL 첨부"
                 >📎</button>
                 {showAttachMenu && (
-                  <div style={{ position:"absolute", bottom:44, left:0, background:"white", border:"1.5px solid rgba(124,58,237,0.15)", borderRadius:14, boxShadow:"0 8px 24px rgba(0,0,0,0.12)", overflow:"hidden", minWidth:160, zIndex:300, animation:"plMetafadeUp 0.2s ease both" }}>
-                    <button onClick={() => { fileInputRef.current?.click(); setShowAttachMenu(false); }} style={{ width:"100%", padding:"12px 16px", background:"none", border:"none", textAlign:"left", fontSize:13, fontWeight:600, color:"#1F2937", cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ position:"absolute", bottom:44, left:0, background: "var(--card)", border:"1.5px solid rgba(124,58,237,0.15)", borderRadius:14, boxShadow:"0 8px 24px rgba(0,0,0,0.12)", overflow:"hidden", minWidth:160, zIndex:300, animation:"plMetafadeUp 0.2s ease both" }}>
+                    <button onClick={() => { fileInputRef.current?.click(); setShowAttachMenu(false); }} style={{ width:"100%", padding:"12px 16px", background:"none", border:"none", textAlign:"left", fontSize:13, fontWeight:600, color:"var(--foreground)", cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
                       🖼️ 이미지 업로드
                     </button>
-                    <div style={{ height:1, background:"#F3F4F6" }} />
-                    <button onClick={() => { setAttachType("url"); setShowAttachMenu(false); }} style={{ width:"100%", padding:"12px 16px", background:"none", border:"none", textAlign:"left", fontSize:13, fontWeight:600, color:"#1F2937", cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
+                    <div style={{ height:1, background:"var(--muted)" }} />
+                    <button onClick={() => { setAttachType("url"); setShowAttachMenu(false); }} style={{ width:"100%", padding:"12px 16px", background:"none", border:"none", textAlign:"left", fontSize:13, fontWeight:600, color:"var(--foreground)", cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
                       🔗 URL 붙여넣기
                     </button>
                   </div>
@@ -465,13 +465,13 @@ export function MetaPromptTool() {
                 placeholder={started ? "답변을 입력하세요..." : "무엇을 만들고 싶은지 자유롭게 말해보세요..."}
                 disabled={loading}
                 rows={1}
-                style={{ flex:1, border:"none", outline:"none", resize:"none", fontSize:14, color:"#1F2937", fontFamily:"inherit", background:"transparent", lineHeight:1.6, maxHeight:120, overflowY:"auto" }}
+                style={{ flex:1, border:"none", outline:"none", resize:"none", fontSize:14, color:"var(--foreground)", fontFamily:"inherit", background:"transparent", lineHeight:1.6, maxHeight:120, overflowY:"auto" }}
                 onInput={e => { const el = e.currentTarget; el.style.height="auto"; el.style.height=Math.min(el.scrollHeight,120)+"px"; }}
               />
               <button
                 onClick={() => send(input)}
                 disabled={(!input.trim() && !attachImage && !attachUrl) || loading}
-                style={{ width:40, height:40, borderRadius:12, flexShrink:0, background:(input.trim()||attachImage||attachUrl)&&!loading?`linear-gradient(135deg,${P},${PINK})`:"#E5E7EB", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.15s", boxShadow:(input.trim()||attachImage||attachUrl)?"0 4px 12px rgba(124,58,237,0.28)":"none" }}
+                style={{ width:40, height:40, borderRadius:12, flexShrink:0, background:(input.trim()||attachImage||attachUrl)&&!loading?`linear-gradient(135deg,${P},${PINK})`:"var(--border)", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.15s", boxShadow:(input.trim()||attachImage||attachUrl)?"0 4px 12px rgba(124,58,237,0.28)":"none" }}
               >
                 {loading
                   ? <div style={{ width:16,height:16,borderRadius:"50%",border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid white",animation:"plMetaspin 0.8s linear infinite" }} />
@@ -480,7 +480,7 @@ export function MetaPromptTool() {
               </button>
             </div>
           </div>
-          <div style={{ textAlign:"center", marginTop:8, fontSize:11, color:"#9CA3AF" }}>
+          <div style={{ textAlign:"center", marginTop:8, fontSize:11, color:"var(--muted-foreground)" }}>
             Enter 전송 · Shift+Enter 줄바꿈
           </div>
         </div>
