@@ -21,3 +21,7 @@ dialog{background:#191917;border:1px solid #44443c;color:var(--text);padding:0;b
 .library-button{min-width:27px;min-height:32px}
 @media(min-width:851px){.primary-nav{font-size:13px}.hero-description{font-size:14px;max-width:440px}.hero-meta{font-size:12px}.hero .btn{font-size:13px}.card-title{font-size:14px}.card-caption{font-size:10px}.shelf-heading h2{font-size:21px}.shelf-heading span{font-size:11px}.game-launch{bottom:65px}.catalog-intro p{font-size:13px}.collection-feature p{font-size:13px}.detail-subtitle{font-size:13px}.prompt-box p{font-size:14px}.detail-tabs button{font-size:12px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* Keep the same six destinations visible on the homepage and service screens. */
+@media(max-width:1200px){.primary-nav .secondary-nav{display:flex!important}}
+@media(max-width:850px){.primary-nav{gap:18px}}
+@media(max-width:600px){.primary-nav{gap:clamp(15px,5.8vw,24px);overflow-x:auto;scrollbar-width:none}.primary-nav a{flex-shrink:0}}
