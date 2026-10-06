@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-05",
+  "generationMode": "Built-in image_gen",
+  "implementation": "A photographic sculpture plate with live WebGL artwork projection, pointer/keyboard selection and subtle water refraction. The metallic sculpture is a still image; the artwork texture and water animation are live.",
+  "assets": [
+    {
+      "path": "public/uploads/seed/hero-sculpture-v4.png",
+      "role": "Production hero sculpture and water plate",
+      "reference": "User-provided ChatGPT 이미지 2026년 10월 4일 오후 11_42_23.png",
+      "prompt": "Edit target: the provided PLAYLAB website concept image. Create the production BACKGROUND PLATE for the hero only. STRICTLY preserve the beautiful existing metallic infinity/Mobius ribbon sculpture's contour, camera view, proportions, brushed stainless-steel texture, thick thin metal edges, warm studio softbox highlights, curved rear metallic band, and gentle water reflections. Remove ALL interface elements: navigation/header, logo, all words/letters, buttons, thumbnails, gallery cards, footer. Remove the entire lower gallery portion. Reframe only the metallic sculpture and its calm water floor as a wide landscape image, about 2.5:1, at least 2400px wide. Keep the sculpture almost edge to edge horizontally, top just under the upper edge, bottom of sculpture at about 72% image height, leave bottom quarter calm dark water for live HTML copy. Crucial: REPLACE EVERY PHOTOGRAPH/ILLUSTRATION/UI PANEL ON THE FRONT DISPLAY BAND with ONE uninterrupted FLAT SOLID NEAR-BLACK matte display surface (#171a19), clean and empty, from the left curved end to the right curved end. Preserve the exact same front-band top and bottom contour and its curved wrapping/perspective, but NO panel separators, no imagery, no lettering inside this matte band. The real website will project live photographs into this dark display band. The METAL REAR and undersides stay luxurious realistic brushed silver/champagne stainless steel, not black. Keep the broad shiny silver underside on the lower left and broad metallic loop on upper right matching the original perfectly. No new objects. Dark charcoal seamless studio background, calm dark reflective water below, restrained champagne reflections. It must look like an exceptionally high-end physical sculpture photographed in a luxury studio, identical to the provided design's material quality. This is a complete hero background plate, not a website mockup.",
+      "actualDimensions": "1983x793"
+    },
+    {
+      "path": "public/uploads/seed/space-cover-v3.png",
+      "role": "Illustrative cover for the existing bundled space shooter; not a gameplay screenshot",
+      "prompt": "Use case: illustration-story. Asset type: premium cover art for an existing playable arcade space shooter in PLAYLAB, used at large size on a sculptural gallery ribbon and as a game thumbnail. Create a richly art-directed cinematic pixel-art scene, landscape 3:2. A small luminous ivory-and-coral spacecraft flies over the silhouette of an ancient observatory and distant fantastical cliffside city, under a huge warm full moon in a deep violet midnight sky. Space-shooter theme: a few tiny distant enemy craft, delicate laser star trails, but calm and beautiful rather than explosive action. Foreground stone terrace, tiny wildflowers lit in amber, painterly rose and lavender clouds, atmospheric layers of dark-blue mountains and city spires. Sophisticated 16-bit pixel-art aesthetic with tightly controlled fine pixel detail, no large blocky pixels. A coherent game-world establishing shot, warm moonlight against rich violet-blue shadows, soft luminous accents, exceptionally beautiful visual hierarchy. Subject spacecraft at left-centre, moon in upper right, horizon low enough to retain recognizable composition when cropped. No text, letters, titles, logos, UI, border, watermark, poster typography, synthetic chrome, or neon-purple stock sci-fi imagery. This is original editorial game cover art, not a screenshot. At least 1536x1024."
+    },
+    {
+      "path": "public/uploads/seed/flappy-cover-v4.png",
+      "role": "Illustrative cover for the existing bundled Flappy Neon game; not a gameplay screenshot",
+      "prompt": "Use case: stylized-concept. Asset type: original polished cover illustration for a playable neon Flappy Bird-style arcade game called Flappy Neon, no rendered title text. Landscape 3:2. Vibrant exquisitely detailed fine pixel-art, a small round sky-blue bird with orange beak and white belly flying LEFT OF CENTER through a gap between two glowing emerald-green vertical pipes, the near pipe at the right quarter. Indigo midnight rooftop city with tiny warm windows and magenta neon accents, rich electric blue shadows, foreground pixel sparkles, satisfying cheerful expressive bird. Strong clear graphic silhouette, collectible indie game cover art, polished restrained retro charm. Deep vivid navy background, teal and lime highlights, coral orange accent, natural pixel grid, 16-bit hand-drawn feel. Not 3D, not blurry, no screen capture UI, no score, no text, no logos, no watermark, no border. Enough room around bird for wide 1.6:1 crop. It should feel like a real crafted indie game world rather than a generic AI image."
+    },
+    {
+      "path": "public/uploads/seed/create-cover-v4.svg",
+      "role": "Code-native editorial illustration linking to the real vibe-coding setup guide, not a community submission",
+      "method": "SVG with real text, geometric shapes and a paper-canvas composition"
+    }
+  ],
+  "verification": ["Desktop direct picture click opened the corresponding keyring project", "Pointer dragging changed the selected work and its label", "Arrow key selection worked", "The guide panel opened vibe-setup", "Mobile layout had no horizontal overflow or broken images"],
+  "discardedExperiment": "Brushed-steel-v3 texture and fully parametric mesh are retained as an earlier experiment; the production ribbon uses hero-sculpture-v4.png."
+}

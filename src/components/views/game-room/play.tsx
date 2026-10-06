@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Edit2, Expand, Heart, Loader2, Maximize2, Minimize2, Share2, Trash2, Trophy,
+  ArrowLeft, Edit2, Heart, Loader2, Maximize2, Minimize2, Share2, Trash2, Trophy,
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
@@ -29,6 +29,7 @@ interface GameDetailDTO {
   likedByMe: boolean;
   createdAt: string;
   metadata: Record<string, unknown>;
+  previewMode?: boolean;
 }
 
 export default function GamePlayView() {
@@ -52,13 +53,14 @@ export default function GamePlayView() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [lbPeriod, setLbPeriod] = useState<'today' | 'week' | 'month' | 'all'>('today');
 
-  const { data: game, isLoading } = useQuery({
+  const { data: game, isLoading, isError, refetch } = useQuery({
     queryKey: ['game-play', gameId],
     queryFn: () => api.get<GameDetailDTO>(`/api/game-room/${gameId}`),
     enabled: !!gameId,
   });
 
   const isLocalGame = game?.contentUrl?.startsWith('/') ?? false;
+  const trackingEnabled = Boolean(game && !game.previewMode);
 
   const { data: lbData } = useQuery({
     queryKey: ['leaderboard', gameId, lbPeriod],
@@ -78,7 +80,7 @@ export default function GamePlayView() {
   }, [game?.contentUrl, isLocalGame]);
 
   useEffect(() => {
-    if (!gameId) return;
+    if (!gameId || !trackingEnabled) return;
     api.post('/api/game-room/play', { artifactId: gameId }).catch(() => undefined);
     startTime.current = Date.now();
     return () => {
@@ -87,27 +89,28 @@ export default function GamePlayView() {
         api.post('/api/game-room/play', { artifactId: gameId, durationMs: duration }).catch(() => undefined);
       }
     };
-  }, [gameId]);
+  }, [gameId, trackingEnabled]);
 
   // Listen for game score messages from iframe
   useEffect(() => {
-    if (!gameId) return;
+    if (!gameId || !trackingEnabled) return;
     const handler = (e: MessageEvent) => {
+      if (e.source !== iframeRef.current?.contentWindow) return;
       if (e.data?.type === 'game-score' && typeof e.data.score === 'number' && e.data.score > 0) {
         api.post('/api/game-room/play', { artifactId: gameId, score: e.data.score }).catch(() => undefined);
       }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [gameId]);
+  }, [gameId, trackingEnabled]);
 
   useEffect(() => {
-    if (!gameId) return;
+    if (!gameId || !trackingEnabled) return;
     const timer = setTimeout(() => {
       api.post('/api/game-room/ad-impression', { artifactId: gameId, slotType: 'banner' }).catch(() => undefined);
     }, 2000);
     return () => clearTimeout(timer);
-  }, [gameId]);
+  }, [gameId, trackingEnabled]);
 
   const handleLike = async () => {
     if (!requireLogin() || !gameId) return;
@@ -164,11 +167,12 @@ export default function GamePlayView() {
     setDeleteConfirm(false);
   };
 
-  if (isLoading) return null;
+  if (isLoading) return <div className="flex justify-center py-20" role="status" aria-label="게임 불러오는 중"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  if (isError) return <EmptyState title="게임을 불러오지 못했어요." action={<Button variant="outline" onClick={() => void refetch()}>다시 불러오기</Button>} />;
   if (!game) return <EmptyState title="Game not found" description="" />;
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-4">
+    <div className="w-full max-w-6xl mx-auto space-y-4 px-5 py-8 md:px-8">
       {/* Back + Title + Management */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate('game-room')}>
@@ -224,6 +228,7 @@ export default function GamePlayView() {
               variant="ghost"
               size="sm"
               className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white"
+              aria-label={isFullscreen ? t.exitFullscreen : t.fullscreen}
               onClick={toggleFullscreen}
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}

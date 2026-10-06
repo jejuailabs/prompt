@@ -1,5 +1,7 @@
 'use client';
 
+import { moduleDestination } from '@/lib/module-navigation';
+
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAppStore } from '@/lib/store';
@@ -16,7 +18,7 @@ const TABS = [
   { view: 'home', icon: 'home', ko: '홈', en: 'Home' },
   { view: 'gallery', icon: 'images', ko: '갤러리', en: 'Gallery' },
   { view: 'lab', icon: 'flask-conical', ko: '실험실', en: 'Lab' },
-  { view: 'pipelines', icon: 'workflow', ko: '파이프라인', en: 'Pipelines' },
+  { view: 'ai-tools', icon: 'wrench', ko: '도구', en: 'Tools' },
 ] as const;
 
 const TAB_VIEWS: string[] = TABS.map((tb) => tb.view);
@@ -35,7 +37,7 @@ export default function MobileTabbar() {
 
   const titleFor = (tab: (typeof TABS)[number]) => {
     const m = modules.find((mod) => mod.entryView === tab.view);
-    return m ? moduleTitle(m, locale) : locale === 'en' ? tab.en : tab.ko;
+    return locale === 'en' ? tab.en : tab.ko;
   };
 
   const studioModules = modules.filter((m) => !m.adminOnly && m.group === 'studio');
@@ -95,7 +97,7 @@ export default function MobileTabbar() {
                     <button
                       key={m.id}
                       type="button"
-                      onClick={() => { navigate(m.entryView as ViewKey); setMoreOpen(false); }}
+                      onClick={() => { navigate(moduleDestination(m).view, moduleDestination(m).params); setMoreOpen(false); }}
                       className={cn(
                         'flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors',
                         active ? 'border-primary/40 bg-primary/5' : 'hover:bg-accent',
@@ -133,7 +135,7 @@ export default function MobileTabbar() {
                   key={m.id}
                   type="button"
                   onClick={() => {
-                    navigate(m.entryView as ViewKey);
+                    navigate(moduleDestination(m).view, moduleDestination(m).params);
                     setMoreOpen(false);
                   }}
                   className={cn(

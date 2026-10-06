@@ -1,0 +1,267 @@
+{
+  "completedAt": "2026-10-04T20:48:02.916Z",
+  "scope": "로컬 읽기 전용 미리보기: 화면·탐색·로컬 기능 / 운영 생성·저장 미검증",
+  "checks": [
+    {
+      "feature": "QR 생성",
+      "result": "PNG 데이터와 다운로드 링크 생성 확인; IAB 다운로드 이벤트는 응답하지 않아 파일 저장은 미확인"
+    },
+    {
+      "feature": "로그인",
+      "result": "미리보기 안내 및 Google 로그인 비활성 확인; 실제 OAuth는 운영 연결 필요"
+    },
+    {
+      "feature": "파일 변환 PNG→JPG",
+      "result": "샘플 PNG 파일 선택 및 JPG 변환 완료 메시지 확인. 실제 파일 저장 이벤트는 IAB에서 확인 불가"
+    },
+    {
+      "route": "tool?slug=tts",
+      "brokenImages": [],
+      "buttons": 14,
+      "overflow": false,
+      "text": "AI Tools\n\nPLAYLAB AI TOOLS\n\nTTS 메이커\n\nGemini 음성으로 자연스러운 내레이션을 제작합니다\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\n01 / 읽을 내용\n47 / 10,000\n02 / 목소리 선택\n미리듣기\nCharon\n차분한 남성\nFenrir\n에너지 있는 남성\nPuck\n친근한 남성\nOrus\n설명형 남성\nEnceladus\n부드러운 남성\nKore\n맑은 여성\nAoede\n따뜻한 여성\nLeda\n전문적인 여성\nZephyr\n경쾌한 여성\nCallirrhoe\n고급스러운 여성\n음성 만들기\n\n03 / LISTEN TO YOUR IDEA\n\n글이 목소리가 되는 순간.\n\n내용을 입력하고 목소리를 골라보세요. 완성된 음성이 여기에 도착해요.\n\nGEMINI VOICE · WAV / 24 kHz\n내 목소리로 만들기 · 보이스 클로닝",
+      "title": "TTS 메이커"
+    },
+    {
+      "route": "tool?slug=suno",
+      "brokenImages": [],
+      "buttons": 4,
+      "overflow": false,
+      "text": "AI Tools\n\nPLAYLAB AI TOOLS\n\n수노 뮤직 메이커\n\nAI 음악 프롬프트와 가사를 만듭니다\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\n🎵\n어디서부터 시작할까요?\n\n가사를 먼저 쓰거나, 사운드 스타일을 먼저 잡거나 —\n원하는 방식으로 음악을 만들어보세요.\n\n⚡\n간단 모드 — 한 줄로 바로 생성\n“비 오는 날 헤어진 연인을 그리는 잔잔한 시티팝” 한 줄만 입력 →\n장르·무드·보컬까지 AI가 알아서 + 가사·스타일 프롬프트 완성\n→\n또는 직접 골라서 만들기 (디테일 모드)\n✍️\n가사 먼저 만들기\n스토리가 담긴 가사를 먼저 쓰고\n어울리는 사운드를 입힙니다.\n✓\n이미 쓴 가사 붙여넣기 → 스타일 추출\n✓\n키워드로 영감 제공 → 스타일 추출\n✓\n7가지 항목으로 가사 직접 생성\n가사 먼저 만들기 →\n🎛️\n스타일 프롬프트 먼저\n먼저 음악의 장르·분위기·사운드를 잡고\n가사를 스타일에 맞춰 생성합니다.\n✓\n장르 + 무드 + 보컬 + 어드밴스드 설정\n✓\nSuno 스타일 프롬프트 자동 생성\n✓\n생성된 스타일 기반으로 가사 제작\n스타일 프롬프트 먼저 →\nPowered by Gemini 2.5 Flash + Suno AI",
+      "title": "수노 뮤직 메이커"
+    },
+    {
+      "route": "tool?slug=ace-music",
+      "brokenImages": [],
+      "buttons": 15,
+      "overflow": false,
+      "text": "THE EXPERIMENT ROOM\n이미지\n영상\n3D\n음악\nAI Tools\n\nPLAYLAB AI TOOLS\n\nACE-Step 노래 생성\n\nACE-Step 1.5 XL-Turbo로 노래와 배경음악을 생성합니다\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\nACE-Step 노래 생성\n\nRTX 4090급 GPU에서 ACE-Step 1.5 XL-Turbo 8스텝으로 MP3를 생성합니다.\n\nXL-Turbo · 8 steps · 240 크레딧\n새 노래\n커버곡\n스타일 설명\n가사\n제목\n보컬 언어\n한국어\nEnglish\n日本語\n中文\n자동 감지\n종류\n보컬곡\n연주곡\n생성 길이\n30초\n1분\n1.5분\n3분\n4분\nBPM\n노래 만들기",
+      "title": "ACE-Step 노래 생성"
+    },
+    {
+      "route": "tool?slug=metaprompt",
+      "brokenImages": [],
+      "buttons": 8,
+      "overflow": false,
+      "text": "AI Tools\n\nPLAYLAB AI TOOLS\n\n메타 프롬프트\n\nAI 인터뷰로 아이디어를 완성형 프롬프트로 만듭니다\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\n✦ META PROMPT ENGINE\n막연한 아이디어를\n완벽한 프롬프트로\n\n10개의 질문으로 아이디어를 구체화하고\n프롬프트 생성 또는 이미지를 바로 만들어드립니다.\n\n분위기 있는 카페 포스터 만들고 싶어\n신나는 여름 노래 만들어줘\n제품 홍보 영상 기획하고 싶은데\n감성적인 인스타 카피 써줘\nSF 영화 포스터 이미지 만들고 싶어\n📎\nEnter 전송 · Shift+Enter 줄바꿈",
+      "title": "메타 프롬프트"
+    },
+    {
+      "route": "tool?slug=thumbnail",
+      "brokenImages": [],
+      "buttons": 4,
+      "overflow": false,
+      "text": "AI Tools\n\nPLAYLAB AI TOOLS\n\n유튜브 썸네일 메이커\n\nCTR을 고려한 유튜브 썸네일 프롬프트를 만듭니다\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\n🖼️ CTR 최적화 썸네일 AI\n클릭하게 만드는\nAI 썸네일 프롬프트\n\n단순히 예쁜 이미지가 아니라 — 유튜브에서 실제로 클릭되는 썸네일을 만들어드립니다\n\n🎵 음악 전용\n수노 스타일 프롬프트 + 가사 분석\n📺 범용\n영상 주제 기반 CTR 썸네일\n🎵\n음악 정보 입력\n음악 제목 *\n수노 스타일 프롬프트 *\n가사 *\n타겟 청취자\n10-20대 여성\n20-30대 여성\n30-40대 여성\n10-20대 남성\n20-30대 남성\n30-40대 남성\n공부하는 학생\n직장인 (출퇴근)\n전체 연령\n플레이리스트 시리즈\n없음\n공부음악 시리즈\n감성음악 시리즈\n새벽음악 시리즈\n카페음악 시리즈\n드라이브 시리즈\n힐링음악 시리즈\n운동음악 시리즈\n채널 메인 컬러 (선택 — 브랜딩 일관성)\n🖼️ 썸네일 프롬프트 생성\n\n제목, 스타일 프롬프트, 가사를 모두 입력하세요",
+      "title": "유튜브 썸네일 메이커"
+    },
+    {
+      "route": "tool?slug=storyboard",
+      "brokenImages": [],
+      "buttons": 2,
+      "overflow": false,
+      "text": "AI Tools\n\nPLAYLAB AI TOOLS\n\n스토리보드 제너레이터\n\n영상 기획부터 컷 분할과 이미지·영상 프롬프트까지\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\n스토리보드 제너레이터\n\n영상 주제를 컷별 장면·카메라·퍼스트프레임·영상 프롬프트로 분해합니다.\n\n기획 만들기",
+      "title": "스토리보드 제너레이터"
+    },
+    {
+      "route": "tool?slug=detail",
+      "brokenImages": [],
+      "buttons": 2,
+      "overflow": false,
+      "text": "AI Tools\n\nPLAYLAB AI TOOLS\n\n상세페이지 메이커\n\n상품 정보를 바탕으로 상세페이지를 설계합니다\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\n상세페이지 메이커\n\n상품 정보를 구매 전환 중심의 상세페이지 카피·섹션·이미지 프롬프트로 설계합니다.\n\n기획 만들기",
+      "title": "상세페이지 메이커"
+    },
+    {
+      "route": "tool?slug=detail2",
+      "brokenImages": [],
+      "buttons": 9,
+      "overflow": false,
+      "text": "AI Tools\n\nPLAYLAB AI TOOLS\n\n상세페이지 메이커 2\n\n12장 설득 구조의 상세페이지 제작 도구\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\n🧱\nAI Studio\n🧱 상세페이지 2\n📥 상품 정보\n입력만 하면 12장 설득 구조로 설계돼요\n브랜드명 / 상품명\n카테고리\n🪄 자동 판단\n🥤 식품 · 건강식품\n💄 뷰티 · 화장품\n👗 패션 · 의류 · 잡화\n🔌 전자 · 가전 · 디지털\n🛋 리빙 · 생활 · 기타\n카테고리에 맞춰 상세정보 항목·톤이 자동 조정돼요\n인물(모델) 포함\n자동\n포함\n제외\n카테고리 기본값(전자·생활용품은 제품 중심)\n주요 특징 (줄바꿈으로 여러 개)\n추가 요청 (선택)\n👤 모델 설정\n성별\n여성\n남성\n혼합/가족\n나이\n연령대\n10대\n20대\n30대\n40대\n50대 이상\n전 연령\n분위기 / 표정\n사용 상황 (선택)\n🔧 이미지 품질\ngpt-image-2 생성 품질\nLow\nMid\nHigh\nLow=빠름·저렴 / High=느림·디테일↑\n🧱 12장 프롬프트 설계\n🧱\n상품 정보를 입력하고 설계를 시작하세요\nHook → 문제공감 → 해결 → 핵심가치5 → 신뢰 → 상세 → 체크 → CTA\n📜 롱 캔버스\n0장\n이미지를 생성하면\n여기에 순서대로 쌓여요\n⬇",
+      "title": "상세페이지 메이커 2"
+    },
+    {
+      "route": "tool?slug=whisper",
+      "brokenImages": [],
+      "buttons": 6,
+      "overflow": false,
+      "text": "AI Tools\n\nPLAYLAB AI TOOLS\n\n음성 텍스트 변환\n\nMP3·M4A 등 오디오 파일을 텍스트로 변환합니다\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\n음성 텍스트 변환\n\nMP3, M4A, WAV 등 오디오 파일을 업로드하면 Whisper large-v3 GPU 워커가 텍스트로 변환합니다.\n\n한국어\nEnglish\n日本語\n中文\n\nMP3, M4A, WAV, OGG, FLAC, AAC · 최대 100MB\n\n텍스트로 변환하기",
+      "title": "음성 텍스트 변환"
+    },
+    {
+      "route": "tool?slug=srt",
+      "brokenImages": [],
+      "buttons": 2,
+      "overflow": false,
+      "text": "AI Tools\n\nPLAYLAB AI TOOLS\n\nSRT 자막 생성기\n\n대본과 오디오를 시간 자막으로 변환합니다\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\nSRT 자막 생성기\n\n오디오·영상에서 Whisper 타임코드 자막을 추출해 SRT로 다운로드합니다.\n\n24MB 이하 파일을 지원합니다.\n\nSRT 만들기",
+      "title": "SRT 자막 생성기"
+    },
+    {
+      "route": "tool?slug=autocut",
+      "brokenImages": [],
+      "buttons": 2,
+      "overflow": false,
+      "text": "AI Tools\n\nPLAYLAB AI TOOLS\n\n자동 컷편집\n\n영상·오디오에서 편집용 대본과 장면 구간을 추출합니다\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\n자동 컷편집\n\n현재는 편집용 대본·장면 구간 추출을 지원합니다. 영상 자동 편집과 렌더링은 준비 중입니다.\n\n24MB 이하 파일을 지원합니다.\n\n편집 구간 만들기",
+      "title": "자동 컷편집"
+    },
+    {
+      "route": "tool?slug=game-maker",
+      "brokenImages": [],
+      "buttons": 2,
+      "overflow": false,
+      "text": "AI Tools\n\nPLAYLAB AI TOOLS\n\nAI 게임 만들기 도구\n\n아이디어에서 웹 게임 제작까지 시작하고 PLAYLAB 게임룸에 공개할 수 있는 AI 도구입니다.\n\nAI 게임 생성은 준비 중입니다. 완성한 게임은 게임룸에서 등록하고 플레이할 수 있어요.\n\n게임룸 열기",
+      "title": "AI 게임 만들기 도구"
+    },
+    {
+      "route": "3d-studio",
+      "brokenImages": [],
+      "buttons": 8,
+      "overflow": false,
+      "text": "THE EXPERIMENT ROOM\n이미지\n영상\n3D\n음악\n3D 에셋 스튜디오\n\n이미지를 입체로 만들고, 완성한 에셋을 함께 살펴보세요.\n\n새 에셋 만들기\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\n공개 에셋\n내 프로젝트\n\n아직 공개된 3D 에셋이 없어요.\n\n에셋을 만들고 공개하면 이곳에서 함께 볼 수 있어요.\n\n첫 에셋 만들기",
+      "title": "3D 에셋 스튜디오"
+    },
+    {
+      "route": "lab",
+      "brokenImages": [],
+      "buttons": 13,
+      "overflow": false,
+      "text": "THE EXPERIMENT ROOM\n이미지\n영상\n3D\n음악\n모델 실험실\n\n같은 프롬프트를 여러 모델로 동시에 비교 생성합니다\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\n프롬프트 개선하기\n0/1000\n\n모델을 선택하고 생성해보세요\n\n같은 프롬프트가 모델마다 어떻게 다른지 비교합니다\n\n모델 선택 (다중)\n\n사용 가능한 모델이 없습니다\n\n설정\n\n비율\n\n1:1\n3:4\n4:3\n16:9\n9:16\n\n스타일\n\n프리셋 없음\n생성하기",
+      "title": "모델 실험실"
+    },
+    {
+      "route": "academy",
+      "brokenImages": [],
+      "buttons": 2,
+      "overflow": false,
+      "text": "가이드 & 튜토리얼\n\n이 기능은 현재 미리보기에 연결되어 있지 않아요. 운영 데이터와 로그인 연결 후 확인할 수 있습니다.\n\nAI Tools 둘러보기\n바이브코딩 시작 가이드",
+      "title": "가이드 & 튜토리얼"
+    },
+    {
+      "route": "smoke",
+      "brokenImages": [],
+      "buttons": 2,
+      "overflow": false,
+      "text": "스모크 테스트\n\n이 기능은 현재 미리보기에 연결되어 있지 않아요. 운영 데이터와 로그인 연결 후 확인할 수 있습니다.\n\nAI Tools 둘러보기\n바이브코딩 시작 가이드",
+      "title": "스모크 테스트"
+    },
+    {
+      "route": "video-studio",
+      "brokenImages": [],
+      "buttons": 9,
+      "overflow": false,
+      "text": "THE EXPERIMENT ROOM\n이미지\n영상\n3D\n음악\n\n지금은 미리보기입니다. 입력 화면을 살펴볼 수 있으며, 로그인·저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요. 게임 플레이·프롬프트 복사·QR 생성·파일 변환은 바로 이용할 수 있어요.\n\nPLAYLAB VIDEO STUDIO\n보고, 바로 만들고,\n이야기로 완성하세요.\n\n크리에이터의 영상과 에셋에서 시작해, 프롬프트 한 줄 또는 이미지 한 장으로 첫 샷을 만드세요.\n\n새 프로젝트\n에셋 둘러보기\n01\n가장 빠른 시작\n\n이미지 한 장 또는 프롬프트 한 줄\n\n02\n샷을 이어 만들기\n\n첫·끝 프레임과 바이블로 연속성 유지\n\n03\n타임라인으로 완성\n\n자막·나레이션·BGM까지 한 프로젝트에서\n\nVideo Studio\nAsset Studio\n내 프로젝트\n지금 영감을 주는 영상\n\n좋아하는 결과를 선택해 그 스타일과 문맥으로 새 프로젝트를 시작하세요.\n\n공개 갤러리\n\n아직 공개된 작품이 없습니다.",
+      "title": "보고, 바로 만들고,이야기로 완성하세요."
+    },
+    {
+      "route": "my-projects",
+      "result": "비로그인 진입 시 로그인 안내 확인"
+    },
+    {
+      "route": "market",
+      "brokenImages": [],
+      "buttons": 2,
+      "overflow": false,
+      "text": "마켓플레이스\n\n이 기능은 현재 미리보기에 연결되어 있지 않아요. 운영 데이터와 로그인 연결 후 확인할 수 있습니다.\n\nAI Tools 둘러보기\n바이브코딩 시작 가이드",
+      "title": "마켓플레이스"
+    },
+    {
+      "route": "pipelines",
+      "brokenImages": [],
+      "buttons": 2,
+      "overflow": false,
+      "text": "파이프라인\n\n이 기능은 현재 미리보기에 연결되어 있지 않아요. 운영 데이터와 로그인 연결 후 확인할 수 있습니다.\n\nAI Tools 둘러보기\n바이브코딩 시작 가이드",
+      "title": "파이프라인"
+    },
+    {
+      "route": "pipeline-run?id=pipeline-game",
+      "brokenImages": [],
+      "buttons": 2,
+      "overflow": false,
+      "text": "파이프라인 실행\n\n이 기능은 현재 미리보기에 연결되어 있지 않아요. 운영 데이터와 로그인 연결 후 확인할 수 있습니다.\n\nAI Tools 둘러보기\n바이브코딩 시작 가이드",
+      "title": "파이프라인 실행"
+    },
+    {
+      "route": "admin",
+      "brokenImages": [],
+      "buttons": 2,
+      "overflow": false,
+      "text": "관리자\n\n이 기능은 현재 미리보기에 연결되어 있지 않아요. 운영 데이터와 로그인 연결 후 확인할 수 있습니다.\n\nAI Tools 둘러보기\n바이브코딩 시작 가이드",
+      "title": "관리자"
+    },
+    {
+      "route": "revenue",
+      "result": "비로그인 시 정산 데이터 차단 및 로그인 안내 확인"
+    },
+    {
+      "route": "vibe-setup",
+      "brokenImages": [],
+      "buttons": 7,
+      "overflow": false,
+      "text": "바이브코딩 시작하기\n\n1단계부터 차례대로 한 번씩만 따라 하면, 누구나 첫 서비스를 인터넷에 올릴 수 있어요.\n\n내 진행률\n0 / 12 완료\n다음 할 일: Git\nDB · 로그인 서비스\nFirebase\nSupabase\n\n구글 계정으로 바로 시작. NoSQL(문서형) DB\n\n1단계\nPC에 설치할 것들\n컴퓨터당 한 번만 하면 끝\n항목 4개 · 0개 완료 · 문제 해결 안내\n2단계\n내가 쓸 AI 도구 골라 설치\n하나만 골라도 OK\n항목 3개 · 0개 완료\n3단계\n회원가입이 필요한 것들\n계정은 한 번만 만들면 계속 사용\n항목 3개 · 0개 완료\n4단계\n프로젝트마다 새로 만들 것\n새 서비스를 만들 때마다 반복\n항목 4개 · 0개 완료\n📖 바이브코딩 매뉴얼 전체 보기 — 18개 문서\n▾\n\n화면 구성은 2026년 10월 기준으로 단순화해 다시 그린 것이에요. 실제 버튼 이름 · 위치가 조금 다를 수 있으니 공식 매뉴얼 링크도 함께 확인하세요.",
+      "title": "바이브코딩 시작하기"
+    },
+    {
+      "route": "vibe-setup",
+      "interaction": "Git 아이디·이메일 입력→복사됨 확인, VS Code 안내 표시"
+    },
+    {
+      "route": "gallery",
+      "interaction": "이미지 필터 5개 → 음식 검색 1개 확인"
+    },
+    {
+      "feature": "작품 상세 / 공유",
+      "result": "음식 보정 이미지 로드, 공유 URL 클립보드 확인"
+    },
+    {
+      "feature": "홈 리본",
+      "result": "모션 일시정지, 다음 작품, 마우스 드래그로 선택 작품 변경, 바로 경험하기 → 음식 보정 상세 이동"
+    },
+    {
+      "feature": "모바일 프롬프트 위키 / 상세",
+      "result": "이미지·상세 이동 정상, 가로 넘침 없음",
+      "viewport": "390 × 844 요청 (브라우저 보고 CSS 폭 358)"
+    },
+    {
+      "feature": "모바일 TTS",
+      "result": "입력·목소리·생성 버튼 화면 표시, 가로 넘침 없음; 실제 생성은 미리보기에서 불가"
+    },
+    {
+      "feature": "영상 새 프로젝트",
+      "result": "텍스트/이미지 모드 변경, 생성 시 로그인 안내 정상; 실제 렌더 실행 미검증"
+    },
+    {
+      "feature": "MCP 연결",
+      "result": "연결 화면·설치 안내 표시; 연결 키 발급/DB 스키마/실제 GPU 생성은 미검증"
+    },
+    {
+      "feature": "이미지 → PDF",
+      "result": "PNG 선택 → PDF 생성 완료와 다운로드 시작 알림 확인. 내려받은 파일 내용은 미검증."
+    },
+    {
+      "feature": "네온 퐁",
+      "result": "게임룸 카드 → iframe → 게임 시작 버튼 동작, 시작 오버레이 사라짐"
+    },
+    {
+      "feature": "헬리 대쉬",
+      "result": "SCORE 0\nBEST 0"
+    },
+    {
+      "feature": "네온 스네이크",
+      "result": "SCORE 0\nBEST 0"
+    },
+    {
+      "feature": "네온 테트리스",
+      "result": "SCORE 0\nLEVEL 1"
+    },
+    {
+      "feature": "플래피 네온",
+      "result": "SCORE 0\nBEST 0"
+    },
+    {
+      "feature": "스페이스 슈터",
+      "result": "SCORE 0\nWAVE 1\nHP ♥♥♥"
+    },
+    {
+      "feature": "MCP 첫 렌더 재검증",
+      "result": "미리보기 버튼 비활성 및 안내 확인. 새 진입에서 hydration 오류 없음."
+    }
+  ]
+}

@@ -32,12 +32,13 @@ export async function GET() {
     if (error) throw new Error(error.message);
     if (!rows?.length) return ok([]);
 
-    type RawRow = Record<string, unknown> & { owner: Record<string, unknown> | null };
+    type RawRow = Record<string, unknown> & { owner: Record<string, unknown> | Record<string, unknown>[] | null };
 
     const nodeMap = new Map<string, PromptTreeNode>();
     const allNodes: PromptTreeNode[] = [];
 
     for (const r of rows as RawRow[]) {
+      const owner = Array.isArray(r.owner) ? r.owner[0] : r.owner;
       const node: PromptTreeNode = {
         id: r.id as string,
         title: r.title as string,
@@ -45,8 +46,8 @@ export async function GET() {
         category: r.category as string,
         thumbnailUrl: (r.thumbnailUrl as string) ?? null,
         ownerId: r.ownerId as string,
-        ownerName: (r.owner?.username as string) ?? '',
-        ownerAvatar: (r.owner?.avatarUrl as string) ?? null,
+        ownerName: (owner?.username as string) ?? '',
+        ownerAvatar: (owner?.avatarUrl as string) ?? null,
         forkedFromId: (r.forkedFromId as string) ?? null,
         likeCount: (r.likeCount as number) ?? 0,
         forkCount: (r.forkCount as number) ?? 0,

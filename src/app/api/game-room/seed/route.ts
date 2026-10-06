@@ -119,7 +119,7 @@ export async function POST() {
   try {
     await requireAdmin();
 
-    const admin = await db.user.findFirst({ where: { role: 'admin' } });
+    const admin = await db.profile.findFirst({ where: { role: 'admin' } });
     if (!admin) return fail(new Error('No admin user found'));
 
     const created: Array<{ id: string; title: string; status: string }> = [];

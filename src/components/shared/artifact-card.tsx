@@ -40,7 +40,7 @@ export function ArtifactCard({ artifact, onClick, className }: { artifact: Artif
       onKeyDown={
         onClick
           ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
                 e.preventDefault();
                 onClick();
               }
@@ -48,13 +48,13 @@ export function ArtifactCard({ artifact, onClick, className }: { artifact: Artif
           : undefined
       }
       className={cn(
-        'group gap-0 overflow-hidden rounded-xl p-0 shadow-sm transition hover:ring-2 hover:ring-primary/40',
+        'work-card group gap-0 overflow-hidden rounded-none border-0 bg-transparent p-0 shadow-none transition',
         onClick && 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
         className,
       )}
     >
       {/* preview */}
-      <div className="relative aspect-video w-full overflow-hidden bg-muted">
+      <div className="work-image relative aspect-[4/3] w-full overflow-hidden rounded-sm bg-muted">
         <PreviewRenderer artifact={artifact} className="transition-transform duration-300 group-hover:scale-[1.02]" />
         {/* fixed dark gradient (works both themes — docs/09 §9) */}
         <div className="media-overlay pointer-events-none absolute inset-x-0 bottom-0 h-16" />
@@ -72,7 +72,7 @@ export function ArtifactCard({ artifact, onClick, className }: { artifact: Artif
       </div>
 
       {/* body */}
-      <div className="p-4">
+      <div className="px-0 py-3">
         <h3 className="line-clamp-1 font-medium">{artifact.title}</h3>
         <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="truncate">@{artifact.owner?.username}</span>

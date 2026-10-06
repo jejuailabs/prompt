@@ -21,6 +21,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { FluxFirstFrame } from './flux-first-frame';
 import { ProjectCard } from './project-card';
+import { PreviewRenderer } from '@/components/shared/preview-renderer';
+import { PreviewNotice } from '@/components/runtime-context';
 
 type StudioMode = 'gallery' | 'quick' | 'workspace';
 type GalleryTab = 'video' | 'asset' | 'projects';
@@ -101,7 +103,7 @@ export default function VideoStudioView() {
     navigate('video-studio', { studio: 'quick', ...(card ? { remix: card.id } : {}) });
   };
 
-  if (mode === 'quick') return <QuickStart onBack={returnToGallery} onCreated={(id) => navigate('video-studio', { studio: 'workspace', project: id })} remix={remix} />;
+  if (mode === 'quick') return <div className="editorial-page"><PreviewNotice /><QuickStart onBack={returnToGallery} onCreated={(id) => navigate('video-studio', { studio: 'workspace', project: id })} remix={remix} /></div>;
   if (mode === 'workspace' && selectedProjectId) return <ProjectWorkspace projectId={selectedProjectId} onBack={returnToGallery} />;
   return <StudioGallery session={Boolean(session)} onNewProject={() => openQuick()} onOpenProject={(id) => navigate('video-studio', { studio: 'workspace', project: id })} />;
 }
@@ -126,11 +128,11 @@ function StudioGallery({ session, onNewProject, onOpenProject }: {
     enabled: tab === 'asset',
   });
   const gallery = tab === 'asset' ? publicAssets : publicVideos;
-  const published = (gallery.data ?? []).filter(item => item.status === 'published' && item.visibility === 'public' && item.fileUrl);
+  const published = (gallery.data ?? []).filter(item => item.status === 'published' && item.visibility === 'public');
   const filtered = published.filter(item => `${item.title} ${item.owner.username}`.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-7 pb-10">
+    <div className="editorial-page mx-auto w-full max-w-7xl space-y-7 pb-10"><PreviewNotice />
       <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-slate-950 via-slate-900 to-violet-950 px-6 py-9 text-white shadow-xl sm:px-10">
         <div className="absolute -right-20 -top-24 size-80 rounded-full bg-primary/25 blur-3xl" /><div className="absolute -bottom-36 left-1/3 size-72 rounded-full bg-sky-400/15 blur-3xl" />
         <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
@@ -150,25 +152,10 @@ function StudioGallery({ session, onNewProject, onOpenProject }: {
 }
 
 function ArtifactTile({ artifact }: { artifact: ArtifactDTO }) {
-  const [failed, setFailed] = useState(false);
-  const [avatarFailed, setAvatarFailed] = useState(false);
+  const navigate = useAppStore(s => s.navigate);
   return <article className="overflow-hidden rounded-2xl border bg-background">
-    <div className="relative flex aspect-[4/5] items-center justify-center bg-muted">
-      {artifact.type === 'video' && artifact.fileUrl && !failed
-        ? <video src={artifact.fileUrl} controls playsInline preload="metadata" className="size-full object-contain" onError={() => setFailed(true)} />
-        : <p className="p-4 text-sm text-muted-foreground">{failed ? '영상 미리보기를 불러올 수 없습니다.' : '3D 에셋'}</p>}
-    </div>
-    <div className="space-y-3 p-3">
-      <p className="truncate font-medium">{artifact.title}</p>
-      <details className="text-sm">
-        <summary className="flex cursor-pointer items-center gap-2">
-          {artifact.owner.avatarUrl && !avatarFailed ? <img src={artifact.owner.avatarUrl} alt="" className="size-8 rounded-full object-cover" onError={() => setAvatarFailed(true)} /> : <UsersRound className="size-8 rounded-full bg-muted p-1.5" />}
-          <span>@{artifact.owner.username}</span><span className="text-xs text-muted-foreground">작성자 프로필</span>
-        </summary>
-        <p className="mt-2 text-xs text-muted-foreground">작성자: @{artifact.owner.username} · 공개일: {new Date(artifact.createdAt).toLocaleDateString('ko-KR')}</p>
-      </details>
-      {artifact.fileUrl && <a href={artifact.fileUrl} target="_blank" rel="noopener noreferrer" className="block rounded border px-3 py-2 text-center text-sm">결과물 열기</a>}
-    </div>
+    <div className="relative aspect-[4/3] bg-muted"><PreviewRenderer artifact={artifact} /></div>
+    <div className="space-y-3 p-3"><h3 className="truncate font-medium">{artifact.title}</h3><p className="text-xs text-muted-foreground">@{artifact.owner.username}</p><Button variant="outline" className="w-full" onClick={() => navigate('project', { id: artifact.id })}>작품 열기</Button></div>
   </article>;
 }
 

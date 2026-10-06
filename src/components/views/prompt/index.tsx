@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, Edit2, FlaskConical, GitFork, Heart, Loader2, MessageCircle, Send, Trash2 } from 'lucide-react';
+import { ArrowLeft, Copy, Edit2, FlaskConical, GitFork, Heart, Loader2, MessageCircle, Send, Trash2 } from 'lucide-react';
 import { api, ApiError, uploadPromptThumbnail } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
@@ -173,7 +173,7 @@ export default function PromptDetailView() {
   };
 
   if (isLoading) {
-    return null;
+    return <div className="editorial-page" role="status">프롬프트를 불러오는 중이에요.</div>;
   }
 
   if (error || !prompt) {
@@ -181,7 +181,7 @@ export default function PromptDetailView() {
   }
 
   return (
-    <div className="space-y-6 w-full max-w-6xl mx-auto">
+    <div className="space-y-6 w-full max-w-6xl mx-auto px-5 py-8 md:px-8">
       {/* Back */}
       <Button variant="ghost" size="sm" onClick={() => navigate('gallery')}>
         <ArrowLeft className="mr-1 h-4 w-4" /> {t('back')}
@@ -227,6 +227,7 @@ export default function PromptDetailView() {
 
       {/* Actions */}
       <div className="flex gap-2 flex-wrap">
+        <Button variant="outline" size="sm" onClick={async () => { try { await navigator.clipboard.writeText(prompt.body); toast({ title: '프롬프트를 복사했어요.' }); } catch { toast({ title: '복사하지 못했어요. 내용을 선택해 복사해주세요.', variant: 'destructive' }); } }}><Copy className="mr-1 h-4 w-4" />프롬프트 복사</Button>
         <Button variant="outline" size="sm" onClick={handleLike}>
           <Heart className={`mr-1 h-4 w-4 ${prompt.likedByMe ? 'fill-primary text-primary' : ''}`} />
           {prompt.likeCount}

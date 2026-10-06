@@ -1,0 +1,147 @@
+'use client';
+import { useEffect, useRef } from 'react';
+import * as THREE from 'three';
+type Props = { images: string[]; titles?: string[]; categories?: string[]; paused?: boolean; selected?: number; onSelect?: (index: number) => void; onOpen?: (index: number) => void; onInteract?: () => void };
+
+/** A continuous steel sculpture, inset artwork, and a rippled reflection. */
+export default function MediaRibbon({ images, titles = [], categories = [], paused = false, selected = 0, onSelect, onOpen, onInteract }: Props) {
+  const host = useRef<HTMLDivElement>(null);
+  const live = useRef({ paused, selected, onSelect, onOpen, onInteract });
+  useEffect(() => { live.current = { paused, selected, onSelect, onOpen, onInteract }; }, [paused, selected, onSelect, onOpen, onInteract]);
+  const imageKey = JSON.stringify(images.slice(0, 5).map((url, i) => [url, titles[i] ?? '', categories[i] ?? '']));
+  useEffect(() => {
+    const container = host.current;
+    if (!container) return;
+    let renderer: THREE.WebGLRenderer;
+    try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' }); } catch { return; }
+    let disposed = false, visible = true, frame = 0, last = 0, elapsed = 0;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setClearColor(0, 0);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+    container.appendChild(renderer.domElement);
+    const scene = new THREE.Scene(), camera = new THREE.OrthographicCamera(-6.4, 6.4, 3, -3, .1, 100);
+    // HDR softboxes produce broad studio reflections with real surface-dependent highlights.
+    const studio = new THREE.Scene(); studio.background = new THREE.Color(.035, .038, .043);
+    const panelGeometry = new THREE.PlaneGeometry(1, 1), panelMaterials: THREE.MeshBasicMaterial[] = [];
+    const softbox = (position: [number, number, number], size: [number, number], tint: number, strength: number) => {
+      const material = new THREE.MeshBasicMaterial({ color: new THREE.Color(tint).multiplyScalar(strength), side: THREE.DoubleSide }); panelMaterials.push(material);
+      const panel = new THREE.Mesh(panelGeometry, material); panel.position.set(...position); panel.scale.set(size[0], size[1], 1); panel.lookAt(0, 0, 0); studio.add(panel);
+    };
+    softbox([-5, 3, 5], [1.6, 7], 0xffeddb, 2.8); softbox([4, 4, -3], [2, 7], 0xf3f5ff, 3);
+    softbox([1, 7, 0], [4, 7], 0xfff8ed, 3.3); softbox([0, 0, 7], [1.3, 8], 0xffffff, 4); softbox([-7, -1, -2], [1, 5], 0xabbccc, 1.5);
+    const pmrem = new THREE.PMREMGenerator(renderer), environment = pmrem.fromScene(studio, .035); scene.environment = environment.texture;
+    panelGeometry.dispose(); panelMaterials.forEach(m => m.dispose());
+    const sculpture = new THREE.Group(); scene.add(sculpture);
+    const center = (t: number) => new THREE.Vector3(-5.35 * Math.sin(t), .2 * Math.sin(t) + .55 * Math.sin(2 * t) - .8 * Math.sin(t) * THREE.MathUtils.smoothstep(-Math.cos(t), -.05, .6), 1.85 * Math.cos(t));
+    const point = (t: number, w: number) => {
+      // A smooth half-turn keeps both ends rolled; the widened return catches the key light.
+      w *= 1 + .7 * THREE.MathUtils.smoothstep(-Math.cos(t), .05, .75);
+      const twist = t / 2;
+      const tangent = center(t + .001).sub(center(t - .001)).normalize();
+      const up = new THREE.Vector3(0, 1, 0).addScaledVector(tangent, -tangent.y).normalize(), radial = new THREE.Vector3().crossVectors(up, tangent).normalize();
+      return center(t).addScaledVector(up, w * Math.cos(twist)).addScaledVector(radial, w * Math.sin(twist));
+    };
+    const strip = (start: number, end: number, width: number, lift = 0) => {
+      const steps = Math.ceil((end - start) * 100), across = 12, positions: number[] = [], uv: number[] = [], indices: number[] = [], arc = [0];
+      for (let i = 1; i <= steps; i++) arc.push(arc[i - 1] + center(start + (end - start) * i / steps).distanceTo(center(start + (end - start) * (i - 1) / steps)));
+      for (let i = 0; i <= steps; i++) for (let j = 0; j <= across; j++) {
+        const p = point(start + (end - start) * i / steps, (j / across - .5) * width); positions.push(p.x, p.y, p.z); uv.push(1 - arc[i] / arc[steps], j / across);
+        if (i < steps && j < across) { const a = i * (across + 1) + j, b = a + across + 1; indices.push(a, a + 1, b, a + 1, b + 1, b); }
+      }
+      const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      geometry.setIndex(indices); geometry.computeVertexNormals();
+      if (lift) { const p = geometry.attributes.position, n = geometry.attributes.normal; for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + n.getX(i) * lift, p.getY(i) + n.getY(i) * lift, p.getZ(i) + n.getZ(i) * lift); }
+      return geometry;
+    };
+    const loader = new THREE.TextureLoader();
+    const steel = new THREE.MeshPhysicalMaterial({ color: 0xaaa8a3, metalness: 1, roughness: .32, envMapIntensity: 1.1, side: THREE.DoubleSide, clearcoat: .1, anisotropy: .65, anisotropyRotation: Math.PI / 2 });
+    const grain = loader.load('/uploads/seed/brushed-steel-v3.png', texture => {
+      if (disposed) { texture.dispose(); return; }
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(8, 1.4); texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      texture.colorSpace = THREE.SRGBColorSpace; steel.map = texture; steel.bumpMap = texture; steel.bumpScale = .095; steel.needsUpdate = true;
+    });
+    sculpture.add(new THREE.Mesh(strip(-Math.PI, Math.PI, 2.12), steel));
+    const edgeMaterial = new THREE.MeshStandardMaterial({ color: 0xe2dccc, metalness: 1, roughness: .2, envMapIntensity: 1.4 });
+    class Boundary extends THREE.Curve<THREE.Vector3> { constructor() { super(); } getPoint(t: number, target = new THREE.Vector3()) { return target.copy(point(-Math.PI + t * Math.PI * 4, 1.06)); } }
+    sculpture.add(new THREE.Mesh(new THREE.TubeGeometry(new Boundary(), 1000, .019, 6, true), edgeMaterial));
+    const entries = JSON.parse(imageKey) as [string, string, string][], count = Math.max(entries.length, 1);
+    const tileWidth = Math.min(1280, Math.floor(renderer.capabilities.maxTextureSize / count)), tileHeight = 768;
+    const canvas = document.createElement('canvas'); canvas.width = tileWidth * count; canvas.height = tileHeight;
+    const ctx = canvas.getContext('2d')!; ctx.fillStyle = '#1d211f'; ctx.fillRect(0, 0, canvas.width, tileHeight);
+    const atlas = new THREE.CanvasTexture(canvas); atlas.colorSpace = THREE.SRGBColorSpace; atlas.wrapS = THREE.RepeatWrapping; atlas.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const visibleTiles = Math.min(3.55, count); atlas.repeat.x = visibleTiles / count;
+    const photoMaterial = new THREE.MeshPhysicalMaterial({ map: atlas, side: THREE.FrontSide, roughness: .38, metalness: .04, clearcoat: .3, clearcoatRoughness: .2, envMapIntensity: .25 });
+    const photos = new THREE.Mesh(strip(-1.69, 1.69, 2.045, .023), photoMaterial); sculpture.add(photos);
+    entries.forEach(([url, title, category], index) => loader.load(url, source => {
+      if (disposed) { source.dispose(); return; }
+      const picture = source.image as HTMLImageElement, x = index * tileWidth;
+      ctx.save(); ctx.beginPath(); ctx.rect(x, 0, tileWidth, tileHeight); ctx.clip();
+      const scale = Math.max(tileWidth / picture.width, tileHeight / picture.height);
+      ctx.drawImage(picture, x + (tileWidth - picture.width * scale) / 2, (tileHeight - picture.height * scale) / 2, picture.width * scale, picture.height * scale);
+      const shade = ctx.createLinearGradient(0, 540, 0, tileHeight); shade.addColorStop(0, '#090b0b00'); shade.addColorStop(1, '#090b0b85'); ctx.fillStyle = shade; ctx.fillRect(x, 540, tileWidth, 228);
+      ctx.fillStyle = '#f4ede3'; ctx.font = '400 18px Arial, sans-serif'; ctx.fillText(String(index + 1).padStart(2, '0') + '   /   ' + category.toUpperCase(), x + 40, 650);
+      ctx.font = '500 34px "Malgun Gothic", sans-serif'; ctx.fillText(title.length > 21 ? title.slice(0, 20) + '…' : title, x + 40, 707, tileWidth - 80);
+      ctx.fillStyle = '#8c877e'; ctx.fillRect(x, 0, 5, tileHeight); ctx.restore(); atlas.needsUpdate = true; source.dispose();
+    }));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x474c51, 1.2));
+    const key = new THREE.DirectionalLight(0xfff1df, 1.1); key.position.set(-3, 5, 7); scene.add(key);
+    const reflectionTime = { value: 0 }, reflection = sculpture.clone(true), reflectionMaterials: THREE.Material[] = [];
+    reflection.scale.y = -1; reflection.position.y = -3.75;
+    reflection.traverse(object => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const material = (object.material as THREE.Material).clone(); material.transparent = true; material.opacity = .22; material.depthWrite = false;
+      material.onBeforeCompile = shader => {
+        shader.uniforms.reflectionTime = reflectionTime;
+        shader.vertexShader = 'uniform float reflectionTime; varying float reflectionY;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n transformed.x += sin(position.y * 82. + reflectionTime * .5) * .023 + sin(position.y * 137. - reflectionTime * .35) * .012; reflectionY = (modelMatrix * vec4(transformed, 1.)).y;');
+        shader.fragmentShader = 'varying float reflectionY;\n' + shader.fragmentShader.replace('#include <alphamap_fragment>', '#include <alphamap_fragment>\n diffuseColor.a *= smoothstep(-4.3, -1.9, reflectionY);');
+      };
+      object.material = material; reflectionMaterials.push(material);
+    });
+    scene.add(reflection);
+    let current = live.current.selected, target = current, applied = current, dragging = false, moved = false, startX = 0, startValue = 0;
+    const raycaster = new THREE.Raycaster(), cursor = new THREE.Vector2(), wrap = (n: number) => ((n % count) + count) % count;
+    const hit = (event: PointerEvent) => {
+      const rect = container.getBoundingClientRect(); cursor.set((event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2);
+      raycaster.setFromCamera(cursor, camera); const intersection = raycaster.intersectObject(photos)[0];
+      return intersection?.uv ? Math.floor(wrap((intersection.uv.x * atlas.repeat.x + atlas.offset.x) * count)) : -1;
+    };
+    const down = (e: PointerEvent) => { if (e.button !== 0) return; dragging = true; moved = false; startX = e.clientX; startValue = current; target = current; container.setPointerCapture(e.pointerId); };
+    const move = (e: PointerEvent) => { if (!dragging) return; const dx = e.clientX - startX; moved ||= Math.abs(dx) > 6; target = startValue - dx / container.clientWidth * visibleTiles; };
+    const up = (e: PointerEvent) => {
+      if (!dragging) return; dragging = false; if (container.hasPointerCapture(e.pointerId)) container.releasePointerCapture(e.pointerId);
+      if (moved) { target = Math.round(target); applied = wrap(target); live.current.onSelect?.(applied); live.current.onInteract?.(); }
+      else { const index = hit(e); if (index >= 0) { live.current.onSelect?.(index); live.current.onOpen?.(index); } }
+    };
+    const cancel = () => { dragging = false; target = Math.round(current); };
+    const keydown = (e: KeyboardEvent) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); live.current.onSelect?.(wrap(Math.round(current) + (e.key === 'ArrowRight' ? 1 : -1))); live.current.onInteract?.(); } else if (e.key === 'Enter') live.current.onOpen?.(wrap(Math.round(current))); };
+    container.addEventListener('pointerdown', down); container.addEventListener('pointermove', move); container.addEventListener('pointerup', up); container.addEventListener('pointercancel', cancel); container.addEventListener('keydown', keydown);
+    const resize = () => {
+      const width = container.clientWidth, height = Math.max(container.clientHeight, 1), mobile = width < 700; renderer.setSize(width, height);
+      const halfWidth = mobile ? 6 : Math.max(6.25, 1.86 * width / height);
+      camera.left = -halfWidth; camera.right = halfWidth; camera.top = halfWidth * height / width; camera.bottom = -camera.top;
+      camera.position.set(0, 5.5, 20); camera.lookAt(0, mobile ? -.4 : -.2, 0); camera.updateProjectionMatrix();
+      sculpture.scale.set(.93, mobile ? 1.15 : .8, 1); reflection.scale.set(.93, mobile ? -1.15 : -.8, 1);
+    };
+    const observer = new ResizeObserver(resize); observer.observe(container); resize();
+    const intersection = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; }); intersection.observe(container);
+    const draw = (time: number) => {
+      frame = requestAnimationFrame(draw); if (time - last < 1000 / 45) return; const dt = Math.min((time - last) / 1000, .05); last = time;
+      if (!visible || document.hidden) return;
+      if (live.current.selected !== applied && !dragging) { const desired = live.current.selected; let delta = desired - wrap(Math.round(target)); if (delta > count / 2) delta -= count; if (delta < -count / 2) delta += count; target = Math.round(target) + delta; applied = desired; }
+      current = THREE.MathUtils.lerp(current, target, dragging ? .65 : .085); atlas.offset.x = current / count;
+      if (!reduced.matches && !live.current.paused && !dragging) elapsed += dt;
+      sculpture.rotation.y = Math.sin(elapsed * .19) * .018; sculpture.rotation.z = -.045 + Math.sin(elapsed * .23) * .006; sculpture.position.y = .35 + Math.sin(elapsed * .35) * .018;
+      reflection.rotation.set(-sculpture.rotation.x, sculpture.rotation.y, -sculpture.rotation.z); reflection.position.y = -3.2 - sculpture.position.y; reflectionTime.value = elapsed;
+      renderer.render(scene, camera); container.dataset.ready = 'true';
+    };
+    frame = requestAnimationFrame(draw);
+    return () => {
+      disposed = true; cancelAnimationFrame(frame); observer.disconnect(); intersection.disconnect();
+      container.removeEventListener('pointerdown', down); container.removeEventListener('pointermove', move); container.removeEventListener('pointerup', up); container.removeEventListener('pointercancel', cancel); container.removeEventListener('keydown', keydown);
+      sculpture.traverse(object => { if (object instanceof THREE.Mesh) object.geometry.dispose(); });
+      [steel, edgeMaterial, photoMaterial, ...reflectionMaterials].forEach(m => m.dispose()); grain.dispose(); atlas.dispose(); environment.dispose(); pmrem.dispose(); renderer.dispose(); renderer.domElement.remove(); delete container.dataset.ready;
+    };
+  }, [imageKey]);
+  return <div ref={host} className="media-ribbon" tabIndex={0} role="group" aria-label="작품 띠. 좌우로 끌거나 방향키로 작품을 넘기고, 이미지를 클릭하거나 Enter로 열 수 있습니다"><div className="ribbon-fallback" /></div>;
+}
+

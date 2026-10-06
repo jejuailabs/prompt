@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { GitFork, Heart, MessageCircle, Image, ChevronDown, ChevronRight } from 'lucide-react';
+import { GitFork, Heart, MessageCircle, ChevronDown, ChevronRight, ArrowUpRight } from 'lucide-react';
 import { api } from '@/lib/api-client';
+import type { ViewKey } from '@/lib/types';
 import { useAppStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/shared/empty-state';
 
 interface TreeNode {
   id: string;
@@ -27,7 +30,7 @@ interface TreeNode {
   children: TreeNode[];
 }
 
-function ForkNode({ node, depth, navigate }: { node: TreeNode; depth: number; navigate: (view: string, params: Record<string, string>) => void }) {
+function ForkNode({ node, depth, navigate }: { node: TreeNode; depth: number; navigate: (view: ViewKey, params?: Record<string, string>) => void }) {
   const [expanded, setExpanded] = useState(depth < 2);
   const hasForks = node.children.length > 0;
 
@@ -38,24 +41,28 @@ function ForkNode({ node, depth, navigate }: { node: TreeNode; depth: number; na
           <div className="absolute -left-4 top-5 h-px w-4 bg-border/50" />
         )}
         <Card
-          className="cursor-pointer gap-0 overflow-hidden p-0 transition-all hover:ring-1 hover:ring-primary/40"
+          role="button"
+          tabIndex={0}
+          aria-label={`${node.title} 프롬프트 보기`}
+          className={`wiki-prompt-card cursor-pointer gap-0 overflow-hidden p-0 transition-all hover:ring-1 hover:ring-primary/40 ${depth === 0 ? 'wiki-root-card' : ''}`}
           onClick={() => navigate('prompt', { id: node.id })}
+          onKeyDown={event => { if (event.target === event.currentTarget && ['Enter', ' '].includes(event.key)) { event.preventDefault(); navigate('prompt', { id: node.id }); } }}
         >
-          <div className="flex gap-3 p-3">
+          <div className="wiki-card-inner">
             {node.thumbnailUrl ? (
               <img
                 src={node.thumbnailUrl}
-                alt=""
-                className="size-14 shrink-0 rounded-md object-cover"
+                alt={`${node.title} 대표 이미지`}
+                className="wiki-card-image"
               />
             ) : (
-              <div className="flex size-14 shrink-0 items-center justify-center rounded-md bg-muted">
-                <Image className="size-6 text-muted-foreground" />
+              <div className="wiki-card-image wiki-card-placeholder" aria-hidden="true">
+                <span>PLAYLAB / PROMPT</span><strong>{node.category}</strong>
               </div>
             )}
-            <div className="min-w-0 flex-1">
+            <div className="wiki-card-content">
               <div className="flex items-start justify-between gap-2">
-                <h3 className="truncate text-sm font-semibold leading-tight">{node.title}</h3>
+                <h3>{node.title}</h3>
                 {hasForks && (
                   <button
                     type="button"
@@ -67,7 +74,7 @@ function ForkNode({ node, depth, navigate }: { node: TreeNode; depth: number; na
                   </button>
                 )}
               </div>
-              <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{node.body}</p>
+              <p className="wiki-card-excerpt">{node.body}</p>
               <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Avatar className="size-4">
@@ -86,6 +93,7 @@ function ForkNode({ node, depth, navigate }: { node: TreeNode; depth: number; na
                 )}
                 <Badge variant="outline" className="px-1 py-0 text-[10px]">{node.category}</Badge>
               </div>
+              {depth === 0 && <span className="wiki-card-open">프롬프트 보기 <ArrowUpRight size={15} /></span>}
             </div>
           </div>
         </Card>
@@ -106,7 +114,7 @@ export default function PromptWikiView() {
   const navigate = useAppStore((s) => s.navigate);
   const locale = useAppStore((s) => s.locale);
 
-  const { data: trees = [], isLoading } = useQuery({
+  const { data: trees = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['prompt-trees'],
     queryFn: () => api.get<TreeNode[]>('/api/prompts/trees'),
     staleTime: 30_000,
@@ -115,10 +123,11 @@ export default function PromptWikiView() {
   const totalForks = trees.reduce((sum, t) => sum + countDescendants(t), 0);
   const totalRoots = trees.length;
 
-  if (isLoading) return null;
+  if (isLoading) return <div className="editorial-page" role="status">프롬프트를 불러오는 중이에요.</div>;
+  if (isError) return <EmptyState title="프롬프트를 불러오지 못했어요." action={<Button onClick={() => void refetch()}>다시 불러오기</Button>} />;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
+    <div className="wiki-page mx-auto max-w-5xl space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-bold">
           {locale === 'en' ? 'Prompt Wiki' : '프롬프트 위키'}

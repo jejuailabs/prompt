@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import type { Locale, SessionUser, ViewKey } from '@/lib/types';
 
 const VIEW_KEYS: ViewKey[] = [
-  'home', 'gallery', 'prompt', 'project', 'lab', 'pipelines', 'pipeline-run',
+  'home', 'gallery', 'prompt', 'prompt-wiki', 'project', 'lab', 'pipelines', 'pipeline-run',
   'smoke', 'revenue', 'market', 'community', 'academy', 'vibe-setup', 'ai-tools', 'my-projects',
   'game-room', 'game-play', 'video-studio', '3d-studio', 'admin', 'tool',
 ];
@@ -62,6 +62,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (window.location.hash !== destination) {
         history.pushState({ playlab: true }, '', destination);
       }
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }
   },
 

@@ -1,18 +1,8 @@
 import type { Metadata } from "next";
 import { GOOGLE_SITE_VERIFICATION, NAVER_SITE_VERIFICATION, SITE_NAME, SITE_URL } from "@/lib/site";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "PLAYLAB — 바이브코딩 올인원 플랫폼",
@@ -43,9 +33,10 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className="antialiased bg-background text-foreground"
       >
-        <Providers>{children}</Providers>
+        <Providers previewMode={process.env.NODE_ENV === 'development' && process.env.PLAYLAB_DESIGN_PREVIEW === '1'} authConfigured={Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)}>{children}</Providers>
+        {process.env.NODE_ENV === 'development' && process.env.PLAYLAB_DESIGN_PREVIEW === '1' && <div className="preview-notice">디자인 미리보기 · 공개 작품 스냅샷 · 저장/생성 비활성</div>}
       </body>
     </html>
   );

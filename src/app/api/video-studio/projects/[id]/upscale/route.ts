@@ -53,7 +53,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const prompt = typeof shot.prompt === 'string' ? shot.prompt : (typeof meta.prompt === 'string' ? meta.prompt : project.description);
     const ledger = await beginVideoUpscaleOperation({
       userId: user.id,
-      engine: 'upscale',
       prompt: `[${target.label}] ${prompt}`,
       aspect,
       style: typeof meta.style === 'string' ? meta.style : null,

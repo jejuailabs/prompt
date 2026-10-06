@@ -9,7 +9,11 @@ test('H3 selected GPU routes queue and polling, preserving legacy jobs', async (
   const exports = {};
   const source = fs.readFileSync('src/lib/server/runpod.ts', 'utf8');
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
-  vm.runInNewContext(js, { exports, process: { env: { RUNPOD_API_KEY: 'test', RUNPOD_H3_ENDPOINT_ID: 'legacy', RUNPOD_H3_BLACKWELL_ENDPOINT_ID: 'blackwell', RUNPOD_WAN_ENDPOINT_ID: 'wan' } }, fetch: async (url) => { calls.push(url); return { ok: true, json: async () => ({ id: 'job', status: 'IN_QUEUE' }) }; } });
+  let enabledChecks = 0;
+  vm.runInNewContext(js, { exports, require: (name) => {
+    assert.equal(name, '@/lib/server/runpod-admin');
+    return { assertRunpodEngineEnabled: async () => { enabledChecks++; }, resolveManagedRunpodEndpointId: async () => null };
+  }, process: { env: { RUNPOD_API_KEY: 'test', RUNPOD_H3_ENDPOINT_ID: 'legacy', RUNPOD_H3_BLACKWELL_ENDPOINT_ID: 'blackwell', RUNPOD_WAN_ENDPOINT_ID: 'wan' } }, fetch: async (url) => { calls.push(url); return { ok: true, json: async () => ({ id: 'job', status: 'IN_QUEUE' }) }; } });
   assert.equal(exports.getRunpodEndpointId('h3'), 'legacy');
   assert.equal(exports.getRunpodEndpointId('h3', '5090'), 'legacy');
   assert.equal(exports.getRunpodEndpointId('h3', 'blackwell'), 'blackwell');
@@ -17,6 +21,7 @@ test('H3 selected GPU routes queue and polling, preserving legacy jobs', async (
   await exports.queueRunpodWorkflow('h3', {}, undefined, 'blackwell');
   await exports.getRunpodJobStatus('h3', 'job', 'blackwell');
   await exports.getRunpodJobStatus('h3', 'old-job');
+  assert.equal(enabledChecks, 1);
   assert.deepEqual(calls, ['https://api.runpod.ai/v2/blackwell/run', 'https://api.runpod.ai/v2/blackwell/status/job', 'https://api.runpod.ai/v2/legacy/status/old-job']);
   for (const action of ['status', 'cancel']) {
     const route = fs.readFileSync(`src/app/api/video-studio/projects/[id]/render/${action}/route.ts`, 'utf8');

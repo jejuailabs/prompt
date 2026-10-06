@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
           const payoutsEnabled = account.payouts_enabled;
           const newStatus = chargesEnabled && payoutsEnabled ? 'active' : 'pending';
           await db.paymentAccount.update({
-            where: { id: paymentAccount.id },
+            where: { userId: paymentAccount.userId },
             data: { status: newStatus },
           });
         }

@@ -7,6 +7,9 @@ export interface ModuleConfigSeed extends Omit<ModuleDTO, 'newUntil'> {
 }
 
 export const MODULE_CONFIGS: ModuleConfigSeed[] = [
+  { id: 'game-room', phase: 3, titleKo: '게임룸', titleEn: 'Game Room', descKo: '만든 게임을 함께 플레이하세요', descEn: 'Play community games', icon: 'gamepad-2', navOrder: 7.5, enabled: true, status: 'active', mainScreenSlot: 'none', entryView: 'game-room', requiresAuth: false, adminOnly: false },
+  { id: 'public-gallery', phase: 1, titleKo: '둘러보기', titleEn: 'Explore', descKo: '만든 작품을 보고, 실행하고, 이야기하세요', descEn: 'Explore and play community creations', icon: 'images', navOrder: 1.5, enabled: true, status: 'active', mainScreenSlot: 'none', entryView: 'gallery', requiresAuth: false, adminOnly: false },
+  { id: 'tools-catalogue', phase: 1, titleKo: 'AI Tools', titleEn: 'AI Tools', descKo: '작은 아이디어를 완성하는 도구들', descEn: 'Tools for your next idea', icon: 'wrench', navOrder: 3.5, enabled: true, status: 'active', mainScreenSlot: 'none', entryView: 'ai-tools', requiresAuth: false, adminOnly: false },
   {
     id: 'main-gallery', phase: 1, titleKo: '홈', titleEn: 'Home',
     descKo: '아이디어를 만들고, 실험하고, 세상에 선보이세요',
@@ -59,8 +62,8 @@ export const MODULE_CONFIGS: ModuleConfigSeed[] = [
   },
   {
     id: 'academy', phase: 0, titleKo: '가이드 & 튜토리얼', titleEn: 'Academy',
-    descKo: '바이브코딩 입문부터 출시까지', descEn: 'From vibe-coding to launch',
-    icon: 'graduation-cap', navOrder: 9, enabled: true, status: 'coming-soon',
+    descKo: '영상 커리큘럼과 학습노트로 배우는 바이브코딩', descEn: 'Learn with video courses and study notes',
+    icon: 'graduation-cap', navOrder: 9, enabled: true, status: 'active',
     mainScreenSlot: 'none', entryView: 'academy', requiresAuth: false, adminOnly: false,
   },
   {

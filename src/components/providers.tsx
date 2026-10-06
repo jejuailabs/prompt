@@ -9,8 +9,9 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAppStore } from '@/lib/store';
 import { getMessages } from '@/lib/i18n';
 import type { Locale } from '@/lib/types';
+import { RuntimeContext } from './runtime-context';
 
-export default function Providers({ children }: { children: React.ReactNode }) {
+export default function Providers({ children, previewMode = false, authConfigured = false }: { children: React.ReactNode; previewMode?: boolean; authConfigured?: boolean }) {
   const locale = useAppStore((s) => s.locale);
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
@@ -25,13 +26,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const messages = useMemo(() => getMessages(locale), [locale]);
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+    <RuntimeContext.Provider value={{ previewMode, authConfigured }}><ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
         <NextIntlClientProvider locale={(locale satisfies Locale) as string} messages={messages} timeZone="Asia/Seoul">
           <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
           <Toaster />
         </NextIntlClientProvider>
       </QueryClientProvider>
-    </ThemeProvider>
+    </ThemeProvider></RuntimeContext.Provider>
   );
 }

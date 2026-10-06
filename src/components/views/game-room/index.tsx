@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Gamepad2, Heart, Loader2, Play, TrendingUp, Clock, Plus, Trash2, Edit2, Trophy } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
-import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -44,13 +43,13 @@ export default function GameRoomView() {
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['game-room', sort],
     queryFn: () => api.get<{ games: GameDTO[] }>(`/api/game-room?sort=${sort}`),
   });
 
   const games = data?.games ?? [];
-  const { data: lbData } = useQuery({
+  const { data: lbData, isError: leaderboardError, isLoading: leaderboardLoading } = useQuery({
     queryKey: ['leaderboard-global', lbPeriod],
     queryFn: () => api.get<{ rankings: Array<{ rank: number; username: string; score: number; gameTitle: string; playedAt: string }> }>(`/api/game-room/leaderboard?period=${lbPeriod}&limit=10`),
     refetchInterval: 60000,
@@ -70,16 +69,16 @@ export default function GameRoomView() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-6">
+    <div className="w-full max-w-6xl mx-auto space-y-7 px-5 py-8 md:px-8 md:py-10">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-5">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Gamepad2 className="h-6 w-6" /> {t.title}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">{t.subtitle}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button size="sm" onClick={() => setSubmitOpen(true)}><Plus className="mr-1 h-4 w-4" />게임 등록</Button>
           <Button
             variant={sort === 'popular' ? 'default' : 'outline'}
@@ -100,50 +99,13 @@ export default function GameRoomView() {
 
       {session?.role === 'admin' && (pending.data?.games.length ?? 0) > 0 && <Card className="p-4"><h2 className="font-semibold">게임 심사 대기</h2><div className="mt-3 space-y-2">{pending.data!.games.map((game) => <div key={game.id} className="flex flex-wrap items-center gap-3 rounded-md border p-3"><div className="min-w-0 flex-1"><p className="font-medium">{game.title}</p><a className="block truncate text-xs text-primary underline" href={game.contentUrl ?? '#'} target="_blank" rel="noreferrer">{game.contentUrl}</a></div><Button size="sm" onClick={() => void moderate(game.id, 'approve')}>승인</Button><Button size="sm" variant="destructive" onClick={() => void moderate(game.id, 'reject')}>반려</Button></div>)}</div></Card>}
 
-      {/* Leaderboard */}
-      <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-500" />
-            <h2 className="font-semibold">게임 랭킹</h2>
-          </div>
-          <div className="flex gap-1">
-            {(['today', 'week', 'month', 'all'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setLbPeriod(p)}
-                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                  lbPeriod === p ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-muted'
-                }`}
-              >
-                {{ today: '오늘', week: '이번주', month: '이번달', all: '전체' }[p]}
-              </button>
-            ))}
-          </div>
-        </div>
-        {lbData?.rankings && lbData.rankings.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
-            {lbData.rankings.map((r) => (
-              <div key={`${r.rank}-${r.username}-${r.score}`} className="flex items-center gap-2 py-1.5 text-sm border-b border-border/50 last:border-0">
-                <span className={`w-6 text-center font-bold ${r.rank <= 3 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
-                  {r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : r.rank}
-                </span>
-                <span className="flex-1 truncate font-medium">{r.username}</span>
-                <span className="text-xs text-muted-foreground truncate max-w-[100px]">{r.gameTitle}</span>
-                <span className="font-mono font-semibold tabular-nums text-sm">{r.score.toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground text-center py-6">아직 기록이 없습니다. 게임을 플레이해보세요!</p>
-        )}
-      </Card>
-
       {/* Game Grid */}
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
+      ) : isError ? (
+        <EmptyState title="게임 목록을 불러오지 못했어요." description="잠시 후 다시 시도해주세요." action={<Button variant="outline" onClick={() => void refetch()}>다시 불러오기</Button>} />
       ) : games.length === 0 ? (
         <EmptyState title={t.empty} description="" />
       ) : (
@@ -151,8 +113,12 @@ export default function GameRoomView() {
           {games.map((game) => (
             <Card
               key={game.id}
-              className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all group"
+              role="button"
+              tabIndex={0}
+              aria-label={`${game.title} 플레이`}
+              className="gap-0 py-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all group"
               onClick={() => navigate('game-play', { id: game.id })}
+              onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); navigate('game-play', { id: game.id }); } }}
             >
               {/* Thumbnail */}
               <div className="relative aspect-[4/3] bg-gradient-to-br from-violet-600/20 to-indigo-600/20 overflow-hidden">
@@ -233,6 +199,45 @@ export default function GameRoomView() {
           ))}
         </div>
       )}
+
+      {/* Leaderboard */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-500" />
+            <h2 className="font-semibold">게임 랭킹</h2>
+          </div>
+          <div className="flex gap-1">
+            {(['today', 'week', 'month', 'all'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setLbPeriod(p)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  lbPeriod === p ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {{ today: '오늘', week: '이번주', month: '이번달', all: '전체' }[p]}
+              </button>
+            ))}
+          </div>
+        </div>
+        {leaderboardError ? <p role="status" className="text-sm text-muted-foreground py-3">랭킹을 불러오지 못했어요.</p> : leaderboardLoading ? <p className="text-sm text-muted-foreground py-3">랭킹을 불러오는 중이에요.</p> : lbData?.rankings && lbData.rankings.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+            {lbData.rankings.map((r) => (
+              <div key={`${r.rank}-${r.username}-${r.score}`} className="flex items-center gap-2 py-1.5 text-sm border-b border-border/50 last:border-0">
+                <span className={`w-6 text-center font-bold ${r.rank <= 3 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                  {r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : r.rank}
+                </span>
+                <span className="flex-1 truncate font-medium">{r.username}</span>
+                <span className="text-xs text-muted-foreground truncate max-w-[100px]">{r.gameTitle}</span>
+                <span className="font-mono font-semibold tabular-nums text-sm">{r.score.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-6">아직 기록이 없습니다. 게임을 플레이해보세요!</p>
+        )}
+      </Card>
 
       <Dialog open={submitOpen} onOpenChange={setSubmitOpen}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>게임 등록 요청</DialogTitle><DialogDescription>공개 HTTPS 배포 URL을 제출하면 관리자 승인 후 게임룸에 공개됩니다.</DialogDescription></DialogHeader><div className="space-y-3"><Input placeholder="게임 제목" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /><Input placeholder="게임 배포 URL (https://...)" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} /><Input placeholder="썸네일 URL (선택)" value={form.thumbnailUrl} onChange={(e) => setForm({ ...form, thumbnailUrl: e.target.value })} /><Input placeholder="태그: 액션, 퍼즐, 캐주얼" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} /><Textarea placeholder="게임 소개" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /><Textarea placeholder="조작법 (예: 방향키 이동, 스페이스 발사)" value={form.controls} onChange={(e) => setForm({ ...form, controls: e.target.value })} />{submitError && <p className="text-sm text-destructive">{submitError}</p>}<Button className="w-full" onClick={() => void submitGame()} disabled={submitting}>{submitting ? '제출 중...' : '심사 요청하기'}</Button></div></DialogContent></Dialog>
     </div>

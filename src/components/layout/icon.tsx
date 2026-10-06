@@ -51,6 +51,10 @@ import {
   Wallet,
   Wand2,
   Workflow,
+  Wrench,
+  GitFork,
+  Film,
+  Mic,
   X,
   Zap,
 } from 'lucide-react';
@@ -59,6 +63,10 @@ import { cn } from '@/lib/utils';
 // Static icon map — string keys match MODULE_CONFIGS / QUICK_ACTIONS / shell usage (CONTRACTS §6).
 // Unknown names fall back to Sparkles so a bad registry entry never crashes the UI.
 const ICON_MAP = {
+  wrench: Wrench,
+  'git-fork': GitFork,
+  film: Film,
+  mic: Mic,
   home: Home,
   'folder-kanban': FolderKanban,
   images: Images,

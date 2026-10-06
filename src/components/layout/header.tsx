@@ -12,6 +12,11 @@ import { QUICK_ACTIONS } from '@/lib/quick-actions';
 import { useRefreshSession } from '@/hooks/use-session';
 import { Icon } from '@/components/layout/icon';
 import { Logo } from '@/components/layout/logo';
+import { CreditsWidget } from './sidebar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ExploreMenu } from '@/components/experience/explore-menu';
+import { useModules } from '@/hooks/use-session';
+import { moduleTitle } from '@/lib/registry/module-configs';
 import { CreatePromptDialog } from '@/components/shared/create-prompt-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -26,6 +31,7 @@ import {
 import { Input } from '@/components/ui/input';
 import type { EventDTO, ViewKey } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import './header.css';
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : 'Unknown error';
@@ -136,7 +142,7 @@ function NotificationBell() {
 
 // ─── account dropdown (desktop) ─────────────────────────────────────────────
 
-function AccountMenu() {
+function AccountMenu({ onCredits }: { onCredits: () => void }) {
   const t = useTranslations('core');
   const locale = useAppStore((s) => s.locale);
   const session = useAppStore((s) => s.session);
@@ -147,7 +153,7 @@ function AccountMenu() {
 
   if (!session) {
     return (
-      <Button variant="ghost" size="sm" onClick={() => setLoginOpen(true)}>
+      <Button className="header-login" variant="ghost" size="sm" onClick={() => setLoginOpen(true)}>
         {t('login')}
       </Button>
     );
@@ -188,6 +194,10 @@ function AccountMenu() {
           {locale === 'en' ? 'My Projects' : '내 프로젝트'}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onCredits}>
+          <Icon name="credit-card" className="size-4" />
+          {locale === 'en' ? 'Credits & top-up' : '크레딧 · 충전 요청'}
+        </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={() => void logout()}>
           <Icon name="log-out" className="size-4" />
           {t('logout')}
@@ -219,9 +229,9 @@ function CreateMenu() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="sm" className="gap-1 px-2.5">
+          <Button size="sm" className="header-create" aria-label={locale === 'en' ? 'Create' : '작업 올리기'}>
             <Icon name="plus" className="size-4" />
-            <span className="hidden sm:inline">{t('create')}</span>
+            <span className="hidden sm:inline">{locale === 'en' ? 'Create' : '작업 올리기'}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
@@ -249,6 +259,11 @@ export default function Header() {
 
   const [q, setQ] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [creditsOpen, setCreditsOpen] = useState(false);
+  const { data: modules = [] } = useModules();
+  const view = useAppStore(s => s.view);
+  const locale = useAppStore(s => s.locale);
+  const session = useAppStore(s => s.session);
 
   const search = (value: string) => {
     const v = value.trim();
@@ -259,57 +274,47 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
-      <div className="flex h-14 items-center gap-2 px-3 md:px-6">
+    <header data-home={view === 'home' || undefined} className="ribbon-header sticky top-0 z-40 border-b bg-background/90 backdrop-blur-xl">
+      <div className="ribbon-header-inner flex items-center gap-2">
         {/* mobile logo */}
-        <button type="button" className="md:hidden" onClick={() => navigate('home')}>
-          <Logo compact />
+        <button type="button" className="shrink-0" aria-label="PLAYLAB 홈" onClick={() => navigate('home')}>
+          <Logo />
         </button>
 
-        {/* desktop search */}
-        <div className="relative hidden w-full max-w-md md:block">
-          <Icon name="search" className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') search(q);
-            }}
-            placeholder={t('searchPlaceholder')}
-            className="pl-8"
-            aria-label={t('searchPlaceholder')}
-          />
-        </div>
-
-        <div className="ml-auto flex items-center gap-1 md:gap-1.5">
+        <nav className="ribbon-nav" aria-label="주요 공간">
+          {modules.filter(m => ['gallery', 'prompt-wiki', 'community', 'ai-tools', 'lab'].includes(m.entryView) && !m.group).map(m => <button key={m.id} aria-current={view === m.entryView ? 'page' : undefined} onClick={() => navigate(m.entryView as ViewKey, m.entryView === 'gallery' ? { tab: 'artifacts' } : undefined)}>{moduleTitle(m, locale)}</button>)}
+        </nav>
+        <div className="header-actions">
           {/* mobile search trigger */}
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden"
             aria-label={t('searchPlaceholder')}
             onClick={() => setSearchOpen(true)}
           >
             <Icon name="search" className="size-4" />
           </Button>
 
-          <ThemeToggle />
+          <div className="hidden lg:block"><ThemeToggle /></div>
+          {session && <button className="header-credits hidden xl:block" onClick={() => setCreditsOpen(true)}>◉ {session.credits.toLocaleString()} <span>크레딧</span></button>}
 
           <div className="hidden md:block">
             <NotificationBell />
           </div>
-          <div className="hidden md:block">
-            <AccountMenu />
+          <div className="header-account">
+            <AccountMenu onCredits={() => setCreditsOpen(true)} />
           </div>
 
           <CreateMenu />
+          <ExploreMenu />
         </div>
       </div>
 
+      <Dialog open={creditsOpen} onOpenChange={setCreditsOpen}><DialogContent><DialogHeader><DialogTitle>{locale === 'en' ? 'Your credits' : '내 크레딧'}</DialogTitle><DialogDescription>{locale === 'en' ? 'Check your balance and request a top-up.' : '잔액을 확인하고 충전을 요청하세요.'}</DialogDescription></DialogHeader><CreditsWidget /></DialogContent></Dialog>
       {/* mobile full-screen search overlay */}
       {searchOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-background/90 backdrop-blur-sm" onClick={() => setSearchOpen(false)} />
+        <div className="fixed inset-x-0 top-0 z-50">
+          <div className="fixed inset-0 bg-background/90 backdrop-blur-sm" onClick={() => setSearchOpen(false)} />
           <div className="relative flex items-center gap-2 border-b bg-background p-3">
             <Icon name="search" className="size-4 shrink-0 text-muted-foreground" />
             <Input

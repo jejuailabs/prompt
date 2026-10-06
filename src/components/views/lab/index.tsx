@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ViewHeader } from '@/components/shared/view-header';
+import { PreviewNotice, useRuntime } from '@/components/runtime-context';
 import { cn } from '@/lib/utils';
 
 type Aspect = '1:1' | '3:4' | '4:3' | '16:9' | '9:16';
@@ -48,6 +49,7 @@ function downloadImage(url: string, filename: string) {
 }
 
 export default function LabView() {
+  const { previewMode } = useRuntime();
   const t = useTranslations('lab');
   const tc = useTranslations('core');
   const params = useAppStore((s) => s.params);
@@ -152,6 +154,7 @@ export default function LabView() {
     setSelectedResults((prev) => (prev.includes(artifactId) ? prev.filter((x) => x !== artifactId) : [...prev, artifactId]));
 
   const improve = async () => {
+    if (previewMode || !requireLogin()) return;
     setImproving(true);
     try {
       const { improved } = await api.post<{ improved: string }>('/api/lab/improve-prompt', { text: promptText });
@@ -195,8 +198,9 @@ export default function LabView() {
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-4">
+    <div className="editorial-page flex min-w-0 flex-col gap-4">
       <ViewHeader title={t('title')} subtitle={t('subtitle')} />
+      <PreviewNotice />
 
       {/* ━━ TOP: Prompt bar ━━ */}
       <Card className="p-4">
@@ -214,7 +218,7 @@ export default function LabView() {
               variant="outline"
               size="sm"
               className="h-7 text-xs"
-              disabled={improving || !promptText.trim()}
+              disabled={previewMode || improving || !promptText.trim()}
               onClick={() => void improve()}
             >
               {improving ? <Loader2 className="size-3 animate-spin" /> : <Sparkles className="size-3" />}
@@ -353,6 +357,8 @@ export default function LabView() {
                   </label>
                 ))}
               </div>
+            ) : providersQ.isError ? (
+              <p role="status" className="text-sm text-muted-foreground">모델 목록을 불러오지 못했어요. <button className="underline" onClick={() => void providersQ.refetch()}>다시 불러오기</button></p>
             ) : providersQ.isLoading ? (
               <p className="text-xs text-muted-foreground">로딩 중...</p>
             ) : (

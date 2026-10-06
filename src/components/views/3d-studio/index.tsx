@@ -32,6 +32,8 @@ import { StepForm } from '@/components/shared/step-form';
 import { ModelPreview } from './model-preview';
 import { GenerationPreview } from './generation-preview';
 import { MotionLibrary } from './motion-library';
+import { ArtifactCard } from '@/components/shared/artifact-card';
+import { PreviewNotice } from '@/components/runtime-context';
 
 function errMsg(e: unknown): string {
   if (e instanceof ApiError) return e.message;
@@ -60,37 +62,13 @@ export default function Studio3dView() {
 
 function AssetGalleryLanding({ session, onNew, onOpenProject }: { session: boolean; onNew: () => void; onOpenProject: (id: string) => void }) {
   const [tab, setTab] = useState<'gallery' | 'mine'>('gallery');
-  const publicAssets = useQuery({
-    queryKey: ['asset-studio-gallery'],
-    queryFn: () => api.get<ArtifactDTO[]>('/api/artifacts?scope=feed&type=3d_asset&limit=12'),
-  });
-  const mine = useQuery({
-    queryKey: ['asset-studio-projects'],
-    queryFn: () => api.get<ArtifactDTO[]>('/api/artifacts?scope=mine&type=3d_asset&limit=24'),
-    enabled: session,
-  });
-  const examples = [
-    ['흑요석 찻잔', '제품 · Blender 기반', 'from-stone-950 via-stone-700 to-amber-200'],
-    ['제주 돌담 마을', '공간 · 환경 에셋', 'from-emerald-950 via-teal-700 to-cyan-200'],
-    ['캐주얼 백팩', '제품 · 리텍스처 가능', 'from-slate-950 via-blue-800 to-slate-200'],
-    ['단편 영화 세트', '장소 · 씬 패키지', 'from-violet-950 via-fuchsia-700 to-pink-200'],
-  ];
-
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-7 pb-10">
-      <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-zinc-950 via-slate-900 to-emerald-950 px-6 py-9 text-white shadow-xl sm:px-10">
-        <div className="absolute -right-20 top-0 size-72 rounded-full bg-emerald-400/20 blur-3xl" />
-        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div><div className="mb-3 flex items-center gap-2 text-sm font-medium text-emerald-200"><Box className="size-4" /> PLAYLAB ASSET STUDIO</div><h1 className="text-3xl font-bold tracking-tight sm:text-5xl">좋은 장면은 좋은<br />에셋에서 시작됩니다.</h1><p className="mt-4 max-w-xl text-sm leading-6 text-slate-300">캐릭터, 제품, 장소, Blender 씬을 탐색하고 내 영상 프로젝트의 기준 에셋으로 가져오세요.</p></div>
-          <Button className="bg-white text-slate-950 hover:bg-slate-100" onClick={onNew}><Sparkles className="size-4" /> 새 에셋 만들기</Button>
-        </div>
-      </section>
-      <section className="rounded-3xl border bg-card p-4 sm:p-6">
-        <div className="flex items-center justify-between border-b pb-4"><div className="flex gap-1 rounded-xl bg-muted p-1"><button type="button" onClick={() => setTab('gallery')} className={`rounded-lg px-3 py-2 text-sm font-medium ${tab === 'gallery' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>Asset Gallery</button><button type="button" onClick={() => setTab('mine')} className={`rounded-lg px-3 py-2 text-sm font-medium ${tab === 'mine' ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}>내 에셋</button></div><Button variant="outline" size="sm" onClick={onNew}>+ 새 에셋</Button></div>
-        {tab === 'gallery' ? <><div className="mt-5"><h2 className="font-semibold">다른 제작자가 만든 기준 에셋</h2><p className="mt-1 text-sm text-muted-foreground">영상 프로젝트로 가져가 레퍼런스, 첫 프레임 또는 Blender 씬으로 사용하세요.</p></div><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{examples.map(([title, subtitle, gradient]) => <article key={title} className="overflow-hidden rounded-2xl border bg-background"><div className={`relative aspect-[4/5] bg-gradient-to-br ${gradient}`}><div className="absolute inset-0 bg-[radial-gradient(circle_at_68%_25%,rgba(255,255,255,.45),transparent_20%),linear-gradient(145deg,transparent_35%,rgba(0,0,0,.45))]" /><Badge className="absolute left-3 top-3 border-0 bg-black/40 text-white hover:bg-black/40">공개 에셋</Badge><Box className="absolute bottom-4 right-4 size-10 text-white/70" /></div><div className="p-3"><p className="font-medium">{title}</p><p className="mt-1 text-xs text-muted-foreground">{subtitle}</p><Button variant="outline" size="sm" className="mt-3 w-full" onClick={onNew}>이 에셋으로 시작</Button></div></article>)}{publicAssets.data?.map((asset) => <article key={asset.id} className="overflow-hidden rounded-2xl border bg-background"><div className="relative aspect-[4/5] bg-muted">{asset.fileUrl ? <img src={asset.fileUrl} alt="" className="size-full object-cover" /> : <Box className="absolute left-1/2 top-1/2 size-9 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />}</div><div className="p-3"><p className="truncate font-medium">{asset.title}</p><p className="mt-1 text-xs text-muted-foreground">by {asset.owner.username}</p></div></article>)}</div></> : <div className="mt-6">{!session ? <div className="rounded-2xl border border-dashed p-12 text-center"><Box className="mx-auto size-8 text-muted-foreground" /><h2 className="mt-3 font-semibold">내 에셋을 모아보세요</h2><p className="mt-1 text-sm text-muted-foreground">로그인하면 만든 캐릭터, 제품, 장소 에셋을 프로젝트별로 관리합니다.</p><Button className="mt-5" onClick={onNew}>로그인하고 시작</Button></div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{(mine.data ?? []).map((asset) => <button type="button" key={asset.id} onClick={() => onOpenProject(asset.id)} className="rounded-2xl border p-4 text-left hover:border-primary/50"><Box className="size-6 text-primary" /><p className="mt-6 font-medium">{asset.title}</p><p className="mt-1 text-xs text-muted-foreground">{asset.description || '에셋 프로젝트'}</p></button>)}{!mine.isLoading && !mine.data?.length && <button type="button" onClick={onNew} className="flex min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed text-muted-foreground hover:border-primary hover:text-primary"><Sparkles className="size-6" /><span className="mt-2 text-sm font-medium">첫 에셋 만들기</span></button>}</div>}</div>}
-      </section>
-    </div>
-  );
+  const publicAssets = useQuery({ queryKey: ['asset-studio-gallery'], queryFn: () => api.get<ArtifactDTO[]>('/api/artifacts?scope=feed&type=3d_asset&limit=12') });
+  return <div className="editorial-page space-y-7">
+    <ViewHeader title="3D 에셋 스튜디오" subtitle="이미지를 입체로 만들고, 완성한 에셋을 함께 살펴보세요." actions={<Button onClick={onNew}>새 에셋 만들기</Button>} />
+    <PreviewNotice />
+    <div className="flex gap-2"><Button variant={tab === 'gallery' ? 'default' : 'outline'} onClick={() => setTab('gallery')}>공개 에셋</Button><Button variant={tab === 'mine' ? 'default' : 'outline'} onClick={() => setTab('mine')}>내 프로젝트</Button></div>
+    {tab === 'gallery' ? publicAssets.isLoading ? <p role="status">공개 에셋을 불러오는 중이에요.</p> : publicAssets.isError ? <EmptyState title="에셋을 불러오지 못했어요." action={<Button onClick={() => void publicAssets.refetch()}>다시 불러오기</Button>} /> : publicAssets.data?.length ? <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">{publicAssets.data.map(asset => <ArtifactCard key={asset.id} artifact={asset} />)}</div> : <EmptyState title="아직 공개된 3D 에셋이 없어요." description="에셋을 만들고 공개하면 이곳에서 함께 볼 수 있어요." action={<Button onClick={onNew}>첫 에셋 만들기</Button>} /> : session ? <ProjectList onSelect={onOpenProject} /> : <EmptyState title="로그인하면 내 3D 프로젝트를 볼 수 있어요." action={<Button onClick={onNew}>로그인</Button>} />}
+  </div>;
 }
 
 // ─── Project List ─────────────────────────────────────────────────────────────
@@ -117,6 +95,7 @@ function ProjectList({ onSelect }: { onSelect: (id: string) => void }) {
     );
   }
 
+  if (q.isError) return <EmptyState title="프로젝트를 불러오지 못했어요." action={<Button onClick={() => void q.refetch()}>다시 불러오기</Button>} />;
   const projects = q.data ?? [];
   if (projects.length === 0) {
     return <EmptyState title={t('noProjects')} description={t('noProjectsDesc')} />;

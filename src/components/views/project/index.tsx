@@ -10,6 +10,8 @@ import {
   Loader2,
   MessageCircle,
   MoreHorizontal,
+  Maximize,
+  Square,
   Play,
   Send,
   Trash2,
@@ -114,7 +116,7 @@ export default function ProjectView() {
     return <EmptyState title={t('notFound')} description={t('notFoundDesc')} />;
   }
   if (artifactQ.isLoading) {
-    return null;
+    return <div className="editorial-page"><div className="h-[60vh] animate-pulse bg-muted" role="status" aria-label="작품 불러오는 중" /></div>;
   }
   if (artifactQ.isError || !a) {
     return (
@@ -199,7 +201,7 @@ export default function ProjectView() {
 
   // ── render ──
   return (
-    <div className="min-w-0">
+    <div className="editorial-page min-w-0">
       {/* breadcrumb row */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Button
@@ -221,11 +223,11 @@ export default function ProjectView() {
       </div>
 
       {/* body — single column for static types, two-column for executable */}
-      <div className={`grid items-start gap-6 ${isExecutable ? 'lg:grid-cols-[1fr_1.1fr]' : 'mx-auto max-w-4xl'}`}>
+      <div className="project-stage">
         {/* Preview */}
-        <Card className={`overflow-hidden ${isExecutable ? 'lg:order-2' : ''}`}>
+        <Card className="project-preview overflow-hidden" id="project-player">
           <div className="relative">
-            <PreviewRenderer artifact={a} playing={isPlaying} expanded={a.type === 'landing_page'} className={isExecutable ? 'aspect-[4/3] w-full' : a.type === 'landing_page' ? 'min-h-[400px] w-full' : 'w-full'} />
+            <PreviewRenderer artifact={a} playing={isPlaying} expanded className="project-viewport" />
             {isExecutable && !isPlaying && (
               <button
                 type="button"
@@ -242,10 +244,17 @@ export default function ProjectView() {
               </button>
             )}
           </div>
+          <div className="project-toolbar">
+            <span>{isExecutable ? (isPlaying ? '실행 중 · 작품 안을 눌러 조작하세요' : 'PLAYGROUND / 직접 경험하기') : 'PLAYLAB / 작품 미리보기'}</span>
+            <div className="flex gap-2">
+              {isPlaying && <button aria-label="실행 중지" onClick={() => setPlayingId(null)}><Square size={15} /></button>}
+              <button aria-label="전체 화면" onClick={() => { void document.getElementById('project-player')?.requestFullscreen?.().catch(() => toast({ title: '이 브라우저에서는 전체 화면을 사용할 수 없어요.' })); }}><Maximize size={16} /></button>
+            </div>
+          </div>
         </Card>
 
         {/* Info */}
-        <div className={`min-w-0 ${isExecutable ? 'lg:order-1' : ''}`}>
+        <div className="project-info min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight">{a.title}</h1>
             <Badge variant="secondary">{categoryLabel}</Badge>

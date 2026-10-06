@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { ViewHeader } from '@/components/shared/view-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { AdSlot } from '@/components/experience/ad-slot';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -36,7 +37,7 @@ const CATEGORY_KEYS = ['catImage', 'catVideo', 'catMusic', 'catCoding', 'catMark
 const CATEGORY_VALUES = ['이미지', '영상', '음악', '코딩', '마케팅', '게임', '기타'] as const;
 
 function ListSkeleton() {
-  return null;
+  return <div className="works-grid" aria-label="불러오는 중">{[0,1,2,3].map(n => <div key={n} className="work-skeleton animate-pulse" />)}</div>;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -126,7 +127,8 @@ export default function GalleryView() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [qInput, setQInput] = useState<string | null>(null);
-  const [tab, setTab] = useState<'prompts' | 'artifacts'>(params.tab === 'artifacts' ? 'artifacts' : 'prompts');
+  const [tab, setTab] = useState<'prompts' | 'artifacts'>(params.tab === 'prompts' ? 'prompts' : 'artifacts');
+  const [artifactType, setArtifactType] = useState('');
   const [sort, setSort] = useState<SortKey>('new');
   const [category, setCategory] = useState<string>('');
 
@@ -143,8 +145,8 @@ export default function GalleryView() {
   });
 
   const artifacts = useQuery({
-    queryKey: ['artifacts', 'gallery', artifactSort, q],
-    queryFn: () => api.get<ArtifactDTO[]>(`/api/artifacts?scope=feed&sort=${artifactSort}&q=${encodeURIComponent(q)}`),
+    queryKey: ['artifacts', 'gallery', artifactSort, q, artifactType],
+    queryFn: () => api.get<ArtifactDTO[]>(`/api/artifacts?scope=feed&sort=${artifactSort}&q=${encodeURIComponent(q)}&type=${artifactType}`),
     enabled: tab === 'artifacts',
   });
 
@@ -171,29 +173,21 @@ export default function GalleryView() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
-      <ViewHeader
-        title={t('title')}
-        subtitle={t('subtitle')}
-        actions={
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            {t('writePrompt')}
-          </Button>
-        }
-      />
-
+    <div className="editorial-page">
+      <div className="editorial-page-intro"><div><p className="eyebrow">THE OPEN GALLERY / PLAYLAB</p><h1 className="editorial-page-title">{locale === 'en' ? 'A little out of the ordinary.' : '조금 다른 상상들이 모이는 곳.'}</h1><p>{locale === 'en' ? 'Watch it. Play it. Find out how it was made.' : '감상하고, 직접 써보고, 어떻게 만들었는지 이야기해요.'}</p></div><Button onClick={() => setCreateOpen(true)}>{t('writePrompt')} ↗</Button></div>
       {/* controls + tab panels share one Tabs root (Radix requires TabsContent inside Tabs) */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as 'prompts' | 'artifacts')}>
-        <div className="mb-6 flex flex-wrap items-center gap-3">
+        <div className="gallery-controls flex flex-wrap items-center gap-3">
           <Input
             value={q}
             onChange={(e) => setQInput(e.target.value)}
             placeholder={t('searchPlaceholder')}
+            aria-label={t('searchPlaceholder')}
             className="w-64"
           />
           <TabsList>
             <TabsTrigger value="prompts">{t('tabPrompts')}</TabsTrigger>
-            <TabsTrigger value="artifacts">{t('tabArtifacts')}</TabsTrigger>
+            <TabsTrigger value="artifacts">{locale === 'en' ? 'Works' : '작품'}</TabsTrigger>
           </TabsList>
           <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
             <SelectTrigger className="w-32">
@@ -205,7 +199,7 @@ export default function GalleryView() {
               <SelectItem value="forked">{t('sortForked')}</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex flex-wrap items-center gap-2">{categoryChips}</div>
+          <div className="flex w-full flex-wrap items-center gap-2">{tab === 'prompts' ? categoryChips : [['','전체'],['image','이미지'],['video','영상'],['audio','음악'],['3d_asset','3D'],['game','게임'],['app','앱'],['landing_page','웹페이지']].map(([value,label]) => <Button key={value} size="sm" variant={artifactType === value ? 'secondary' : 'ghost'} onClick={() => setArtifactType(value)}>{locale === 'en' ? (value || 'All') : label}</Button>)}</div>
         </div>
 
         {/* prompts tab */}
@@ -255,7 +249,7 @@ export default function GalleryView() {
             <EmptyState title={t('emptyArtifactsTitle')} description={t('emptyArtifactsDesc')} />
           )}
           {(artifacts.data?.length ?? 0) > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="works-grid">
               {artifacts.data!.map((a) => (
                 <ArtifactCard key={a.id} artifact={a} onClick={() => navigate('project', { id: a.id })} />
               ))}
@@ -264,6 +258,7 @@ export default function GalleryView() {
         </TabsContent>
       </Tabs>
 
+      <AdSlot />
       <CreatePromptDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );

@@ -1,6 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { modelSource, videoSource, artifactThumbnail } from '@/lib/artifact-media';
+import { ExecutablePreview } from '@/components/experience/executable-preview';
 import { useTranslations } from 'next-intl';
 import { Gamepad2, Music2, Pause, Play, RotateCcw, Sparkles } from 'lucide-react';
 import type { ArtifactDTO, LandingContent } from '@/lib/types';
@@ -39,95 +42,20 @@ function FallbackPreview() {
   );
 }
 
-// ─── 3D viewer with interactive rotation ────────────────────────────────────
+const ModelPreview = dynamic(() => import('@/components/views/3d-studio/model-preview').then(m => m.ModelPreview), { ssr: false, loading: () => <p className="p-8 text-sm text-muted-foreground">3D 불러오는 중…</p> });
 
-function ThreeDViewer({ textureUrl, alt }: { textureUrl?: string | null; alt: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [rotation, setRotation] = useState({ x: -25, y: 35 });
-  const dragging = useRef(false);
-  const lastPos = useRef({ x: 0, y: 0 });
+function Asset3D({ artifact, expanded }: { artifact: ArtifactDTO; expanded: boolean }) {
+  const src = modelSource(artifact);
+  if (expanded && src) return <div className="h-full overflow-auto p-4"><ModelPreview src={src} /></div>;
+  return artifact.metadata?.previewUrl ? <ImgCover src={artifact.metadata.previewUrl} alt={artifact.title} /> : <div className="flex h-full items-center justify-center text-sm text-muted-foreground">3D · {expanded ? '모델 파일을 준비하고 있어요' : '열어서 모델 보기'}</div>;
+}
 
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    dragging.current = true;
-    lastPos.current = { x: e.clientX, y: e.clientY };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, []);
-
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragging.current) return;
-    const dx = e.clientX - lastPos.current.x;
-    const dy = e.clientY - lastPos.current.y;
-    lastPos.current = { x: e.clientX, y: e.clientY };
-    setRotation((r) => ({ x: r.x + dy * 0.5, y: r.y + dx * 0.5 }));
-  }, []);
-
-  const onPointerUp = useCallback(() => { dragging.current = false; }, []);
-
-  // Auto-rotate when not dragging
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (!dragging.current) {
-        setRotation((r) => ({ ...r, y: r.y + 0.3 }));
-      }
-    }, 16);
-    return () => clearInterval(id);
-  }, []);
-
-  const faces = [
-    { transform: `rotateY(0deg) translateZ(80px)` },
-    { transform: `rotateY(180deg) translateZ(80px)` },
-    { transform: `rotateY(90deg) translateZ(80px)` },
-    { transform: `rotateY(-90deg) translateZ(80px)` },
-    { transform: `rotateX(90deg) translateZ(80px)` },
-    { transform: `rotateX(-90deg) translateZ(80px)` },
-  ];
-
-  return (
-    <div
-      ref={containerRef}
-      className="flex h-full w-full cursor-grab items-center justify-center bg-gradient-to-br from-primary/15 via-transparent to-primary/5 active:cursor-grabbing"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-    >
-      <div style={{ perspective: '600px' }}>
-        <div
-          style={{
-            width: '160px',
-            height: '160px',
-            position: 'relative',
-            transformStyle: 'preserve-3d',
-            transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
-            transition: dragging.current ? 'none' : 'transform 0.05s linear',
-          }}
-        >
-          {faces.map((face, i) => (
-            <div
-              key={i}
-              style={{
-                position: 'absolute',
-                width: '160px',
-                height: '160px',
-                transform: face.transform,
-                backfaceVisibility: 'hidden',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                borderRadius: '8px',
-                border: '1px solid hsl(var(--border))',
-                ...(textureUrl
-                  ? { backgroundImage: `url(${textureUrl})` }
-                  : { background: 'hsl(var(--primary) / 0.15)' }),
-              }}
-              aria-label={i === 0 ? alt : undefined}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="absolute bottom-2 right-2 rounded bg-black/50 px-2 py-0.5 text-[10px] text-white/70">
-        드래그하여 회전
-      </div>
-    </div>
-  );
+function MediaVideo({ artifact, expanded }: { artifact: ArtifactDTO; expanded: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const src = videoSource(artifact);
+  if (!src) return artifact.metadata.frames?.length ? <VideoPlayer artifact={artifact} /> : <FallbackPreview />;
+  if (failed) return <div className="flex h-full items-center justify-center p-6 text-center text-sm text-muted-foreground">영상을 불러오지 못했어요. 잠시 후 다시 열어주세요.</div>;
+  return <div className="relative h-full w-full" onClick={expanded ? event => event.stopPropagation() : undefined}><video src={src} poster={artifact.metadata.previewUrl || artifact.metadata.frames?.[0]} controls={expanded} playsInline preload="metadata" onError={() => setFailed(true)} className="h-full w-full object-contain" />{!expanded && <PlayOverlay />}</div>;
 }
 
 // ─── Video slideshow with controls ──────────────────────────────────────────
@@ -138,7 +66,7 @@ function VideoPlayer({ artifact }: { artifact: ArtifactDTO }) {
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const frameMs = 2800;
 
   useEffect(() => {
@@ -305,7 +233,7 @@ function LandingPageRenderer({ artifact, expanded = false }: { artifact: Artifac
 function AudioPreview({ artifact }: { artifact: ArtifactDTO }) {
   const cover = artifact.metadata?.previewUrl;
   return (
-    <div className="relative flex h-full w-full flex-col justify-end bg-gradient-to-br from-violet-600 via-fuchsia-500 to-amber-400">
+    <div className="relative flex h-full w-full flex-col justify-end bg-gradient-to-br from-stone-700 via-stone-800 to-stone-950">
       {cover && <ImgCover src={cover} alt={artifact.title} />}
       <div className="absolute inset-0 flex items-center justify-center">
         <Music2 className="size-10 text-white/80 drop-shadow" />
@@ -335,29 +263,25 @@ export function PreviewRenderer({
 }) {
   const t = useTranslations('core');
   const meta = artifact.metadata ?? {};
+  const thumbnail = artifactThumbnail(artifact);
 
   return (
     <div className={cn('relative h-full w-full overflow-hidden bg-muted', className)}>
       {artifact.type === 'image' && (artifact.fileUrl ? <ImgCover src={artifact.fileUrl} alt={artifact.title} /> : <FallbackPreview />)}
 
-      {artifact.type === 'video' && <VideoPlayer artifact={artifact} />}
+      {artifact.type === 'video' && <MediaVideo artifact={artifact} expanded={expanded} />}
 
       {artifact.type === 'audio' && <AudioPreview artifact={artifact} />}
 
-      {artifact.type === '3d_asset' && <ThreeDViewer textureUrl={meta.previewUrl ?? artifact.fileUrl} alt={artifact.title} />}
+      {artifact.type === '3d_asset' && <Asset3D artifact={artifact} expanded={expanded} />}
 
       {(artifact.type === 'game' || artifact.type === 'app') &&
         (playing && artifact.contentUrl ? (
-          <iframe
-            src={artifact.contentUrl}
-            title={artifact.title}
-            sandbox="allow-scripts allow-pointer-lock"
-            className="h-full w-full border-0"
-          />
+          <ExecutablePreview artifact={artifact} />
         ) : (
           <>
-            {artifact.fileUrl ? (
-              <ImgCover src={artifact.fileUrl} alt={artifact.title} />
+            {thumbnail ? (
+              <ImgCover src={thumbnail} alt={artifact.title} />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 via-transparent to-primary/5 text-primary">
                 <Gamepad2 className="size-8 opacity-70" />

@@ -39,7 +39,7 @@ test('comparison render reuses stored prompt, locks seed/preset and rejects non-
   let received;
   class HttpError extends Error { constructor(message, status) { super(message); this.status = status; } }
   const comparison = { batchId: 'test', seed: 12345, preset: 'standard20', compiledPrompt: 'shared prompt' };
-  const meta = { comparison, engine: 'ltx', prompt: 'original user prompt', inputMode: 'text', aspectRatio: '16:9', targetDurationSec: 6, quality: 'standard' };
+  const meta = { shots: [{ id: 'shot-1', prompt: 'original user prompt', duration: 6 }], comparison, engine: 'ltx', prompt: 'original user prompt', inputMode: 'text', aspectRatio: '16:9', targetDurationSec: 6, quality: 'standard' };
   const deps = {
     '@/lib/server/h3-config': {}, '@/lib/h3-presets': presets,
     '@/lib/auth': { requireUser: async () => ({ id: 'owner', role }), HttpError },

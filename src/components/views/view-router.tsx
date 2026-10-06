@@ -2,40 +2,49 @@
 
 // SPA view router — the ONLY navigation layer (single visible page route).
 // Views map 1:1 to ModuleConfig.entryView registered in the module registry.
+import dynamic from 'next/dynamic';
 import { useAppStore } from '@/lib/store';
 import HomeView from '@/components/views/home';
-import GalleryView from '@/components/views/gallery';
-import PromptDetailView from '@/components/views/prompt';
-import PromptWikiView from '@/components/views/prompt-wiki';
-import ProjectDetailView from '@/components/views/project';
-import ModelLabView from '@/components/views/lab';
-import PipelinesView from '@/components/views/pipelines';
-import { PipelineRunView } from '@/components/views/pipelines/run';
-import SmokeTestView from '@/components/views/smoke';
-import RevenueView from '@/components/views/revenue';
-import MarketplaceView from '@/components/views/market';
-import CommunityView from '@/components/views/community';
-import AcademyView from '@/components/views/academy';
-import VibeSetupView from '@/components/views/vibe-setup';
-import AiToolsView from '@/components/views/ai-tools';
-import MyProjectsView from '@/components/views/my-projects';
-import GameRoomView from '@/components/views/game-room';
-import GamePlayView from '@/components/views/game-room/play';
-import VideoStudioView from '@/components/views/video-studio';
-import Studio3dView from '@/components/views/3d-studio';
-import AdminView from '@/components/views/admin';
-import ToolView from '@/components/views/tool';
+import { useRuntime } from '@/components/runtime-context';
+import { Button } from '@/components/ui/button';
+const GalleryView = dynamic(() => import('@/components/views/gallery'), { loading: () => <ViewLoading /> });
+const PromptDetailView = dynamic(() => import('@/components/views/prompt'), { loading: () => <ViewLoading /> });
+const PromptWikiView = dynamic(() => import('@/components/views/prompt-wiki'), { loading: () => <ViewLoading /> });
+const ProjectDetailView = dynamic(() => import('@/components/views/project'), { loading: () => <ViewLoading /> });
+const ModelLabView = dynamic(() => import('@/components/views/lab'), { loading: () => <ViewLoading /> });
+const PipelinesView = dynamic(() => import('@/components/views/pipelines'), { loading: () => <ViewLoading /> });
+const PipelineRunView = dynamic(() => import('@/components/views/pipelines/run').then(m => m.PipelineRunView), { loading: () => <ViewLoading /> });
+const SmokeTestView = dynamic(() => import('@/components/views/smoke'), { loading: () => <ViewLoading /> });
+const RevenueView = dynamic(() => import('@/components/views/revenue'), { loading: () => <ViewLoading /> });
+const MarketplaceView = dynamic(() => import('@/components/views/market'), { loading: () => <ViewLoading /> });
+const CommunityView = dynamic(() => import('@/components/views/community'), { loading: () => <ViewLoading /> });
+const AcademyView = dynamic(() => import('@/components/views/academy'), { loading: () => <ViewLoading /> });
+const VibeSetupView = dynamic(() => import('@/components/views/vibe-setup'), { loading: () => <ViewLoading /> });
+const AiToolsView = dynamic(() => import('@/components/views/ai-tools'), { loading: () => <ViewLoading /> });
+const MyProjectsView = dynamic(() => import('@/components/views/my-projects'), { loading: () => <ViewLoading /> });
+const GameRoomView = dynamic(() => import('@/components/views/game-room'), { loading: () => <ViewLoading /> });
+const GamePlayView = dynamic(() => import('@/components/views/game-room/play'), { loading: () => <ViewLoading /> });
+const VideoStudioView = dynamic(() => import('@/components/views/video-studio'), { loading: () => <ViewLoading /> });
+const Studio3dView = dynamic(() => import('@/components/views/3d-studio'), { loading: () => <ViewLoading /> });
+const AdminView = dynamic(() => import('@/components/views/admin'), { loading: () => <ViewLoading /> });
+const ToolView = dynamic(() => import('@/components/views/tool'), { loading: () => <ViewLoading /> });
+
+function ViewLoading() { return <div className="editorial-page" role="status"><div className="h-12 w-52 animate-pulse bg-muted" /><div className="mt-8 h-80 animate-pulse bg-muted" /><span className="sr-only">화면 불러오는 중</span></div>; }
 
 export default function ViewRouter() {
   const view = useAppStore((s) => s.view);
   const params = useAppStore((s) => s.params);
+  const navigate = useAppStore((s) => s.navigate);
+  const { previewMode } = useRuntime();
+  const unavailable: Record<string, string> = { pipelines: '파이프라인', 'pipeline-run': '파이프라인 실행', smoke: '스모크 테스트', market: '마켓플레이스', admin: '관리자' };
+  if (previewMode && unavailable[view]) return <section className="editorial-page"><h1 className="editorial-page-title">{unavailable[view]}</h1><p className="mt-5 max-w-xl leading-7 text-muted-foreground">이 기능은 현재 미리보기에 연결되어 있지 않아요. 운영 데이터와 로그인 연결 후 확인할 수 있습니다.</p><div className="mt-6 flex flex-wrap gap-3"><Button onClick={() => navigate('ai-tools')}>AI Tools 둘러보기</Button><Button variant="outline" onClick={() => navigate('vibe-setup')}>바이브코딩 시작 가이드</Button></div></section>;
 
   // Key by view+params.id so detail views remount cleanly when target changes
   switch (view) {
     case 'home':
       return <HomeView />;
     case 'gallery':
-      return <GalleryView key={params.q ?? ''} />;
+      return <GalleryView key={[params.q, params.tab].join('-')} />;
     case 'prompt':
       return <PromptDetailView key={params.id ?? 'none'} />;
     case 'project':

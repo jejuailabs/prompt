@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PLAYLAB 기능 점검표 · 2026-10-05</title>
+<style>
+:root{color-scheme:light;--ink:#20221e;--muted:#64665f;--line:#d8d9d0;--accent:#d64729}*{box-sizing:border-box}body{margin:0;background:#f4f3ee;color:var(--ink);font:15px/1.65 system-ui,-apple-system,sans-serif}main{max-width:1120px;margin:auto;padding:56px 28px 80px}header{border-bottom:2px solid var(--ink);padding-bottom:30px}.eyebrow{font-size:12px;letter-spacing:.18em;color:var(--accent);font-weight:700}h1{font-size:clamp(30px,5vw,56px);line-height:1.15;letter-spacing:-.04em;margin:18px 0}h2{font-size:23px;margin:44px 0 16px}h3{font-size:17px;margin:0 0 8px}p{margin:10px 0}.muted{color:var(--muted)}.lead{max-width:800px;font-size:17px}.stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}.stats span,.tag{border:1px solid var(--line);padding:6px 12px;border-radius:4px;font-size:12px;white-space:nowrap}.ok{color:#136443;background:#e5f0e8}.partial{color:#81530b;background:#f4ead6}.pending{color:#9b3527;background:#f5e3dd}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{border:1px solid var(--line);padding:22px;background:#fafaf6}.card ul{padding-left:19px;margin-bottom:0}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;text-align:left}th,td{border-bottom:1px solid var(--line);padding:14px 12px;vertical-align:top}th{font-size:12px;color:var(--muted);background:#eaeae3}td:first-child{font-weight:650;width:21%}td:nth-child(2){width:18%}.note{border-left:3px solid var(--accent);padding:14px 20px;background:#ebeae3;margin:24px 0}.remaining{counter-reset:item}.remaining li{margin:12px 0}a{color:#94391f;text-underline-offset:3px}footer{margin-top:44px;border-top:1px solid var(--line);padding-top:18px;font-size:12px;color:var(--muted)}@media(max-width:680px){main{padding:32px 16px}.grid{grid-template-columns:1fr}td,th{padding:12px 8px}td:first-child{min-width:116px}.tag{white-space:normal;padding:3px 6px}h2{margin-top:32px}}@media print{main{max-width:none;padding:15px}.card, tr{break-inside:avoid}a{color:inherit}h2{break-after:avoid}}
+</style></head><body><main>
+<header><div class="eyebrow">PLAYLAB / FUNCTIONAL AUDIT / 2026.10.05</div><h1>기능을 하나씩 확인한 결과.</h1><p class="lead">현재 상태를 <strong>운영 완료로 판단할 수 없습니다.</strong> 로컬 미리보기에서 확인 가능한 화면·이동·게임·복사·변환을 직접 검사하고 발견한 연결 오류를 수정했습니다. 생성·저장·과금은 별도 확인이 남아 있습니다.</p><div class="stats"><span>자동 검사 51 통과 / 1 건너뜀 / 0 실패</span><span>TypeScript 검사 통과</span><span>로컬 읽기 전용 미리보기</span></div></header>
+
+<section class="grid" style="margin-top:28px"><article class="card"><h3>직접 동작 확인</h3><ul><li>리본 드래그·다음·일시정지·상세 이동</li><li>게임 7개 진입·시작</li><li>프롬프트·공유·설치 명령 복사</li><li>QR PNG, JPG·PDF 생성 완료 표시</li></ul></article><article class="card"><h3>이번에 수정한 연결</h3><ul><li>위키 새로고침·프롬프트 상세 API</li><li>개별 도구·파이프라인 목적지</li><li>3D 실제 공개 목록·내 프로젝트</li><li>인증 검사 누락·SRT 시간 반올림</li></ul></article><article class="card"><h3>아직 완료가 아닌 것</h3><ul><li>실제 로그인·업로드·저장</li><li>영상·3D·음악 생성·취소·복구</li><li>전체 도구의 크레딧 차감 통일</li><li>MCP 운영 연결·광고·결제</li></ul></article></section>
+
+<h2>01 / 화면과 사용자 흐름</h2><div class="table-wrap"><table><thead><tr><th>기능</th><th>판정</th><th>직접 확인한 범위와 한계</th></tr></thead><tbody>
+<tr><td>홈 리본</td><td><span class="tag ok">동작 확인</span></td><td>모션 일시정지, 다음 버튼, 마우스 드래그에 따라 선택 작품이 바뀜. 바로 경험하기 → 해당 작품 상세. 전체 애니메이션 품질의 최종 디자인 승인과는 별개.</td></tr>
+<tr><td>갤러리</td><td><span class="tag ok">동작 확인</span></td><td>이미지 필터 5개 → “음식” 검색 1개 → 상세 이동. 작품 이미지 로드 및 공유 URL 클립보드 확인.</td></tr>
+<tr><td>프롬프트 위키</td><td><span class="tag ok">수정·확인</span></td><td>직접 주소/새로고침 복원. 실제 이미지와 6개 원본·1개 포크 표시. 상세 본문, 2,954자 복사, 연결 결과물 1개 확인. 버전 이력·댓글·포크 저장은 운영 검증 필요.</td></tr>
+<tr><td>게임룸</td><td><span class="tag ok">시작 확인</span></td><td>벽돌깨기·네온 퐁·헬리 대쉬·스네이크·테트리스·플래피·슈터 7개. 나머지 6개도 각각 시작 버튼을 눌러 게임 HUD 진입 확인. 벽돌깨기 점수 30은 직전 검사에서 확인. 각 게임의 모든 조작·승패 조건은 완주 검사하지 않음.</td></tr>
+<tr><td>게임 점수·랭킹</td><td><span class="tag pending">운영 미검증</span></td><td>미리보기는 플레이/점수/광고 기록을 저장하지 않음. 랭킹 스냅샷이 없어 비어 있음. 등록·수정·삭제·좋아요 실저장은 미검증.</td></tr>
+<tr><td>메뉴</td><td><span class="tag ok">수정·확인</span></td><td>전체 메뉴의 QR 클릭 → QR 개별 화면 확인. 모바일·사이드바도 같은 목적지 함수 사용. 자동 검사로 모든 도구 목적지 및 파이프라인 ID 전달 확인.</td></tr>
+<tr><td>모바일</td><td><span class="tag ok">선택 화면 확인</span></td><td>위키·상세·TTS 가로 넘침 없음. 게임룸·홈은 직전 검사에서 확인. 390×844 기기 설정, 브라우저 보고 CSS 폭 358px. 모든 화면·모든 기기 크기 검증을 의미하지 않음.</td></tr>
+<tr><td>바이브코딩 가이드</td><td><span class="tag ok">동작 확인</span></td><td>Git 사용자 입력에 테스트 아이디와 이메일을 넣고 명령 전체 복사 확인. VS Code 터미널 안내 확인. 해당 명령을 실제 PC에서 실행하지 않음.</td></tr>
+<tr><td>커뮤니티</td><td><span class="tag partial">부분 확인</span></td><td>공개 프롬프트/작품 랭킹 연결. 도움 요청 조회 실패를 빈 목록과 구분하고 등록·답변·해결 저장 오류 안내 추가. 실제 작성·답변 저장은 미검증.</td></tr>
+<tr><td>모델 실험실</td><td><span class="tag pending">생성 미검증</span></td><td>현재 공급 모델 없음. 미리보기 안내·로그인 경계 및 모델 조회 오류 처리. 실제 비교 생성·결과 저장·차감은 미검증.</td></tr>
+<tr><td>영상 스튜디오</td><td><span class="tag partial">입력 흐름 확인</span></td><td>새 프로젝트 → 텍스트/이미지 입력 모드 → 생성 시 로그인 안내 확인. 실제 영상이 없는 스냅샷이므로 공개 영상 목록은 비어 있음. 실제 렌더·편집·취소·파일 수신은 미검증.</td></tr>
+<tr><td>3D 스튜디오</td><td><span class="tag partial">목록 수정</span></td><td>실제 파일 없는 예시를 공개 에셋으로 표시하던 문제 제거. 공개 작품 API와 실제 내 프로젝트 목록 사용. 스냅샷에 3D 없음. 생성·모델 뷰어·리깅·다운로드 실검증 필요.</td></tr>
+<tr><td>로그인·내 프로젝트·수익</td><td><span class="tag pending">운영 미검증</span></td><td>비로그인 안내 확인. 미리보기의 실행 불가 로그인 버튼 비활성화. 실제 OAuth, 가입 크레딧, 사용자별 저장·소유권·정산 데이터는 미검증.</td></tr>
+<tr><td>가이드·관리자·마켓·파이프라인·스모크</td><td><span class="tag pending">미리보기 연결 없음</span></td><td>API 연결 없는 화면에 명시적 안내를 표시. 이 안내는 기능 완성이 아님. 운영 데이터/권한으로 별도 검증 필요.</td></tr>
+<tr><td>MCP 연결</td><td><span class="tag pending">실연결 미검증</span></td><td>화면·설치 안내 확인. 연결 실패 처리와 미리보기 버튼 상태, 최초 렌더 불일치 수정. 운영 DB 적용·키 발급/해제·Codex/Claude Code에서 GPU 결과 수신 검증 필요.</td></tr>
+<tr><td>광고·결제</td><td><span class="tag pending">운영 미검증</span></td><td>광고 자리 및 설정형 로더가 있는 상태. 실제 AdSense 송출/승인, 결제·환불·정산은 확인하지 않음.</td></tr>
+</tbody></table></div>
+
+<h2>02 / AI Tools 개별 점검</h2><p class="muted">13개 도구의 입력 화면을 열어 확인했습니다. “입력 화면 확인”은 생성 성공을 의미하지 않습니다.</p><div class="table-wrap"><table><thead><tr><th>도구</th><th>판정</th><th>확인 내용</th></tr></thead><tbody>
+<tr><td>QR 생성</td><td><span class="tag ok">생성 확인</span></td><td>테스트 URL → PNG 데이터 이미지와 다운로드 링크. 브라우저 다운로드 이벤트가 응답하지 않아 실제 저장된 파일은 확인 못함.</td></tr>
+<tr><td>무료 변환기</td><td><span class="tag partial">일부 생성 확인</span></td><td>PNG→JPG, PNG→PDF 생성 완료 UI 확인. HEIC/WebP 처리·PDF 병합 구현. HEIC 실파일·PDF 병합과 내려받은 파일 내용은 미검증.</td></tr>
+<tr><td>TTS</td><td><span class="tag partial">입력 화면</span></td><td>본문·목소리·미리듣기·생성·클로닝 화면. 실제 출력에 맞춰 WAV 안내로 수정. 실제 음성 생성/청취 미검증.</td></tr>
+<tr><td>수노 뮤직 메이커</td><td><span class="tag partial">입력 화면</span></td><td>페이지 로드 및 입력 UI 확인. 가사·음악·커버 실생성/저장/다운로드 미검증.</td></tr>
+<tr><td>ACE-Step 음악</td><td><span class="tag partial">입력 화면</span></td><td>입력 UI 확인. GPU 작업 생성·취소·완료·공개·크레딧 실검증 필요.</td></tr>
+<tr><td>메타 프롬프트</td><td><span class="tag partial">입력 화면</span></td><td>입력 UI 확인. 실제 모델 대화·개선·생성 미검증.</td></tr>
+<tr><td>유튜브 썸네일</td><td><span class="tag partial">입력 화면</span></td><td>입력 UI 확인. 실제 분석·이미지/프롬프트 생성 미검증.</td></tr>
+<tr><td>스토리보드</td><td><span class="tag partial">입력 화면</span></td><td>입력 UI 확인. 실제 구현 범위를 장면별 프롬프트로 설명 수정. 생성 미검증.</td></tr>
+<tr><td>상세페이지 메이커</td><td><span class="tag partial">입력 화면</span></td><td>입력 UI 확인. 이전 상세페이지 주소에서 현재 도구로 이동 연결. 실제 생성 미검증.</td></tr>
+<tr><td>상세페이지 메이커 2</td><td><span class="tag partial">입력 화면</span></td><td>입력 UI 확인. 장면 이미지·캔버스 출력·실제 저장 미검증.</td></tr>
+<tr><td>Whisper</td><td><span class="tag partial">입력 화면</span></td><td>지원 확장자/서버 MIME 맞춤, 100MB 제한 추가. 실제 파일 업로드·전사·다운로드 미검증.</td></tr>
+<tr><td>SRT</td><td><span class="tag partial">입력 화면 + 단위 검사</span></td><td>자막 시간의 분·시간 경계 반올림 오류 수정 및 회귀 검사. 음성/영상 실전사 미검증.</td></tr>
+<tr><td>자동 컷편집</td><td><span class="tag pending">부분 구현</span></td><td>현재 대본과 장면 시간 추출 범위. 완성 영상 자동 편집/렌더는 미구현이며 안내 수정. 실제 전사도 미검증.</td></tr>
+</tbody></table></div>
+
+<h2>03 / 배포 전에 남은 일</h2><ol class="remaining"><li><strong>인증·저장:</strong> 운영 테스트 계정으로 로그인/가입 보너스, 업로드, 프롬프트 포크, 댓글·좋아요, 프로젝트 저장·삭제와 권한 확인.</li><li><strong>과금:</strong> 이번에 11개 AI API의 로그인 검사를 추가했지만, 전체 도구 크레딧 예약·차감·실패 환불 규칙은 아직 통일되지 않음.</li><li><strong>생성:</strong> 영상·3D·음악과 개별 AI 도구에서 실제 공급자 연결 후 생성→상태 조회→결과 재생/다운로드→취소/실패 복구 검증.</li><li><strong>MCP:</strong> DB 적용과 실제 연결 키 발급, 클라이언트에서 생성·진행 조회·결과 수신 검증.</li><li><strong>미완성 기능:</strong> 자동 컷편집 렌더, AI 게임 생성, URL 단축, 뉴스·팁·스킬 전용 작성/분류.</li><li><strong>운영 기능:</strong> 관리자·마켓·결제·정산·실제 광고 연결 검증.</li></ol>
+<div class="note"><strong>검증 한계</strong><p>자동 검사 52개 중 51개 통과, 실제 3D 결과 파일을 요구하는 기존 검사 1개 건너뜀. API 인증 회귀 검사는 모의 응답을 사용했습니다. 실제 OAuth, 공급자 생성, 과금, DB 저장 성공의 증거가 아닙니다. DB 변경·유료 생성·배포는 수행하지 않았습니다.</p></div>
+<h2>04 / 기록</h2><p><a href="feature-audit-browser.json">브라우저 관찰 기록</a> · <a href="feature-tests.txt">자동 검사 전체 결과</a> · <a href="audit-game-room-final.jpg">게임룸 화면</a> · <a href="audit-wiki-mobile.jpg">모바일 위키</a> · <a href="audit-converter.jpg">JPG 변환 확인 화면</a> · <a href="audit-qr.jpg">QR 생성 확인 화면</a></p>
+<footer>대상: http://127.0.0.1:3107 · PLAYLAB 디자인 미리보기 · 확인하지 않은 항목은 통과로 계산하지 않았습니다.</footer>
+</main></body></html>

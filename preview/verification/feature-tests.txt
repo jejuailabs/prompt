@@ -1,0 +1,327 @@
+TAP version 13
+# Subtest: ACE music endpoint is authenticated, metered, persistent, and cancellable
+ok 1 - ACE music endpoint is authenticated, metered, persistent, and cancellable
+  ---
+  duration_ms: 3.1099
+  type: 'test'
+  ...
+# Subtest: ACE worker uses the official XL-Turbo API contract on loopback only
+ok 2 - ACE worker uses the official XL-Turbo API contract on loopback only
+  ---
+  duration_ms: 0.5629
+  type: 'test'
+  ...
+# Subtest: ACE image is CUDA 12.8 and bakes the requested XL-Turbo model
+ok 3 - ACE image is CUDA 12.8 and bakes the requested XL-Turbo model
+  ---
+  duration_ms: 0.2995
+  type: 'test'
+  ...
+# Subtest: compact mascot with one head bone and no left hand gets all eleven core roles
+ok 4 - compact mascot with one head bone and no left hand gets all eleven core roles
+  ---
+  duration_ms: 3.9565
+  type: 'test'
+  ...
+# Subtest: missing arm branch does not fabricate a complete mapping
+ok 5 - missing arm branch does not fabricate a complete mapping
+  ---
+  duration_ms: 4.5975
+  type: 'test'
+  ...
+# Subtest: static GLB is never accepted as a rigged result
+ok 6 - static GLB is never accepted as a rigged result
+  ---
+  duration_ms: 5.5102
+  type: 'test'
+  ...
+# Subtest: skeleton without skin-weight attributes is rejected
+ok 7 - skeleton without skin-weight attributes is rejected
+  ---
+  duration_ms: 0.6884
+  type: 'test'
+  ...
+# Subtest: rigging does not imply animation clips exist
+ok 8 - rigging does not imply animation clips exist
+  ---
+  duration_ms: 0.5846
+  type: 'test'
+  ...
+# Subtest: volumetric mesh remains review-needed, never certified Unity Ready
+ok 9 - volumetric mesh remains review-needed, never certified Unity Ready
+  ---
+  duration_ms: 3.8659
+  type: 'test'
+  ...
+# Subtest: flat mesh rejected using actual vertex bytes, not declared accessor bounds
+ok 10 - flat mesh rejected using actual vertex bytes, not declared accessor bounds
+  ---
+  duration_ms: 4.1385
+  type: 'test'
+  ...
+# Subtest: malformed/truncated files fail closed
+ok 11 - malformed/truncated files fail closed
+  ---
+  duration_ms: 1.2964
+  type: 'test'
+  ...
+# Subtest: nonfinite vertex rejected
+ok 12 - nonfinite vertex rejected
+  ---
+  duration_ms: 3.5777
+  type: 'test'
+  ...
+# Subtest: previous paid TRELLIS output is correctly rejected when locally available
+ok 13 - previous paid TRELLIS output is correctly rejected when locally available # SKIP
+  ---
+  duration_ms: 0.1829
+  type: 'test'
+  ...
+# Subtest: every routed screen survives a copied URL and reload
+ok 14 - every routed screen survives a copied URL and reload
+  ---
+  duration_ms: 212.2504
+  type: 'test'
+  ...
+# Subtest: each individual tool menu opens that tool, and pipeline menus include their id
+ok 15 - each individual tool menu opens that tool, and pipeline menus include their id
+  ---
+  duration_ms: 85.2981
+  type: 'test'
+  ...
+# Subtest: every public preview list entry opens a matching detail, including linked prompt works
+ok 16 - every public preview list entry opens a matching detail, including linked prompt works
+  ---
+  duration_ms: 232.7009
+  type: 'test'
+  ...
+# Subtest: anonymous AI requests stop before input parsing or provider calls
+ok 17 - anonymous AI requests stop before input parsing or provider calls
+  ---
+  duration_ms: 837.7752
+  type: 'test'
+  ...
+# Subtest: subtitle timecodes carry rounded milliseconds into minutes and hours
+ok 18 - subtitle timecodes carry rounded milliseconds into minutes and hours
+  ---
+  duration_ms: 12.3626
+  type: 'test'
+  ...
+# Subtest: read routes use a verified Auth identity and reject an invalid cookie identity
+ok 19 - read routes use a verified Auth identity and reject an invalid cookie identity
+  ---
+  duration_ms: 36.7123
+  type: 'test'
+  ...
+# [render-queue] project=p engine=h3 job=job status=IN_QUEUE aspect=9:16 duration=6s
+# [render-queue] project=p engine=h3 job=job status=IN_QUEUE aspect=9:16 duration=6s
+# [render-queue] project=p engine=h3 job=job status=IN_QUEUE aspect=9:16 duration=6s
+# [render-queue] project=p engine=wan job=job status=IN_QUEUE aspect=9:16 duration=6s
+# [render-queue] project=p engine=h3 job=job status=IN_QUEUE aspect=9:16 duration=6s
+# Subtest: H3 muxes decoded audio for text and image inputs, across presets; mute removes the audio edge
+ok 20 - H3 muxes decoded audio for text and image inputs, across presets; mute removes the audio edge
+  ---
+  duration_ms: 5.4268
+  type: 'test'
+  ...
+# Subtest: missing or failed compiler preserves original speech and music for image and text generation
+ok 21 - missing or failed compiler preserves original speech and music for image and text generation
+  ---
+  duration_ms: 136.6687
+  type: 'test'
+  ...
+# Subtest: compiler requests original-language speech and retains structured voice/music/silence results
+ok 22 - compiler requests original-language speech and retains structured voice/music/silence results
+  ---
+  duration_ms: 136.6243
+  type: 'test'
+  ...
+# Subtest: project creation persists audio settings and rejects non-boolean input before writing
+ok 23 - project creation persists audio settings and rejects non-boolean input before writing
+  ---
+  duration_ms: 173.0083
+  type: 'test'
+  ...
+# Subtest: long visual descriptions cannot truncate sound fields
+ok 24 - long visual descriptions cannot truncate sound fields
+  ---
+  duration_ms: 23.0113
+  type: 'test'
+  ...
+# Subtest: render API carries persisted audio choice to compiler, workflow and saved render; comparisons stay silent
+ok 25 - render API carries persisted audio choice to compiler, workflow and saved render; comparisons stay silent
+  ---
+  duration_ms: 231.3514
+  type: 'test'
+  ...
+# Subtest: H3 selected GPU routes queue and polling, preserving legacy jobs
+ok 26 - H3 selected GPU routes queue and polling, preserving legacy jobs
+  ---
+  duration_ms: 246.7087
+  type: 'test'
+  ...
+# Subtest: three presets produce correct sampler steps and LoRA switches
+ok 27 - three presets produce correct sampler steps and LoRA switches
+  ---
+  duration_ms: 2.485
+  type: 'test'
+  ...
+# Subtest: preview is approximately half pixels and retains compatible dimensions
+ok 28 - preview is approximately half pixels and retains compatible dimensions
+  ---
+  duration_ms: 0.4714
+  type: 'test'
+  ...
+# Subtest: preview charges half only for H3; other engines unaffected
+ok 29 - preview charges half only for H3; other engines unaffected
+  ---
+  duration_ms: 54.9393
+  type: 'test'
+  ...
+# Subtest: MCP lists tools, forwards authenticated jobs, and saves a finished result
+ok 30 - MCP lists tools, forwards authenticated jobs, and saves a finished result
+  ---
+  duration_ms: 319.8814
+  type: 'test'
+  ...
+# Subtest: empty real library is valid, no invented clips
+ok 31 - empty real library is valid, no invented clips
+  ---
+  duration_ms: 4.9497
+  type: 'test'
+  ...
+# Subtest: registered FBX accepted
+ok 32 - registered FBX accepted
+  ---
+  duration_ms: 1.7873
+  type: 'test'
+  ...
+# Subtest: duplicate ids rejected
+ok 33 - duplicate ids rejected
+  ---
+  duration_ms: 1.4194
+  type: 'test'
+  ...
+# Subtest: external URL and traversal rejected
+ok 34 - external URL and traversal rejected
+  ---
+  duration_ms: 1.5202
+  type: 'test'
+  ...
+# Subtest: admin-uploaded rows remain visible without a legacy manifest
+ok 35 - admin-uploaded rows remain visible without a legacy manifest
+  ---
+  duration_ms: 0.5892
+  type: 'test'
+  ...
+# Subtest: an uploaded row overrides its legacy entry by id
+ok 36 - an uploaded row overrides its legacy entry by id
+  ---
+  duration_ms: 0.4431
+  type: 'test'
+  ...
+# Subtest: Unicode names and uppercase FBX accepted; storage key is separate hash
+ok 37 - Unicode names and uppercase FBX accepted; storage key is separate hash
+  ---
+  duration_ms: 6.346
+  type: 'test'
+  ...
+# Subtest: oversize and non-FBX rejected
+ok 38 - oversize and non-FBX rejected
+  ---
+  duration_ms: 1.5244
+  type: 'test'
+  ...
+# Subtest: binary and ASCII FBX header accepted; renamed other content rejected
+ok 39 - binary and ASCII FBX header accepted; renamed other content rejected
+  ---
+  duration_ms: 0.4255
+  type: 'test'
+  ...
+# Subtest: 3D studio results use generated GLB instead of the source image
+ok 40 - 3D studio results use generated GLB instead of the source image
+  ---
+  duration_ms: 2.1367
+  type: 'test'
+  ...
+# Subtest: video results accept signed URLs and keep slideshow images out of the video player
+ok 41 - video results accept signed URLs and keep slideshow images out of the video player
+  ---
+  duration_ms: 0.784
+  type: 'test'
+  ...
+# Subtest: two previews of the same game mount and clean up independently
+ok 42 - two previews of the same game mount and clean up independently
+  ---
+  duration_ms: 1.0571
+  type: 'test'
+  ...
+# Subtest: the execution adapter rejects non-web URL schemes
+ok 43 - the execution adapter rejects non-web URL schemes
+  ---
+  duration_ms: 0.9992
+  type: 'test'
+  ...
+# Subtest: all three workflows use identical prompt, seed and 832x480
+ok 44 - all three workflows use identical prompt, seed and 832x480
+  ---
+  duration_ms: 4.8445
+  type: 'test'
+  ...
+# Subtest: regular LTX requests retain their original dimensions
+ok 45 - regular LTX requests retain their original dimensions
+  ---
+  duration_ms: 0.463
+  type: 'test'
+  ...
+# Subtest: comparison endpoints require admin and cannot impersonate newer models
+ok 46 - comparison endpoints require admin and cannot impersonate newer models
+  ---
+  duration_ms: 10.4356
+  type: 'test'
+  ...
+# Subtest: comparison render reuses stored prompt, locks seed/preset and rejects non-admin
+ok 47 - comparison render reuses stored prompt, locks seed/preset and rejects non-admin
+  ---
+  duration_ms: 105.3022
+  type: 'test'
+  ...
+# Subtest: saved comparison renders three playable results and reports runtime differences
+ok 48 - saved comparison renders three playable results and reports runtime differences
+  ---
+  duration_ms: 193.606
+  type: 'test'
+  ...
+# Subtest: Context IR persists first-frame semantics and a bounded duration
+ok 49 - Context IR persists first-frame semantics and a bounded duration
+  ---
+  duration_ms: 187.2978
+  type: 'test'
+  ...
+# Subtest: Context IR warns about contradictory camera directions without adding a negative prompt
+ok 50 - Context IR warns about contradictory camera directions without adding a negative prompt
+  ---
+  duration_ms: 43.9512
+  type: 'test'
+  ...
+# Subtest: portrait H3 output maps to delivery-sized HD and FHD targets
+ok 51 - portrait H3 output maps to delivery-sized HD and FHD targets
+  ---
+  duration_ms: 126.8703
+  type: 'test'
+  ...
+# Subtest: only a PLAYLAB public uploads video can be delegated to a worker
+ok 52 - only a PLAYLAB public uploads video can be delegated to a worker
+  ---
+  duration_ms: 12.7561
+  type: 'test'
+  ...
+1..52
+# tests 52
+# suites 0
+# pass 51
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 2247.5827

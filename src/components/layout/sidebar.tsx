@@ -1,5 +1,7 @@
 'use client';
 
+import { moduleDestination } from '@/lib/module-navigation';
+
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useAppStore } from '@/lib/store';
@@ -40,7 +42,7 @@ function errorMessage(e: unknown): string {
 
 // ─── credits widget + top-up dialog ────────────────────────────────────────
 
-function CreditsWidget() {
+export function CreditsWidget() {
   const t = useTranslations('core');
   const locale = useAppStore((s) => s.locale);
   const session = useAppStore((s) => s.session);
@@ -232,7 +234,7 @@ export default function Sidebar() {
         {mainItems.map((m) => {
           const active = m.entryView === view;
           return (
-            <NavItem key={m.id} m={m} active={active} locale={locale} onClick={() => navigate(m.entryView as ViewKey)} />
+            <NavItem key={m.id} m={m} active={active} locale={locale} onClick={() => navigate(moduleDestination(m).view, moduleDestination(m).params)} />
           );
         })}
 
@@ -245,7 +247,7 @@ export default function Sidebar() {
             {studioItems.map((m) => {
               const active = m.entryView === view;
               return (
-                <NavItem key={m.id} m={m} active={active} locale={locale} onClick={() => navigate(m.entryView as ViewKey)} />
+                <NavItem key={m.id} m={m} active={active} locale={locale} onClick={() => navigate(moduleDestination(m).view, moduleDestination(m).params)} />
               );
             })}
           </div>

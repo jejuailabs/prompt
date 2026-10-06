@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Icon } from '@/components/layout/icon';
 import { Button } from '@/components/ui/button';
+import { useRuntime } from '@/components/runtime-context';
 import {
   Dialog,
   DialogContent,
@@ -22,9 +23,11 @@ export default function LoginDialog() {
   const setOpen = useAppStore((s) => s.setLoginOpen);
   const { toast } = useToast();
   const [pending, setPending] = useState(false);
+  const { previewMode, authConfigured } = useRuntime();
+  const unavailable = previewMode || !authConfigured;
 
   const handleGoogleLogin = async () => {
-    if (pending) return;
+    if (pending || unavailable) return;
     setPending(true);
     try {
       const supabase = createClient();
@@ -61,11 +64,12 @@ export default function LoginDialog() {
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
+          {unavailable && <p role="status" className="rounded-md bg-muted p-3 text-sm leading-6">{previewMode ? '지금은 미리보기입니다. 로그인·작업 저장·AI 생성은 운영 서비스 연결 후 사용할 수 있어요.' : '로그인 연결을 준비 중이에요. 잠시 후 다시 시도해주세요.'}</p>}
           <Button
             variant="outline"
             className="w-full gap-3 h-11"
             onClick={handleGoogleLogin}
-            disabled={pending}
+            disabled={pending || unavailable}
           >
             <svg className="size-5" viewBox="0 0 24 24">
               <path

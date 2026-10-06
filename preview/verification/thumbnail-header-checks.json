@@ -1,0 +1,45 @@
+{
+  "headerChecks": [
+    {
+      "tool": "thumbnail",
+      "createPadding": "16px",
+      "gap": 14,
+      "headerOverflow": false,
+      "loginPadding": "13px"
+    },
+    {
+      "tool": "metaprompt",
+      "createPadding": "16px",
+      "gap": 14,
+      "headerOverflow": false,
+      "loginPadding": "13px"
+    },
+    {
+      "tool": "detail2",
+      "createPadding": "16px",
+      "gap": 14,
+      "headerOverflow": false,
+      "loginPadding": "13px"
+    },
+    {
+      "tool": "suno",
+      "createPadding": "16px",
+      "gap": 14,
+      "headerOverflow": false,
+      "loginPadding": "13px"
+    }
+  ],
+  "mobile": {
+    "width": 344,
+    "scrollWidth": 344,
+    "headingCount": 1
+  },
+  "checks": [
+    "Music/video switch",
+    "Example input in both modes",
+    "Audience input and channel select",
+    "Login dialog opened",
+    "Create menu opened"
+  ],
+  "aiGeneration": "Not run: preview environment"
+}

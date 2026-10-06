@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-05",
+  "implementation": "The metal is sampled directly from the unchanged original reference, with measured source-coordinate clipping and an aspect-locked camera. Only the display area is live artwork; the calm-water background is a separate inpainted plate.",
+  "assets": [
+    {
+      "path": "public/uploads/seed/hero-reference-original-v5.png",
+      "source": "C:/Users/na/Downloads/ChatGPT 이미지 2026년 10월 4일 오후 11_42_23.png",
+      "role": "Original metal texture and silhouette, unchanged source bytes",
+      "sha256": "05450AB3F3625B39619D580B740CF00D3A7B5BAFA4C01EFEAAC2B10E3B6BD8D0"
+    },
+    {
+      "path": "public/uploads/seed/hero-background-v5.png",
+      "role": "Empty studio and water behind original metal",
+      "prompt": "Edit the provided image to produce ONLY its EMPTY BACKGROUND. Preserve the original 912x566 framing and camera exactly. Remove the entire metallic ribbon and every image panel. Remove every UI element: ALL logo, text, titles, navigation, buttons, thumbnail cards, gallery section, little icons, and advertisements. Reconstruct only the original luxury dark charcoal studio and calm very dark reflective water from the original. The ground/water horizon must stay at exactly 230/566 (40.6%) of the image height, matching the original. Keep the warm vertically brushed golden-silver light reflections in the water near x=280 and x=760, and the original dark cinematic subtle overhead spotlight haze. The water extends to the bottom; no gallery section remains. DO NOT introduce objects, silhouettes, lettering, lines, objects, chrome sculpture, or a ribbon. This is a background removal/inpainting plate, NOT a redesign. Original camera and original light distribution are the priority. Output the same 912:566 aspect ratio."
+    }
+  ],
+  "verification": [
+    "TypeScript noEmit passed",
+    "Original source and copied asset SHA256 matched",
+    "Original and implementation compared in 50% overlay and toggled views",
+    "Dragging changed selected work 01 to 02",
+    "Direct click on keyring photograph opened project 4c804452-9890-4eaf-92be-d8e6cac7ad0f",
+    "Mobile band aspect 2.53941388 matched 904/356",
+    "Mobile horizontal overflow absent; broken images 0"
+  ],
+  "captures": [
+    "preview/verification/home-v5-desktop.png",
+    "preview/verification/home-v5-mobile.png",
+    "preview/verification/home-v5-overlay.png",
+    "preview/verification/home-v5-comparison.html"
+  ]
+}

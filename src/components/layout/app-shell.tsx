@@ -3,9 +3,9 @@
 import { useTranslations } from 'next-intl';
 import { useSession } from '@/hooks/use-session';
 import ViewRouter from '@/components/views/view-router';
-import Sidebar from './sidebar';
 import Header from './header';
 import MobileTabbar from './mobile-tabbar';
+import { StudioSwitcher } from '@/components/experience/studio-switcher';
 
 /**
  * App shell: desktop sidebar (md+, sticky) + right column (header / main / sticky footer)
@@ -20,16 +20,18 @@ export default function AppShell() {
   const t = useTranslations('core');
 
   return (
-    <div className="flex flex-1">
-      <Sidebar />
+    <div className="ribbon-app flex flex-1">
 
       <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col">
         <Header />
-        <main className="w-full min-w-0 flex-1 px-4 py-4 pb-20 md:px-6 md:py-6 md:pb-6 lg:px-8">
+        <main id="main-content" className="w-full min-w-0 flex-1 pb-20 md:pb-0">
+          <StudioSwitcher />
           <ViewRouter />
         </main>
-        <footer className="mt-auto border-t py-4 text-center text-xs text-muted-foreground">
-          © 2026 PLAYLAB · {t('footerNote')}
+        <footer className="ribbon-footer mt-auto border-t text-xs text-muted-foreground">
+          <span className="brand-wordmark">PLAYLAB<span>®</span></span>
+          <span>작은 실험이 이어지는 곳.</span>
+          <span>© 2026 PLAYLAB · {t('footerNote')}</span>
         </footer>
       </div>
 
