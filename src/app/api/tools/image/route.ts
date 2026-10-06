@@ -1,7 +1,10 @@
+import { checkToolAccess } from '@/lib/server/tool-access';
 import OpenAI, { toFile } from "openai";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
+  const denied = await checkToolAccess();
+  if (denied) return denied;
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "OPENAI_API_KEY not configured" }, { status: 500 });
   const openai = new OpenAI({ apiKey });

@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
       await cancelRunpodJob('ace_music', meta.runpodJobId);
       const next: MusicMeta = { ...meta, status: 'CANCELLED', completedAt: new Date().toISOString(), error: '사용자가 생성 작업을 취소했습니다.' };
       const updated = await db.artifact.update({ where: { id: artifact.id }, data: { metadata: JSON.stringify(next), status: 'draft' } });
-      if (meta.accountingJobId) await failMeteredOperation(meta.accountingJobId, next.error);
+      if (meta.accountingJobId) await failMeteredOperation(meta.accountingJobId, next.error ?? '사용자가 생성 작업을 취소했습니다.');
       return ok(responseFor(updated));
     }
 

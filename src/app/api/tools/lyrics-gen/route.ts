@@ -1,3 +1,4 @@
+import { checkToolAccess } from '@/lib/server/tool-access';
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -19,6 +20,8 @@ const NARRATIVE_MAP: Record<string, { v1: string; v2: string; bridge: string; ou
 };
 
 export async function POST(req: NextRequest) {
+  const denied = await checkToolAccess();
+  if (denied) return denied;
   const key = process.env.GEMINI_API_KEY;
   if (!key) return NextResponse.json({ error: "GEMINI_API_KEY 환경변수가 설정되지 않았습니다" }, { status: 500 });
   const genAI = new GoogleGenerativeAI(key);

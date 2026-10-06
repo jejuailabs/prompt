@@ -1,3 +1,4 @@
+import { checkToolAccess } from '@/lib/server/tool-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -10,6 +11,8 @@ function getGenAI() {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await checkToolAccess();
+  if (denied) return denied;
   try {
     const body = await req.json();
     const { mode, ...inputs } = body;

@@ -29,7 +29,7 @@ interface Scene {
 }
 
 function Spin({ s = 16, c = "white" }: { s?: number; c?: string }) {
-  return <span style={{ width: s, height: s, border: `2px solid ${c}40`, borderTopColor: c, borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} />;
+  return <span style={{ width: s, height: s, border: `2px solid ${c}40`, borderTopColor: c, borderRadius: "50%", display: "inline-block", animation: "plDetailspin 0.8s linear infinite" }} />;
 }
 
 export function Detail2Tool() {
@@ -178,16 +178,16 @@ export function Detail2Tool() {
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "'Noto Sans KR',-apple-system,sans-serif" }}>
+    <div className="pl-detail2-tool" style={{ minHeight: "100vh", background: "#F8FAFC", fontFamily: "'Noto Sans KR',-apple-system,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap');
-        * { box-sizing:border-box; margin:0; padding:0; }
-        @keyframes spin { to{transform:rotate(360deg)} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .pl-detail2-tool * { box-sizing:border-box; margin:0; padding:0; }
+        @keyframes plDetailspin { to{transform:rotate(360deg)} }
+        @keyframes plDetailfadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         .d2-scroll { scrollbar-width:thin; scrollbar-color:#CBD5E1 transparent; }
         .d2-scroll::-webkit-scrollbar { width:8px; }
         .d2-scroll::-webkit-scrollbar-thumb { background:#CBD5E1; border-radius:100px; }
-        textarea, input, select { font-family:inherit; }
+        .pl-detail2-tool textarea, .pl-detail2-tool input, .pl-detail2-tool select { font-family:inherit; }
       `}</style>
 
       {/* Nav */}
@@ -309,7 +309,7 @@ export function Detail2Tool() {
               </div>
 
               {scenes.map((s, i) => (
-                <div key={i} style={{ background: "white", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", animation: "fadeUp 0.3s ease both" }}>
+                <div key={i} style={{ background: "white", borderRadius: 16, border: "1px solid #E5E7EB", overflow: "hidden", animation: "plDetailfadeUp 0.3s ease both" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", borderBottom: "1px solid #F3F4F6" }}>
                     <span style={{ width: 24, height: 24, borderRadius: 7, background: `linear-gradient(135deg,${O},${O2})`, color: "white", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
                     <span style={{ fontSize: 13, fontWeight: 800, color: "#0F172A" }}>{s.sectionKo}</span>

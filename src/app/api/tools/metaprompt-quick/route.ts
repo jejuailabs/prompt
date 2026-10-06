@@ -1,7 +1,10 @@
+import { checkToolAccess } from '@/lib/server/tool-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { chatJson } from '@/lib/server/ai';
 
 export async function POST(req: NextRequest) {
+  const denied = await checkToolAccess();
+  if (denied) return denied;
   try {
     const { outputType, purpose, description, referenceText, referenceUrl } = await req.json() as {
       outputType: string;

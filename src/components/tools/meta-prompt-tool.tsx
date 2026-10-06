@@ -193,7 +193,7 @@ export function MetaPromptTool() {
   const isImageDomain = domain === "이미지생성" || !domain;
 
   return (
-    <div style={{
+    <div className="pl-meta-tool" style={{
       minHeight: "100vh",
       background: "#FAFBFF",
       fontFamily: "'Noto Sans KR', -apple-system, sans-serif",
@@ -201,13 +201,13 @@ export function MetaPromptTool() {
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes spin { to{transform:rotate(360deg)} }
-        @keyframes shimmer { 0%,100%{opacity:0.5} 50%{opacity:1} }
-        @keyframes gradShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-        .meta-input:focus { outline:none; }
-        .example-chip:hover { background:rgba(124,58,237,0.07)!important; border-color:${P}!important; color:${P}!important; }
+        .pl-meta-tool * { box-sizing: border-box; margin: 0; padding: 0; }
+        @keyframes plMetafadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes plMetaspin { to{transform:rotate(360deg)} }
+        @keyframes plMetashimmer { 0%,100%{opacity:0.5} 50%{opacity:1} }
+        @keyframes plMetagradShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        .pl-meta-tool .meta-input:focus { outline:none; }
+        .pl-meta-tool .example-chip:hover { background:rgba(124,58,237,0.07)!important; border-color:${P}!important; color:${P}!important; }
         @media(max-width:640px) {
           .meta-hero h1 { font-size:28px!important; }
           .meta-wrap { padding:0 16px 140px!important; }
@@ -265,13 +265,13 @@ export function MetaPromptTool() {
 
         {/* Hero */}
         {!started && (
-          <div className="meta-hero" style={{ textAlign:"center", marginBottom:56, animation:"fadeUp 0.5s ease both" }}>
+          <div className="meta-hero" style={{ textAlign:"center", marginBottom:56, animation:"plMetafadeUp 0.5s ease both" }}>
             <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"6px 18px", background:"rgba(124,58,237,0.07)", border:"1px solid rgba(124,58,237,0.15)", borderRadius:100, fontSize:11, fontWeight:700, color:P, letterSpacing:1.5, marginBottom:28 }}>
               ✦ META PROMPT ENGINE
             </div>
             <h1 style={{ fontSize:40, fontWeight:800, color:"#0F172A", lineHeight:1.2, letterSpacing:-1.2, marginBottom:16 }}>
               막연한 아이디어를<br />
-              <span style={{ background:`linear-gradient(135deg,${P},${PINK},${CORAL})`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundSize:"200% 200%", animation:"gradShift 4s ease infinite" }}>
+              <span style={{ background:`linear-gradient(135deg,${P},${PINK},${CORAL})`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundSize:"200% 200%", animation:"plMetagradShift 4s ease infinite" }}>
                 완벽한 프롬프트
               </span>로
             </h1>
@@ -297,7 +297,7 @@ export function MetaPromptTool() {
             const urlMatch = msg.role === "user" && msg.content.match(/\[참조 URL: (.+?)\]/);
             const cleanContent = msg.content.replace(/\[참조 URL: .+?\]/, "").replace("[이미지 첨부됨]", "").trim();
             return (
-              <div key={i} style={{ display:"flex", justifyContent:msg.role==="user"?"flex-end":"flex-start", animation:"fadeUp 0.3s ease both" }}>
+              <div key={i} style={{ display:"flex", justifyContent:msg.role==="user"?"flex-end":"flex-start", animation:"plMetafadeUp 0.3s ease both" }}>
                 {msg.role === "assistant" && (
                   <div style={{ width:32, height:32, borderRadius:10, flexShrink:0, background:`linear-gradient(135deg,${P},${PINK})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, color:"white", fontWeight:800, marginRight:10, marginTop:2 }}>✦</div>
                 )}
@@ -320,15 +320,15 @@ export function MetaPromptTool() {
 
           {/* Loading */}
           {loading && (
-            <div style={{ display:"flex", alignItems:"flex-start", gap:10, animation:"fadeUp 0.3s ease both" }}>
+            <div style={{ display:"flex", alignItems:"flex-start", gap:10, animation:"plMetafadeUp 0.3s ease both" }}>
               <div style={{ width:32, height:32, borderRadius:10, flexShrink:0, background:`linear-gradient(135deg,${P},${PINK})`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, color:"white", fontWeight:800 }}>✦</div>
               <div style={{ background:"white", borderRadius:"4px 18px 18px 18px", padding:"13px 17px", border:"1px solid rgba(124,58,237,0.1)", boxShadow:"0 2px 10px rgba(0,0,0,0.07)" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom: reasoning ? 6 : 0 }}>
-                  <div style={{ width:14, height:14, borderRadius:"50%", border:`2px solid rgba(124,58,237,0.15)`, borderTop:`2px solid ${P}`, animation:"spin 0.8s linear infinite", flexShrink:0 }} />
+                  <div style={{ width:14, height:14, borderRadius:"50%", border:`2px solid rgba(124,58,237,0.15)`, borderTop:`2px solid ${P}`, animation:"plMetaspin 0.8s linear infinite", flexShrink:0 }} />
                   <span style={{ fontSize:12, color:"#9CA3AF", fontWeight:500 }}>추론 중</span>
                 </div>
                 {reasoning && (
-                  <div style={{ fontSize:12, color:P, fontStyle:"italic", lineHeight:1.6, opacity:0.8, animation:"fadeUp 0.3s ease both" }}>
+                  <div style={{ fontSize:12, color:P, fontStyle:"italic", lineHeight:1.6, opacity:0.8, animation:"plMetafadeUp 0.3s ease both" }}>
                     {reasoning}
                   </div>
                 )}
@@ -338,7 +338,7 @@ export function MetaPromptTool() {
 
           {/* Final result */}
           {questionsDone && finalPrompt && (
-            <div style={{ marginTop:8, animation:"fadeUp 0.4s ease both" }}>
+            <div style={{ marginTop:8, animation:"plMetafadeUp 0.4s ease both" }}>
               {/* Prompt card */}
               <div style={{ background:"white", borderRadius:20, border:"1.5px solid rgba(124,58,237,0.2)", overflow:"hidden", boxShadow:"0 8px 32px rgba(124,58,237,0.12)", marginBottom:16 }}>
                 <div style={{ padding:"16px 24px", background:`linear-gradient(135deg,${P},${PINK})`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -364,7 +364,7 @@ export function MetaPromptTool() {
                 </button>
                 <button onClick={generateImage} disabled={generatingImage} style={{ flex:1, padding:"13px", background:`linear-gradient(135deg,${P},${PINK})`, border:"none", borderRadius:14, fontSize:13, fontWeight:700, color:"white", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6, boxShadow:`0 4px 16px rgba(124,58,237,0.3)` }}>
                   {generatingImage
-                    ? <><div style={{ width:14, height:14, borderRadius:"50%", border:"2px solid rgba(255,255,255,0.3)", borderTop:"2px solid white", animation:"spin 0.8s linear infinite" }} /> 생성 중...</>
+                    ? <><div style={{ width:14, height:14, borderRadius:"50%", border:"2px solid rgba(255,255,255,0.3)", borderTop:"2px solid white", animation:"plMetaspin 0.8s linear infinite" }} /> 생성 중...</>
                     : "🎨 이미지"
                   }
                 </button>
@@ -372,7 +372,7 @@ export function MetaPromptTool() {
 
               {/* Generated image */}
               {generatedImage && (
-                <div style={{ marginTop:16, borderRadius:20, overflow:"hidden", boxShadow:"0 8px 32px rgba(0,0,0,0.12)", animation:"fadeUp 0.4s ease both" }}>
+                <div style={{ marginTop:16, borderRadius:20, overflow:"hidden", boxShadow:"0 8px 32px rgba(0,0,0,0.12)", animation:"plMetafadeUp 0.4s ease both" }}>
                   <img src={generatedImage} alt="generated" style={{ width:"100%", display:"block" }} />
                   <div style={{ padding:"12px 16px", background:"white", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                     <span style={{ fontSize:12, color:"#9CA3AF" }}>Gemini 이미지 생성</span>
@@ -442,7 +442,7 @@ export function MetaPromptTool() {
                   title="이미지 또는 URL 첨부"
                 >📎</button>
                 {showAttachMenu && (
-                  <div style={{ position:"absolute", bottom:44, left:0, background:"white", border:"1.5px solid rgba(124,58,237,0.15)", borderRadius:14, boxShadow:"0 8px 24px rgba(0,0,0,0.12)", overflow:"hidden", minWidth:160, zIndex:300, animation:"fadeUp 0.2s ease both" }}>
+                  <div style={{ position:"absolute", bottom:44, left:0, background:"white", border:"1.5px solid rgba(124,58,237,0.15)", borderRadius:14, boxShadow:"0 8px 24px rgba(0,0,0,0.12)", overflow:"hidden", minWidth:160, zIndex:300, animation:"plMetafadeUp 0.2s ease both" }}>
                     <button onClick={() => { fileInputRef.current?.click(); setShowAttachMenu(false); }} style={{ width:"100%", padding:"12px 16px", background:"none", border:"none", textAlign:"left", fontSize:13, fontWeight:600, color:"#1F2937", cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}>
                       🖼️ 이미지 업로드
                     </button>
@@ -474,7 +474,7 @@ export function MetaPromptTool() {
                 style={{ width:40, height:40, borderRadius:12, flexShrink:0, background:(input.trim()||attachImage||attachUrl)&&!loading?`linear-gradient(135deg,${P},${PINK})`:"#E5E7EB", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.15s", boxShadow:(input.trim()||attachImage||attachUrl)?"0 4px 12px rgba(124,58,237,0.28)":"none" }}
               >
                 {loading
-                  ? <div style={{ width:16,height:16,borderRadius:"50%",border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid white",animation:"spin 0.8s linear infinite" }} />
+                  ? <div style={{ width:16,height:16,borderRadius:"50%",border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid white",animation:"plMetaspin 0.8s linear infinite" }} />
                   : <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
                 }
               </button>

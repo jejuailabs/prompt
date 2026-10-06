@@ -196,7 +196,7 @@ interface LyricsContext {
 
 // ── SMALL UI HELPERS ─────────────────────────────────────────────────────────
 function Spin({ size = 16, color = P }: { size?: number; color?: string }) {
-  return <div style={{ width: size, height: size, borderRadius: "50%", flexShrink: 0, border: `2px solid rgba(124,58,237,0.15)`, borderTop: `2px solid ${color}`, animation: "spin 0.8s linear infinite" }} />;
+  return <div style={{ width: size, height: size, borderRadius: "50%", flexShrink: 0, border: `2px solid rgba(124,58,237,0.15)`, borderTop: `2px solid ${color}`, animation: "plSunospin 0.8s linear infinite" }} />;
 }
 
 function SectionCard({ num, title, children, accent = P }: { num: string; title: string; children: React.ReactNode; accent?: string }) {
@@ -665,16 +665,16 @@ export function SunoTool() {
   // ── SHARED STYLES ───────────────────────────────────────────────────────────
   const globalStyle = `
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;800&display=swap');
-    * { box-sizing: border-box; }
-    @keyframes spin { to { transform: rotate(360deg) } }
-    @keyframes fadeUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-    @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-    input[type=range]::-webkit-slider-thumb { width:16px;height:16px;border-radius:50%;background:${P};cursor:pointer;-webkit-appearance:none;box-shadow:0 2px 6px rgba(124,58,237,0.4); }
-    input[type=range]::-webkit-slider-runnable-track { height:4px;border-radius:2px;background:#EDE9FE; }
-    select option { background:white;color:#1A1A2E; }
-    input:focus,textarea:focus,select:focus { border-color:${P}!important;box-shadow:0 0 0 3px rgba(124,58,237,0.1); }
-    .chip-row { display:flex;flex-wrap:wrap;gap:8px; }
+    .pl-suno-tool * { box-sizing: border-box; }
+    @keyframes plSunospin { to { transform: rotate(360deg) } }
+    @keyframes plSunofadeUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
+    @keyframes plSunopulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    @keyframes plSunoshimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+    .pl-suno-tool input[type=range]::-webkit-slider-thumb { width:16px;height:16px;border-radius:50%;background:${P};cursor:pointer;-webkit-appearance:none;box-shadow:0 2px 6px rgba(124,58,237,0.4); }
+    .pl-suno-tool input[type=range]::-webkit-slider-runnable-track { height:4px;border-radius:2px;background:#EDE9FE; }
+    .pl-suno-tool select option { background:white;color:#1A1A2E; }
+    .pl-suno-tool input:focus,.pl-suno-tool textarea:focus,.pl-suno-tool select:focus { border-color:${P}!important;box-shadow:0 0 0 3px rgba(124,58,237,0.1); }
+    .pl-suno-tool .chip-row { display:flex;flex-wrap:wrap;gap:8px; }
     .suno-mode-grid { display:grid;grid-template-columns:1fr 1fr;gap:24px; }
     .suno-2col { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
     .suno-4col { display:grid;grid-template-columns:repeat(4,1fr);gap:12px; }
@@ -789,11 +789,11 @@ export function SunoTool() {
   // ── MODE SELECTOR SCREEN ─────────────────────────────────────────────────────
   if (appMode === "select") {
     return (
-      <div style={{ minHeight:"100vh", background:"#F8F5FF", fontFamily:"'Noto Sans KR',-apple-system,sans-serif" }}>
+      <div className="pl-suno-tool" style={{ minHeight:"100vh", background:"#F8F5FF", fontFamily:"'Noto Sans KR',-apple-system,sans-serif" }}>
         <style>{globalStyle}</style>
         <div className="suno-select-pad" style={{ maxWidth:860, margin:"0 auto", padding:"72px 40px" }}>
           {/* Header */}
-          <div style={{ textAlign:"center", marginBottom:56, animation:"fadeUp 0.4s ease both" }}>
+          <div style={{ textAlign:"center", marginBottom:56, animation:"plSunofadeUp 0.4s ease both" }}>
             <div style={{ fontSize:44, marginBottom:16 }}>🎵</div>
             <h1 style={{ fontSize:34, fontWeight:800, color:"#0F172A", letterSpacing:-1, marginBottom:12 }}>
               어디서부터 시작할까요?
@@ -896,18 +896,18 @@ export function SunoTool() {
       "제주 바다를 달리는 드라이브 록",
     ];
     return (
-      <div style={{ minHeight:"100vh", background:"#F8F5FF", fontFamily:"'Noto Sans KR',-apple-system,sans-serif" }}>
+      <div className="pl-suno-tool" style={{ minHeight:"100vh", background:"#F8F5FF", fontFamily:"'Noto Sans KR',-apple-system,sans-serif" }}>
         <style>{globalStyle}</style>
         <div style={{ maxWidth:720, margin:"0 auto", padding:"36px 20px 80px" }}>
           <button onClick={() => setAppMode("select")} style={{ background:"none", border:"none", color:"#6B7280", fontSize:13, fontWeight:600, cursor:"pointer", marginBottom:20 }}>← 처음으로</button>
 
-          <div style={{ textAlign:"center", marginBottom:28, animation:"fadeUp 0.4s ease both" }}>
+          <div style={{ textAlign:"center", marginBottom:28, animation:"plSunofadeUp 0.4s ease both" }}>
             <div style={{ fontSize:40, marginBottom:12 }}>⚡</div>
             <h1 style={{ fontSize:28, fontWeight:800, color:"#0F172A", letterSpacing:-0.8, marginBottom:10 }}>간단 모드</h1>
             <p style={{ fontSize:14, color:"#6B7280", lineHeight:1.7 }}>어떤 노래를 원하는지 한 줄로만 적어주세요.<br />장르·무드·보컬은 <b style={{ color:P }}>AI가 알아서</b> 정하고 가사·스타일 프롬프트까지 만들어요.</p>
           </div>
 
-          <div style={{ background:"white", borderRadius:20, border:"1px solid #EDE9FE", boxShadow:"0 4px 16px rgba(124,58,237,0.08)", padding:24, animation:"fadeUp 0.5s ease both" }}>
+          <div style={{ background:"white", borderRadius:20, border:"1px solid #EDE9FE", boxShadow:"0 4px 16px rgba(124,58,237,0.08)", padding:24, animation:"plSunofadeUp 0.5s ease both" }}>
             <textarea
               value={simpleIdea}
               onChange={e => setSimpleIdea(e.target.value)}
@@ -1278,7 +1278,7 @@ export function SunoTool() {
       <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
         {/* Style Prompt Results */}
         {results.map((r, i) => (
-          <div key={i} style={{ background:"white", borderRadius:20, border:"1px solid #EDE9FE", overflow:"hidden", animation:"fadeUp 0.4s ease both" }}>
+          <div key={i} style={{ background:"white", borderRadius:20, border:"1px solid #EDE9FE", overflow:"hidden", animation:"plSunofadeUp 0.4s ease both" }}>
             <div style={{ background:`linear-gradient(135deg,${P},${PINK})`, padding:"14px 24px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div style={{ color:"white", fontWeight:700, fontSize:15 }}>
                 {results.length > 1 ? `트랙 ${i + 1}` : "스타일 프롬프트"} {r.suggestedTitle && `— ${r.suggestedTitle}`}
@@ -1305,7 +1305,7 @@ export function SunoTool() {
 
         {/* Lyrics Result */}
         {lyricsResult && (
-          <div style={{ background:"white", borderRadius:20, border:"1px solid #EDE9FE", overflow:"hidden", animation:"fadeUp 0.4s ease both" }}>
+          <div style={{ background:"white", borderRadius:20, border:"1px solid #EDE9FE", overflow:"hidden", animation:"plSunofadeUp 0.4s ease both" }}>
             <div style={{ background:"linear-gradient(135deg,#1E3A5F,#2563EB)", padding:"14px 24px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div style={{ color:"white", fontWeight:700, fontSize:15 }}>생성된 가사</div>
               <div style={{ display:"flex", gap:8 }}>
@@ -1342,7 +1342,7 @@ export function SunoTool() {
   // ── PATH A: LYRICS FIRST ─────────────────────────────────────────────────────
   if (appMode === "path-a") {
     return (
-      <div style={{ minHeight:"100vh", background:"#F8F5FF", fontFamily:"'Noto Sans KR',-apple-system,sans-serif" }}>
+      <div className="pl-suno-tool" style={{ minHeight:"100vh", background:"#F8F5FF", fontFamily:"'Noto Sans KR',-apple-system,sans-serif" }}>
         <style>{globalStyle}</style>
 
         {/* Step indicator */}
@@ -1372,7 +1372,7 @@ export function SunoTool() {
         <div className="suno-page-pad" style={{ maxWidth:780, margin:"0 auto", padding:"40px 40px 80px" }}>
           {/* STEP: choose */}
           {pathAStep === "choose" && (
-            <div style={{ animation:"fadeUp 0.4s ease both" }}>
+            <div style={{ animation:"plSunofadeUp 0.4s ease both" }}>
               <h2 style={{ fontSize:22, fontWeight:800, color:"#0F172A", marginBottom:8 }}>가사를 어떻게 준비하셨나요?</h2>
               <p style={{ fontSize:14, color:"#6B7280", marginBottom:32 }}>준비된 가사가 있으면 붙여넣고, 없으면 직접 만들어드릴게요.</p>
               <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
@@ -1396,7 +1396,7 @@ export function SunoTool() {
 
           {/* STEP: paste */}
           {pathAStep === "paste" && (
-            <div style={{ animation:"fadeUp 0.4s ease both" }}>
+            <div style={{ animation:"plSunofadeUp 0.4s ease both" }}>
               <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
                 <button onClick={() => setPathAStep("choose")} style={{ background:"none", border:"none", cursor:"pointer", color:"#9CA3AF", fontSize:13 }}>← 뒤로</button>
                 <h2 style={{ fontSize:22, fontWeight:800, color:"#0F172A", margin:0 }}>가사 / 영감 붙여넣기</h2>
@@ -1430,7 +1430,7 @@ export function SunoTool() {
 
           {/* STEP: create (lyrics form) */}
           {pathAStep === "create" && (
-            <div style={{ animation:"fadeUp 0.4s ease both" }}>
+            <div style={{ animation:"plSunofadeUp 0.4s ease both" }}>
               <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
                 <button onClick={() => setPathAStep("choose")} style={{ background:"none", border:"none", cursor:"pointer", color:"#9CA3AF", fontSize:13 }}>← 뒤로</button>
                 <h2 style={{ fontSize:22, fontWeight:800, color:"#0F172A", margin:0 }}>가사 생성하기</h2>
@@ -1451,7 +1451,7 @@ export function SunoTool() {
 
               {/* Lyrics Result + Continue to Style */}
               {lyricsResult && (
-                <div ref={lyricsTopRef} style={{ marginTop:32, display:"flex", flexDirection:"column", gap:20, animation:"fadeUp 0.4s ease both", scrollMarginTop:80 }}>
+                <div ref={lyricsTopRef} style={{ marginTop:32, display:"flex", flexDirection:"column", gap:20, animation:"plSunofadeUp 0.4s ease both", scrollMarginTop:80 }}>
                   <div style={{ background:"white", borderRadius:20, border:"1px solid #EDE9FE", overflow:"hidden" }}>
                     <div style={{ background:"linear-gradient(135deg,#1E3A5F,#2563EB)", padding:"14px 24px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                       <div style={{ color:"white", fontWeight:700, fontSize:15 }}>생성된 가사</div>
@@ -1490,7 +1490,7 @@ export function SunoTool() {
 
           {/* STEP: style (Path A) */}
           {pathAStep === "style" && (
-            <div style={{ animation:"fadeUp 0.4s ease both" }}>
+            <div style={{ animation:"plSunofadeUp 0.4s ease both" }}>
               <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
                 <button onClick={() => setPathAStep(lyricsResult ? "create" : "paste")} style={{ background:"none", border:"none", cursor:"pointer", color:"#9CA3AF", fontSize:13 }}>← 뒤로</button>
                 <h2 style={{ fontSize:22, fontWeight:800, color:"#0F172A", margin:0 }}>스타일 프롬프트 생성</h2>
@@ -1525,7 +1525,7 @@ export function SunoTool() {
   // ── PATH B: STYLE FIRST ──────────────────────────────────────────────────────
   if (appMode === "path-b") {
     return (
-      <div style={{ minHeight:"100vh", background:"#F8F5FF", fontFamily:"'Noto Sans KR',-apple-system,sans-serif" }}>
+      <div className="pl-suno-tool" style={{ minHeight:"100vh", background:"#F8F5FF", fontFamily:"'Noto Sans KR',-apple-system,sans-serif" }}>
         <style>{globalStyle}</style>
 
         {/* Step indicator */}
@@ -1568,7 +1568,7 @@ export function SunoTool() {
 
           {/* Style Prompt Result */}
           {results.length > 0 && (
-            <div style={{ marginTop:32, display:"flex", flexDirection:"column", gap:24, animation:"fadeUp 0.4s ease both" }}>
+            <div style={{ marginTop:32, display:"flex", flexDirection:"column", gap:24, animation:"plSunofadeUp 0.4s ease both" }}>
               {results.map((r, i) => (
                 <div key={i} style={{ background:"white", borderRadius:20, border:"1px solid #EDE9FE", overflow:"hidden" }}>
                   <div style={{ background:`linear-gradient(135deg,${P},${PINK})`, padding:"14px 24px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -1594,7 +1594,7 @@ export function SunoTool() {
               ))}
 
               {/* Lyrics Confirmation Banner + Form */}
-              <div ref={lyricsTopRef} style={{ background:"linear-gradient(135deg,rgba(124,58,237,0.06),rgba(236,72,153,0.04))", border:`1.5px solid ${P}`, borderRadius:20, overflow:"hidden", animation:"fadeUp 0.4s ease 0.2s both" }}>
+              <div ref={lyricsTopRef} style={{ background:"linear-gradient(135deg,rgba(124,58,237,0.06),rgba(236,72,153,0.04))", border:`1.5px solid ${P}`, borderRadius:20, overflow:"hidden", animation:"plSunofadeUp 0.4s ease 0.2s both" }}>
                 <div style={{ background:`linear-gradient(135deg,${P},${PINK})`, padding:"16px 24px", display:"flex", alignItems:"center", gap:12 }}>
                   <span style={{ fontSize:20 }}>✨</span>
                   <div>
@@ -1639,7 +1639,7 @@ export function SunoTool() {
 
               {/* Lyrics Result */}
               {lyricsResult && (
-                <div style={{ background:"white", borderRadius:20, border:"1px solid #EDE9FE", overflow:"hidden", animation:"fadeUp 0.4s ease both" }}>
+                <div style={{ background:"white", borderRadius:20, border:"1px solid #EDE9FE", overflow:"hidden", animation:"plSunofadeUp 0.4s ease both" }}>
                   <div style={{ background:"linear-gradient(135deg,#1E3A5F,#2563EB)", padding:"14px 24px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                     <div style={{ color:"white", fontWeight:700, fontSize:15 }}>생성된 가사</div>
                     <div style={{ display:"flex", gap:8 }}>

@@ -1,3 +1,4 @@
+import { checkToolAccess } from '@/lib/server/tool-access';
 import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -79,6 +80,8 @@ async function withRetry<T>(fn: () => Promise<T>, tries = 3): Promise<T> {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await checkToolAccess();
+  if (denied) return denied;
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "OPENAI_API_KEY not configured" }, { status: 500 });
   const openai = new OpenAI({ apiKey });

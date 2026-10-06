@@ -1,51 +1,28 @@
 'use client';
-
-import { useQuery } from '@tanstack/react-query';
-import { Sparkles } from 'lucide-react';
-import { api } from '@/lib/api-client';
-import type { ModuleDTO } from '@/lib/types';
+import { useState } from 'react';
+import { ArrowUpRight, Search } from 'lucide-react';
+import { useModules } from '@/hooks/use-session';
 import { Icon } from '@/components/layout/icon';
 import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
-import { ViewHeader } from '@/components/shared/view-header';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { useAppStore } from '@/lib/store';
-
+import { Input } from '@/components/ui/input';
+import { PreviewNotice } from '@/components/runtime-context';
 const LIVE_TOOL_IDS = new Set(['tool-tts', 'tool-suno', 'tool-ace-music', 'tool-metaprompt', 'tool-qr', 'tool-thumbnail', 'tool-storyboard', 'tool-detail', 'tool-detail2', 'tool-converter', 'tool-srt', 'tool-autocut', 'tool-whisper']);
-const VISUALS: Record<string, { accent: string; soft: string; glow: string }> = {
-  'tool-tts': { accent: 'from-cyan-500 to-blue-600', soft: 'bg-cyan-50 text-cyan-600', glow: 'group-hover:shadow-cyan-100' },
-  'tool-storyboard': { accent: 'from-amber-400 to-orange-500', soft: 'bg-amber-50 text-amber-600', glow: 'group-hover:shadow-amber-100' },
-  'tool-suno': { accent: 'from-fuchsia-500 to-pink-500', soft: 'bg-fuchsia-50 text-fuchsia-600', glow: 'group-hover:shadow-fuchsia-100' },
-  'tool-ace-music': { accent: 'from-violet-600 to-fuchsia-500', soft: 'bg-violet-50 text-violet-600', glow: 'group-hover:shadow-violet-100' },
-  'tool-metaprompt': { accent: 'from-violet-500 to-indigo-600', soft: 'bg-violet-50 text-violet-600', glow: 'group-hover:shadow-violet-100' },
-  'tool-detail': { accent: 'from-sky-500 to-blue-600', soft: 'bg-sky-50 text-sky-600', glow: 'group-hover:shadow-sky-100' },
-  'tool-detail2': { accent: 'from-orange-500 to-rose-500', soft: 'bg-orange-50 text-orange-600', glow: 'group-hover:shadow-orange-100' },
-  'tool-converter': { accent: 'from-emerald-500 to-teal-600', soft: 'bg-emerald-50 text-emerald-600', glow: 'group-hover:shadow-emerald-100' },
-  'tool-autocut': { accent: 'from-purple-500 to-pink-500', soft: 'bg-purple-50 text-purple-600', glow: 'group-hover:shadow-purple-100' },
-  'tool-srt': { accent: 'from-blue-500 to-indigo-600', soft: 'bg-blue-50 text-blue-600', glow: 'group-hover:shadow-blue-100' },
-  'tool-url': { accent: 'from-slate-600 to-slate-800', soft: 'bg-slate-100 text-slate-600', glow: 'group-hover:shadow-slate-200' },
-  'tool-whisper': { accent: 'from-teal-500 to-cyan-600', soft: 'bg-teal-50 text-teal-600', glow: 'group-hover:shadow-teal-100' },
-  'tool-qr': { accent: 'from-rose-500 to-red-600', soft: 'bg-rose-50 text-rose-600', glow: 'group-hover:shadow-rose-100' },
-  'tool-thumbnail': { accent: 'from-pink-500 to-orange-500', soft: 'bg-pink-50 text-pink-600', glow: 'group-hover:shadow-pink-100' },
-};
-
 export default function AiToolsView() {
-  const navigate = useAppStore((state) => state.navigate);
-  const tools = useQuery({ queryKey: ['modules'], queryFn: () => api.get<ModuleDTO[]>('/api/modules') });
-  // Admin's module ON/OFF switch is the publication control: hidden tools
-  // stay registered but never appear in this public catalogue.
-  const moduleById = new Map((tools.data ?? []).map((m) => [m.id, m]));
-  const items = AI_STUDIO_TOOLS.map((detail) => ({ detail, module: moduleById.get(detail.id) })).filter((x) => x.module?.enabled);
-  return <div className="mx-auto w-full max-w-[1440px] p-4 md:p-6 lg:p-8">
-    <ViewHeader title="AI Tools" subtitle="필요한 AI 도구를 선택해 바로 작업을 시작하세요" />
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      {items.map(({ detail, module }) => { const tool = module!; const isLive = LIVE_TOOL_IDS.has(tool.id); const visual = VISUALS[tool.id] || VISUALS['tool-metaprompt']; return <Card key={tool.id} className={`group relative overflow-hidden border-border/80 p-4 shadow-sm transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl ${visual.glow}`}>
-        <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${visual.accent}`} />
-        <div className="flex items-start justify-between gap-2"><span className={`flex size-10 items-center justify-center rounded-xl ${visual.soft}`}><Icon name={tool.icon} className="size-5" /></span><Badge variant={isLive ? 'default' : 'secondary'} className="px-2 py-0.5 text-[10px]">{isLive ? '사용 가능' : '준비 중'}</Badge></div>
-        <h2 className="mt-4 truncate text-base font-bold tracking-tight">{detail.titleKo}</h2><p className="mt-1 line-clamp-2 min-h-10 text-xs leading-5 text-muted-foreground">{detail.descKo}</p><ul className="mt-3 space-y-1 text-[11px] leading-4 text-muted-foreground">{detail.features.slice(0, 2).map((feature) => <li key={feature} className="truncate">✓ {feature}</li>)}</ul>
-        <Button size="sm" className={`mt-4 h-8 w-full bg-gradient-to-r text-xs shadow-none ${visual.accent}`} disabled={!isLive} onClick={() => navigate('tool', { slug: tool.id.replace('tool-', '') })}><Sparkles className="size-3.5" />{isLive ? '도구 열기' : '이식 중'}</Button>
-      </Card>; })}
-    </div>
+  const navigate = useAppStore(s => s.navigate);
+  const session = useAppStore(s => s.session);
+  const en = useAppStore(s => s.locale) === 'en';
+  const modules = useModules();
+  const [query, setQuery] = useState('');
+  const byId = new Map((modules.data ?? []).map(m => [m.id,m]));
+  const items = AI_STUDIO_TOOLS.filter(d => byId.get(d.id)?.enabled && (d.titleKo + d.descKo).toLowerCase().includes(query.toLowerCase()));
+  return <div className="editorial-page">
+    <div className="editorial-page-intro"><div><p className="eyebrow">THE EVERYDAY TOOLBOX / PLAYLAB</p><h1 className="editorial-page-title">Small tools.<br />Big possibilities<span className="text-primary">.</span></h1><p>{en ? 'A voice, an image, the beginning of your next idea.' : '목소리 하나, 이미지 한 장. 다음 아이디어를 완성하는 작은 도구들.'}</p></div><span className="text-sm text-muted-foreground">{session ? `◉ ${session.credits.toLocaleString()} 크레딧` : '가입하면 1,000 크레딧으로 시작'}</span></div>
+    <PreviewNotice />
+    <a href="/mcp-connect" className="mb-8 flex items-center justify-between border border-border px-5 py-4 text-sm hover:border-primary"><span>Codex · Claude Code에서 영상, 3D, 음악 만들기</span><ArrowUpRight size={18} /></a>
+    <div className="mb-8 flex items-center gap-3"><Search size={17} className="text-muted-foreground" /><Input value={query} onChange={e => setQuery(e.target.value)} placeholder={en ? 'Find a tool' : '어떤 도구가 필요하세요?'} aria-label={en ? 'Find a tool' : '도구 검색'} className="max-w-sm border-0 border-b rounded-none bg-transparent" /><span className="ml-auto text-xs text-muted-foreground">{items.length} TOOLS</span></div>
+    {modules.isError && <div className="mb-5 text-sm text-muted-foreground">도구 목록을 갱신하지 못했어요. <button className="underline" onClick={() => void modules.refetch()}>다시 불러오기</button></div>}
+    <div className="tool-catalogue">{items.map((detail,i) => { const tool=byId.get(detail.id)!; const live=LIVE_TOOL_IDS.has(tool.id); return <article key={detail.id} className="tool-tile"><div className="flex items-center justify-between"><Icon name={tool.icon} className="size-7 text-primary" /><span className="eyebrow">{String(i+1).padStart(2,'0')} / {live ? 'READY TO MAKE' : 'COMING SOON'}</span></div><h2>{detail.titleKo}</h2><p>{detail.descKo}</p><button disabled={!live} onClick={() => navigate('tool',{slug:tool.id.replace('tool-','')})}>{live ? (en ? 'Open tool' : '도구 열기') : '준비 중'} <ArrowUpRight size={16} /></button></article>; })}</div>
+    {!items.length && !modules.isError && <p className="py-20 text-center text-muted-foreground">검색한 도구가 없어요. 다른 단어로 찾아보세요.</p>}
   </div>;
 }

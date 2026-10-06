@@ -1,3 +1,4 @@
+import { checkToolAccess } from '@/lib/server/tool-access';
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -63,6 +64,8 @@ OUTPUT:
 }`;
 
 export async function POST(req: NextRequest) {
+  const denied = await checkToolAccess();
+  if (denied) return denied;
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
   const genAI = new GoogleGenerativeAI(apiKey);

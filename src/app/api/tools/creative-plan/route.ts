@@ -1,7 +1,10 @@
+import { checkToolAccess } from '@/lib/server/tool-access';
 import { NextRequest, NextResponse } from 'next/server';
 import { chatJson } from '@/lib/server/ai';
 
 export async function POST(req: NextRequest) {
+  const denied = await checkToolAccess();
+  if (denied) return denied;
   try {
     const { kind, subject, audience, style, details } = await req.json() as { kind?: 'storyboard' | 'detail' | 'detail2'; subject?: string; audience?: string; style?: string; details?: string };
     if (!kind || !subject?.trim()) return NextResponse.json({ error: '핵심 주제 또는 상품명을 입력해 주세요.' }, { status: 400 });

@@ -1,9 +1,12 @@
+import { checkToolAccess } from '@/lib/server/tool-access';
 import { NextRequest, NextResponse } from 'next/server';
 
 const MODEL = 'gemini-2.5-flash-preview-tts';
 const VOICES = new Set(['Charon', 'Fenrir', 'Puck', 'Orus', 'Enceladus', 'Kore', 'Aoede', 'Leda', 'Zephyr', 'Callirrhoe']);
 
 export async function POST(req: NextRequest) {
+  const denied = await checkToolAccess();
+  if (denied) return denied;
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return NextResponse.json({ error: 'TTS를 사용하려면 GEMINI_API_KEY가 필요합니다.' }, { status: 503 });
   try {

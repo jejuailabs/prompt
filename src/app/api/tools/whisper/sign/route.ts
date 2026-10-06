@@ -13,6 +13,8 @@ const audioContentTypes: Record<string, string> = {
   aac: 'audio/aac',
   wav: 'audio/wav',
   wave: 'audio/wav',
+  flac: 'audio/flac',
+  ogg: 'audio/ogg',
 };
 
 export async function POST(req: NextRequest) {
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
   const contentType = audioContentTypes[ext];
   if (!contentType) {
     return NextResponse.json(
-      { error: 'MP3, M4A, AAC, WAV 형식의 오디오만 업로드할 수 있습니다.' },
+      { error: 'MP3, M4A, AAC, WAV, FLAC, OGG 형식의 오디오만 업로드할 수 있습니다.' },
       { status: 400 },
     );
   }

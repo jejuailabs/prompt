@@ -1,3 +1,4 @@
+import { srtTimestamp as toSrt } from '@/lib/subtitles';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUserFast } from '@/lib/auth';
 import { queueRunpodJob, getRunpodJobStatus, getRunpodEndpointId } from '@/lib/server/runpod';
@@ -5,15 +6,6 @@ import { beginMeteredOperation, finishMeteredOperation, failMeteredOperation } f
 
 const POLL_INTERVAL = 2000;
 const MAX_POLLS = 150; // 5분
-
-function toSrt(seconds: number) {
-  const ms = Math.round((seconds % 1) * 1000);
-  const total = Math.floor(seconds);
-  const s = total % 60;
-  const m = Math.floor(total / 60) % 60;
-  const h = Math.floor(total / 3600);
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
-}
 
 export async function POST(req: NextRequest) {
   const endpointId = getRunpodEndpointId('whisper');
