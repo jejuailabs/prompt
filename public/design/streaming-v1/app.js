@@ -15,6 +15,8 @@ const icons = {
 };
 const icon = (name) => `<svg aria-hidden="true" viewBox="0 0 24 24">${icons[name] || icons.arrow}</svg>`;
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const liveHomepage = location.pathname === '/';
+document.body.classList.toggle('live-homepage', liveHomepage);
 let spaceNavigation = { sections: [], entries: [] };
 let navigationRole = null;
 function renderSpaces() {
@@ -134,13 +136,16 @@ function detailTab(w, tab) {
 }
 function render() {
   const route=(location.hash.slice(1).split('?')[0]||'home');
+  const liveDestinations = { prompts:'/app#prompt-wiki', films:'/app#gallery?type=video', games:'/app#game-room' };
+  if (liveHomepage && liveDestinations[route]) { location.replace(liveDestinations[route]); return; }
   if(route==='content') { $('#content').focus(); return; }
   if (!navPages.includes(route)) { location.replace('/app' + location.hash); return; }
   page=route;shelfNumber=0;
   $('#content').innerHTML=({home,prompts,films,games,detail})[page]();
+  if (liveHomepage) $$('#content a').forEach(a => { const destination = liveDestinations[a.getAttribute('href')?.slice(1)]; if (destination) a.href = destination; });
   $$('[data-page]').forEach(a=>{const active=a.dataset.page===page;a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   const labels={home:'홈',prompts:'프롬프트',films:'영상',games:'게임',detail:'작품 상세'};
-  document.title=`${labels[page]} — PLAYLAB 디자인 시안`;
+  document.title=`${labels[page]} — PLAYLAB${liveHomepage ? '' : ' 디자인 시안'}`;
 }
 function toast(message) {const el=$('#toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),2700);}
 function modal(html, game=false) {$('#modal-content').innerHTML=html;$('#modal').classList.toggle('game-modal',game);$('#modal').showModal();document.body.style.overflow='hidden';}

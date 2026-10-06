@@ -133,7 +133,8 @@ function StudioGallery({ session, onNewProject, onOpenProject }: {
 
   return (
     <div className="editorial-page mx-auto w-full max-w-7xl space-y-7 pb-10"><PreviewNotice />
-      <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-slate-950 via-slate-900 to-violet-950 px-6 py-9 text-white shadow-xl sm:px-10">
+      <section className="video-poster-hero relative overflow-hidden px-6 py-9 text-white sm:px-10">
+        <img src="/design/streaming-v1/assets/midnight-station.png" alt="" aria-hidden="true" className="video-poster-image" />
         <div className="absolute -right-20 -top-24 size-80 rounded-full bg-primary/25 blur-3xl" /><div className="absolute -bottom-36 left-1/3 size-72 rounded-full bg-sky-400/15 blur-3xl" />
         <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl"><div className="mb-3 flex items-center gap-2 text-sm font-medium text-sky-200"><Sparkles className="size-4" /> PLAYLAB VIDEO STUDIO</div><h1 className="text-3xl font-bold tracking-tight sm:text-5xl">보고, 바로 만들고,<br />이야기로 완성하세요.</h1><p className="mt-4 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">크리에이터의 영상과 에셋에서 시작해, 프롬프트 한 줄 또는 이미지 한 장으로 첫 샷을 만드세요.</p></div>

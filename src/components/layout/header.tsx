@@ -290,8 +290,8 @@ export default function Header({ poster = false }: { poster?: boolean }) {
           {poster ? ['home', 'prompt-wiki', 'gallery', 'game-room', 'academy', 'ai-tools'].map(key => {
             const m = modules.find(item => item.entryView === key && !item.group && item.enabled && !item.adminOnly);
             if (!m) return null;
-            const destination = ({ home: '/#home', 'prompt-wiki': '/#prompts', gallery: '/#films', 'game-room': '/#games', academy: '/app#academy', 'ai-tools': '/app#ai-tools' } as Record<string, string>)[key];
-            const label = ({ home: '홈', 'prompt-wiki': '프롬프트', gallery: '영상', 'game-room': '게임', academy: '강의', 'ai-tools': 'AI Tools' } as Record<string, string>)[key];
+            const destination = key === 'home' ? '/#home' : `/app#${key}`;
+            const label = ({ home: '홈', 'prompt-wiki': '프롬프트', gallery: '둘러보기', 'game-room': '게임', academy: '강의', 'ai-tools': 'AI Tools' } as Record<string, string>)[key];
             return <a key={m.id} href={destination} aria-current={view === key || (key === 'ai-tools' && view === 'tool') ? 'page' : undefined}>{locale === 'en' ? moduleTitle(m, locale) : label}</a>;
           }) : modules.filter(m => ['gallery', 'prompt-wiki', 'community', 'ai-tools', 'lab'].includes(m.entryView) && !m.group).map(m => <button key={m.id} aria-current={view === m.entryView ? 'page' : undefined} onClick={() => navigate(m.entryView as ViewKey, m.entryView === 'gallery' ? { tab: 'artifacts' } : undefined)}>{moduleTitle(m, locale)}</button>)}
         </nav>

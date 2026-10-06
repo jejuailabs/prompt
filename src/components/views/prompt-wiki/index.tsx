@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/shared/empty-state';
+import { ViewHeader } from '@/components/shared/view-header';
 
 interface TreeNode {
   id: string;
@@ -127,16 +128,9 @@ export default function PromptWikiView() {
   if (isError) return <EmptyState title="프롬프트를 불러오지 못했어요." action={<Button onClick={() => void refetch()}>다시 불러오기</Button>} />;
 
   return (
-    <div className="wiki-page mx-auto max-w-5xl space-y-6 p-6">
+    <div className="wiki-page editorial-page space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">
-          {locale === 'en' ? 'Prompt Wiki' : '프롬프트 위키'}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {locale === 'en'
-            ? 'See how prompts evolve through forks and remixes'
-            : '프롬프트가 포크와 수정을 거쳐 어떻게 진화하는지 확인하세요'}
-        </p>
+        <ViewHeader eyebrow="THE PROMPT COLLECTION" title={locale === 'en' ? 'Prompt Wiki' : '프롬프트 위키'} subtitle={locale === 'en' ? 'See the result. Make the prompt your own.' : '마음에 드는 결과물에서 시작해, 프롬프트를 내 것으로.'} actions={<Button onClick={() => navigate('gallery', { tab: 'prompts' })}>{locale === 'en' ? 'Find a prompt' : '프롬프트 검색'} ↗</Button>} />
         <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-2 rounded-full bg-primary" />
@@ -154,7 +148,7 @@ export default function PromptWikiView() {
           {locale === 'en' ? 'No prompts yet' : '아직 프롬프트가 없습니다'}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="wiki-collection-grid">
           {trees.map((root) => (
             <ForkNode key={root.id} node={root} depth={0} navigate={navigate} />
           ))}

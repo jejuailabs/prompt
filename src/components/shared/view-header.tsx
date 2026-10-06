@@ -3,14 +3,16 @@
 import type { ReactNode } from 'react';
 
 /** Standard view heading: title + optional subtitle on the left, action buttons on the right. */
-export function ViewHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+export function ViewHeader({ title, subtitle, actions, eyebrow, image }: { title: string; subtitle?: string; actions?: ReactNode; eyebrow?: string; image?: string }) {
   return (
-    <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-      <div className="min-w-0">
-        <h1 className="text-3xl font-medium tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+    <section className={`space-heading ${image ? 'space-heading-art' : ''}`}>
+      {image && <img className="space-heading-image" src={image} alt="" aria-hidden="true" />}
+      <div className="space-heading-copy">
+        {eyebrow && <p className="space-eyebrow">{eyebrow}</p>}
+        <h1>{title}</h1>
+        {subtitle && <p className="space-subtitle">{subtitle}</p>}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
-    </div>
+      {actions && <div className="space-heading-actions">{actions}</div>}
+    </section>
   );
 }

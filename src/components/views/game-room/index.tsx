@@ -6,6 +6,7 @@ import { Gamepad2, Heart, Loader2, Play, TrendingUp, Clock, Plus, Trash2, Edit2,
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { EmptyState } from '@/components/shared/empty-state';
+import { ViewHeader } from '@/components/shared/view-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -69,16 +70,11 @@ export default function GameRoomView() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-7 px-5 py-8 md:px-8 md:py-10">
+    <div className="editorial-page arcade-page space-y-7">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-5">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Gamepad2 className="h-6 w-6" /> {t.title}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">{t.subtitle}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <div>
+        <ViewHeader eyebrow="PLAYLAB ARCADE / PLAY IN YOUR BROWSER" title={t.title} subtitle={t.subtitle} image={games[0]?.fileUrl ?? '/uploads/seed/space-cover-v3.png'} actions={games[0] && <Button onClick={() => navigate('game-play', { id: games[0].id })}><Play className="size-4" />{locale === 'en' ? 'Play now' : '바로 플레이'}</Button>} />
+        <div className="arcade-toolbar flex flex-wrap gap-2">
           <Button size="sm" onClick={() => setSubmitOpen(true)}><Plus className="mr-1 h-4 w-4" />게임 등록</Button>
           <Button
             variant={sort === 'popular' ? 'default' : 'outline'}
@@ -109,7 +105,7 @@ export default function GameRoomView() {
       ) : games.length === 0 ? (
         <EmptyState title={t.empty} description="" />
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="arcade-grid grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {games.map((game) => (
             <Card
               key={game.id}

@@ -26,7 +26,7 @@ export default function Providers({ children, previewMode = false, authConfigure
   const messages = useMemo(() => getMessages(locale), [locale]);
 
   return (
-    <RuntimeContext.Provider value={{ previewMode, authConfigured }}><ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+    <RuntimeContext.Provider value={{ previewMode, authConfigured }}><ThemeProvider attribute="class" storageKey="playlab-poster-theme" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
         <NextIntlClientProvider locale={(locale satisfies Locale) as string} messages={messages} timeZone="Asia/Seoul">
           <TooltipProvider delayDuration={200}>{children}</TooltipProvider>

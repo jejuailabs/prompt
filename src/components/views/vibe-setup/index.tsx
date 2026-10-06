@@ -80,8 +80,10 @@ export default function VibeSetupView() {
   const current = stepItems.find((i) => i.id === openItem) ?? null;
 
   return (
-    <div id="vibe-top" className="mx-auto w-full max-w-7xl scroll-mt-20 p-4 md:p-6 lg:p-8">
+    <div id="vibe-top" className="editorial-page vibe-setup-page scroll-mt-20">
       <ViewHeader
+        eyebrow="START SOMETHING / VIBE CODING"
+        image="/design/streaming-v1/assets/glass-garden.png"
         title="바이브코딩 시작하기"
         subtitle="1단계부터 차례대로 한 번씩만 따라 하면, 누구나 첫 서비스를 인터넷에 올릴 수 있어요."
       />

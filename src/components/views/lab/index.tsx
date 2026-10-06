@@ -199,7 +199,7 @@ export default function LabView() {
 
   return (
     <div className="editorial-page flex min-w-0 flex-col gap-4">
-      <ViewHeader title={t('title')} subtitle={t('subtitle')} />
+      <ViewHeader eyebrow="THE EXPERIMENT ROOM / IMAGE" title={t('title')} subtitle={t('subtitle')} />
       <PreviewNotice />
 
       {/* ━━ TOP: Prompt bar ━━ */}

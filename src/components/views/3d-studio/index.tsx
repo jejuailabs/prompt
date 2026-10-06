@@ -64,10 +64,10 @@ function AssetGalleryLanding({ session, onNew, onOpenProject }: { session: boole
   const [tab, setTab] = useState<'gallery' | 'mine'>('gallery');
   const publicAssets = useQuery({ queryKey: ['asset-studio-gallery'], queryFn: () => api.get<ArtifactDTO[]>('/api/artifacts?scope=feed&type=3d_asset&limit=12') });
   return <div className="editorial-page space-y-7">
-    <ViewHeader title="3D 에셋 스튜디오" subtitle="이미지를 입체로 만들고, 완성한 에셋을 함께 살펴보세요." actions={<Button onClick={onNew}>새 에셋 만들기</Button>} />
+    <ViewHeader eyebrow="THE EXPERIMENT ROOM / 3D" image="/uploads/seed/thumb-isometric.png" title="3D 에셋 스튜디오" subtitle="이미지를 입체로 만들고, 완성한 에셋을 함께 살펴보세요." actions={<Button onClick={onNew}>새 에셋 만들기 ↗</Button>} />
     <PreviewNotice />
     <div className="flex gap-2"><Button variant={tab === 'gallery' ? 'default' : 'outline'} onClick={() => setTab('gallery')}>공개 에셋</Button><Button variant={tab === 'mine' ? 'default' : 'outline'} onClick={() => setTab('mine')}>내 프로젝트</Button></div>
-    {tab === 'gallery' ? publicAssets.isLoading ? <p role="status">공개 에셋을 불러오는 중이에요.</p> : publicAssets.isError ? <EmptyState title="에셋을 불러오지 못했어요." action={<Button onClick={() => void publicAssets.refetch()}>다시 불러오기</Button>} /> : publicAssets.data?.length ? <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">{publicAssets.data.map(asset => <ArtifactCard key={asset.id} artifact={asset} />)}</div> : <EmptyState title="아직 공개된 3D 에셋이 없어요." description="에셋을 만들고 공개하면 이곳에서 함께 볼 수 있어요." action={<Button onClick={onNew}>첫 에셋 만들기</Button>} /> : session ? <ProjectList onSelect={onOpenProject} /> : <EmptyState title="로그인하면 내 3D 프로젝트를 볼 수 있어요." action={<Button onClick={onNew}>로그인</Button>} />}
+    {tab === 'gallery' ? publicAssets.isLoading ? <p role="status">공개 에셋을 불러오는 중이에요.</p> : publicAssets.isError ? <EmptyState title="에셋을 불러오지 못했어요." action={<Button onClick={() => void publicAssets.refetch()}>다시 불러오기</Button>} /> : publicAssets.data?.length ? <div className="works-grid">{publicAssets.data.map(asset => <ArtifactCard key={asset.id} artifact={asset} onClick={() => useAppStore.getState().navigate('project', { id: asset.id })} />)}</div> : <EmptyState title="아직 공개된 3D 에셋이 없어요." description="에셋을 만들고 공개하면 이곳에서 함께 볼 수 있어요." action={<Button onClick={onNew}>첫 에셋 만들기</Button>} /> : session ? <ProjectList onSelect={onOpenProject} /> : <EmptyState title="로그인하면 내 3D 프로젝트를 볼 수 있어요." action={<Button onClick={onNew}>로그인</Button>} />}
   </div>;
 }
 

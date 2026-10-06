@@ -128,7 +128,7 @@ export default function GalleryView() {
   const [createOpen, setCreateOpen] = useState(false);
   const [qInput, setQInput] = useState<string | null>(null);
   const [tab, setTab] = useState<'prompts' | 'artifacts'>(params.tab === 'prompts' ? 'prompts' : 'artifacts');
-  const [artifactType, setArtifactType] = useState('');
+  const [artifactType, setArtifactType] = useState(params.type ?? '');
   const [sort, setSort] = useState<SortKey>('new');
   const [category, setCategory] = useState<string>('');
 
@@ -174,7 +174,7 @@ export default function GalleryView() {
 
   return (
     <div className="editorial-page">
-      <div className="editorial-page-intro"><div><p className="eyebrow">THE OPEN GALLERY / PLAYLAB</p><h1 className="editorial-page-title">{locale === 'en' ? 'A little out of the ordinary.' : '조금 다른 상상들이 모이는 곳.'}</h1><p>{locale === 'en' ? 'Watch it. Play it. Find out how it was made.' : '감상하고, 직접 써보고, 어떻게 만들었는지 이야기해요.'}</p></div><Button onClick={() => setCreateOpen(true)}>{t('writePrompt')} ↗</Button></div>
+      <ViewHeader eyebrow="THE OPEN GALLERY / PLAYLAB" title={locale === 'en' ? 'A little out of the ordinary.' : '조금 다른 상상들이 모이는 곳.'} subtitle={locale === 'en' ? 'Watch it. Play it. Find out how it was made.' : '감상하고, 직접 써보고, 어떻게 만들었는지 이야기해요.'} actions={<Button onClick={() => setCreateOpen(true)}>{t('writePrompt')} ↗</Button>} />
       {/* controls + tab panels share one Tabs root (Radix requires TabsContent inside Tabs) */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as 'prompts' | 'artifacts')}>
         <div className="gallery-controls flex flex-wrap items-center gap-3">

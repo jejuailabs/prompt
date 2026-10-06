@@ -9,6 +9,7 @@ import MobileTabbar from './mobile-tabbar';
 import { StudioSwitcher } from '@/components/experience/studio-switcher';
 import { useAppStore } from '@/lib/store';
 import './poster-shell.css';
+import './poster-pages.css';
 
 /**
  * App shell: desktop sidebar (md+, sticky) + right column (header / main / sticky footer)
@@ -22,13 +23,12 @@ export default function AppShell() {
   useSession(); // boot: fetch session cookie → store (also used by sidebar/header)
   const t = useTranslations('core');
   const view = useAppStore(s => s.view);
-  const poster = ['academy', 'ai-tools', 'tool', 'my-projects', 'project', 'prompt'].includes(view);
 
   return (
-    <div className={`ribbon-app flex flex-1 ${poster ? 'poster-app dark' : ''}`}>
+    <div className="ribbon-app poster-app flex flex-1" data-view={view}>
 
       <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col">
-        <Header poster={poster} />
+        <Header poster />
         <CreationNav />
         <main id="main-content" className="w-full min-w-0 flex-1 pb-20 md:pb-0">
           <StudioSwitcher />

@@ -18,7 +18,7 @@ export function spaceEntry(module: ModuleDTO) {
   const target = moduleDestination(module);
   const query = target.params ? `?${new URLSearchParams(target.params)}` : '';
   const href = target.view === 'home' ? '/#home' : `/app#${target.view}${query}`;
-  const section = ['preparing', 'coming-soon'].includes(module.status) ? 'upcoming'
+  const section = ['preparing', 'coming-soon'].includes(module.status) && ['smoke', 'market', 'revenue', 'pipeline-run'].includes(module.entryView) ? 'upcoming'
     : ['vibe-setup', 'academy'].includes(module.id) ? 'learn'
     : module.group === 'studio' || ['model-lab', 'tool-ace-music', 'tools-catalogue'].includes(module.id) ? 'create'
     : module.adminOnly || module.entryView === 'my-projects' ? 'account' : 'explore';

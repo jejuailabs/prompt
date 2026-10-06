@@ -4,7 +4,6 @@
 // Views map 1:1 to ModuleConfig.entryView registered in the module registry.
 import dynamic from 'next/dynamic';
 import { useAppStore } from '@/lib/store';
-import HomeView from '@/components/views/home';
 import { useRuntime } from '@/components/runtime-context';
 import { Button } from '@/components/ui/button';
 const GalleryView = dynamic(() => import('@/components/views/gallery'), { loading: () => <ViewLoading /> });
@@ -42,9 +41,9 @@ export default function ViewRouter() {
   // Key by view+params.id so detail views remount cleanly when target changes
   switch (view) {
     case 'home':
-      return <HomeView />;
+      return <ViewLoading />;
     case 'gallery':
-      return <GalleryView key={[params.q, params.tab].join('-')} />;
+      return <GalleryView key={[params.q, params.tab, params.type].join('-')} />;
     case 'prompt':
       return <PromptDetailView key={params.id ?? 'none'} />;
     case 'project':
@@ -86,6 +85,6 @@ export default function ViewRouter() {
     case 'admin':
       return <AdminView />;
     default:
-      return <HomeView />;
+      return <ViewLoading />;
   }
 }

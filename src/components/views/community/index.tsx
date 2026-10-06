@@ -158,8 +158,8 @@ export default function CommunityView() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-7xl p-4 md:p-6 lg:p-8">
-      <ViewHeader title={t('title')} subtitle={t('subtitle')} />
+    <div className="editorial-page community-page">
+      <ViewHeader eyebrow="THE COMMUNITY / PLAYLAB" title={t('title')} subtitle={locale === 'en' ? 'Every experiment starts a conversation.' : '작은 발견부터 막힌 순간까지, 같이 이야기해요.'} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* ── ranking ───────────────────────────────────────── */}
