@@ -44,7 +44,7 @@ export default function ViewRouter() {
     case 'home':
       return <HomeView />;
     case 'gallery':
-      return <GalleryView key={[params.q, params.tab].join('-')} />;
+      return <GalleryView key={[params.q, params.tab, params.type].join('-')} />;
     case 'prompt':
       return <PromptDetailView key={params.id ?? 'none'} />;
     case 'project':

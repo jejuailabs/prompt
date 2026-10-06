@@ -282,7 +282,7 @@ export default function Header() {
         </button>
 
         <nav className="ribbon-nav" aria-label="주요 공간">
-          {modules.filter(m => ['gallery', 'prompt-wiki', 'community', 'ai-tools', 'lab'].includes(m.entryView) && !m.group).map(m => <button key={m.id} aria-current={view === m.entryView ? 'page' : undefined} onClick={() => navigate(m.entryView as ViewKey, m.entryView === 'gallery' ? { tab: 'artifacts' } : undefined)}>{moduleTitle(m, locale)}</button>)}
+          {modules.filter(m => ['home', 'gallery', 'prompt-wiki', 'game-room', 'ai-tools', 'academy'].includes(m.entryView) && !m.group).map(m => <button key={m.id} aria-current={view === m.entryView ? 'page' : undefined} onClick={() => navigate(m.entryView as ViewKey, m.entryView === 'gallery' ? { tab: 'artifacts' } : undefined)}>{m.entryView === 'academy' ? (locale === 'en' ? 'Courses' : '강의') : m.entryView === 'prompt-wiki' ? (locale === 'en' ? 'Prompts' : '프롬프트') : moduleTitle(m, locale)}</button>)}
         </nav>
         <div className="header-actions">
           {/* mobile search trigger */}

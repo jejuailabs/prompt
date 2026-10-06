@@ -128,7 +128,7 @@ export default function GalleryView() {
   const [createOpen, setCreateOpen] = useState(false);
   const [qInput, setQInput] = useState<string | null>(null);
   const [tab, setTab] = useState<'prompts' | 'artifacts'>(params.tab === 'prompts' ? 'prompts' : 'artifacts');
-  const [artifactType, setArtifactType] = useState('');
+  const [artifactType, setArtifactType] = useState(['image','video','audio','3d_asset','game','app','landing_page','text'].includes(params.type ?? '') ? params.type : '');
   const [sort, setSort] = useState<SortKey>('new');
   const [category, setCategory] = useState<string>('');
 
