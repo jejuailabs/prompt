@@ -56,6 +56,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   booted: false,
 
   navigate: (view, params) => {
+    // Home is the public poster site, regardless of the active app screen.
+    if (view === 'home' && typeof window !== 'undefined') {
+      window.location.assign('/#home');
+      return;
+    }
     set({ view, params: params ?? {} });
     if (typeof window !== 'undefined') {
       const destination = encodeHash(view, params);
@@ -70,6 +75,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   hydrateFromHash: () => {
     const { view, params } = parseHash();
+    if (view === 'home' && typeof window !== 'undefined') {
+      window.location.replace('/#home');
+      return;
+    }
     set({ view, params });
   },
 

@@ -142,7 +142,7 @@ function NotificationBell() {
 
 // ─── account dropdown (desktop) ─────────────────────────────────────────────
 
-function AccountMenu({ onCredits, poster = false }: { onCredits: () => void; poster?: boolean }) {
+function AccountMenu({ onCredits }: { onCredits: () => void }) {
   const t = useTranslations('core');
   const locale = useAppStore((s) => s.locale);
   const session = useAppStore((s) => s.session);
@@ -172,8 +172,7 @@ function AccountMenu({ onCredits, poster = false }: { onCredits: () => void; pos
     }
     setSession(null);
     refreshSession();
-    if (poster) window.location.assign('/#home');
-    else navigate('home');
+    navigate('home');
   };
 
   return (
@@ -283,9 +282,9 @@ export default function Header({ poster = false }: { poster?: boolean }) {
     <header data-home={view === 'home' || undefined} className="ribbon-header sticky top-0 z-40 border-b bg-background/90 backdrop-blur-xl">
       <div className="ribbon-header-inner flex items-center gap-2">
         {/* mobile logo */}
-        <button type="button" className="shrink-0" aria-label="PLAYLAB 홈" onClick={() => poster ? window.location.assign('/#home') : navigate('home')}>
+        <a href="/#home" className="shrink-0" aria-label="PLAYLAB 홈">
           <Logo />
-        </button>
+        </a>
 
         <nav className="ribbon-nav" aria-label="주요 공간">
           {poster ? ['home', 'prompt-wiki', 'gallery', 'game-room', 'academy', 'ai-tools'].map(key => {
@@ -314,7 +313,7 @@ export default function Header({ poster = false }: { poster?: boolean }) {
             <NotificationBell />
           </div>
           <div className="header-account">
-            <AccountMenu poster={poster} onCredits={() => setCreditsOpen(true)} />
+            <AccountMenu onCredits={() => setCreditsOpen(true)} />
           </div>
 
           <CreateMenu />
