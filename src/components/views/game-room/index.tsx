@@ -40,7 +40,7 @@ export default function GameRoomView() {
   const session = useAppStore((s) => s.session);
   const setLoginOpen = useAppStore((s) => s.setLoginOpen);
   const qc = useQueryClient();
-  const [sort, setSort] = useState<'popular' | 'recent'>('popular');
+  const [sort, setSort] = useState<'popular' | 'recent'>('recent');
   const [lbPeriod, setLbPeriod] = useState<'today' | 'week' | 'month' | 'all'>('today');
   const [submitOpen, setSubmitOpen] = useState(false);
   const [form, setForm] = useState({ title: '', url: '', description: '', thumbnailUrl: '', tags: '', controls: '' });

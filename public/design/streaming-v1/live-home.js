@@ -16,7 +16,7 @@ export function artifactWork(a) {
   const gameSlug = a.type === 'game' && a.contentUrl?.match(/^\/games\/([a-z0-9-]+)\.html$/)?.[1];
   if (gameSlug && (!image || image.startsWith('/uploads/seed/thumb-'))) image = `/games/thumbs/${gameSlug}.png`;
   return { id:a.id, key:`artifact:${a.id}`, type:a.type, title:a.title || '제목 없는 작품', description:a.description || '', by:a.owner?.username || '크리에이터', image, video,
-    href:`/app#project?id=${encodeURIComponent(a.id)}`, playHref:a.type === 'game' ? `/app#game-play?id=${encodeURIComponent(a.id)}` : '',
+    href:`/app#${a.type === 'game' ? 'game-play' : 'project'}?id=${encodeURIComponent(a.id)}`, playHref:a.type === 'game' ? `/app#game-play?id=${encodeURIComponent(a.id)}` : '',
     promptHref:a.sourcePromptId ? `/app#prompt?id=${encodeURIComponent(a.sourcePromptId)}` : '', createdAt:a.createdAt || '', category:meta.categoryLabel || labels[a.type] || '작품' };
 }
 export function promptWork(p) {
@@ -91,7 +91,7 @@ export function mountHomepage(root, { icon }) {
     if (a.status==='fulfilled' && Array.isArray(a.value)) artifacts = a.value.map(artifactWork).filter(Boolean); else failed.push('결과물');
     if (v.status==='fulfilled' && Array.isArray(v.value)) artifacts = unique([...artifacts,...v.value.map(artifactWork)]); else failed.push('영상');
     if (p.status==='fulfilled' && Array.isArray(p.value)) prompts = p.value.map(promptWork).filter(Boolean); else failed.push('프롬프트');
-    if (g.status==='fulfilled' && Array.isArray(g.value?.games)) games = g.value.games.map(item=>artifactWork({...item,type:'game',status:'published',visibility:'public',owner:{username:item.ownerName}})).filter(Boolean); else failed.push('게임');
+    if (g.status==='fulfilled' && Array.isArray(g.value?.games)) games = newest(g.value.games.map(item=>artifactWork({...item,type:'game',status:'published',visibility:'public',owner:{username:item.ownerName}})).filter(Boolean)); else failed.push('게임');
     loading = false; busy = false; lastLoad = Date.now(); render();
   }
   root.addEventListener('click',event=>{

@@ -49,10 +49,12 @@ export function previewResponse(request: NextRequest) {
     const games = artifacts.data.filter(game => game.type === 'game' && game.status === 'published' && game.visibility === 'public');
     if (path === '/api/game-room') {
       if (request.nextUrl.searchParams.get('scope') === 'pending') return NextResponse.json({ ok: false, error: '관리자 로그인이 필요합니다.' }, { status: 401 });
-      const recent = request.nextUrl.searchParams.get('sort') === 'recent';
+      const recent = request.nextUrl.searchParams.get('sort') !== 'popular';
       games.sort((a, b) => recent ? b.createdAt.localeCompare(a.createdAt) : b.likeCount - a.likeCount || b.createdAt.localeCompare(a.createdAt));
       const limit = Math.max(1, Math.min(50, Number(request.nextUrl.searchParams.get('limit')) || 24));
-      return ok({ games: [...games.slice(0, limit).map(previewGame), ...LITTLE_WORLDS.filter(item=>!games.some(game=>game.contentUrl===item.contentUrl)).map(item=>({...getLocalLittleWorld('builtin-'+item.slug)!,ownerId:'',createdAt:'2026-10-07T00:00:00.000Z',metadata:{controls:item.controls},topPlayers:[],previewMode:true}))] });
+      const listed = [...games.slice(0, limit).map(previewGame), ...LITTLE_WORLDS.filter(item=>!games.some(game=>game.contentUrl===item.contentUrl)).map(item=>({...getLocalLittleWorld('builtin-'+item.slug)!,ownerId:'',metadata:{controls:item.controls},topPlayers:[],previewMode:true}))];
+      listed.sort((a,b) => (recent ? 0 : b.likeCount - a.likeCount) || b.createdAt.localeCompare(a.createdAt));
+      return ok({ games: listed });
     }
     const game = games.find(item => item.id === path.split('/')[3]);
     const shipped=getLocalLittleWorld(path.split('/')[3]);

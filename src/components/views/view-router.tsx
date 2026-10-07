@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic';
 import { useAppStore } from '@/lib/store';
 import { useRuntime } from '@/components/runtime-context';
 import { Button } from '@/components/ui/button';
+import { getLocalLittleWorld } from '@/lib/little-worlds';
+import { getLocalArcadeGame } from '@/lib/bundled-arcade-games';
 const GalleryView = dynamic(() => import('@/components/views/gallery'), { loading: () => <ViewLoading /> });
 const PromptDetailView = dynamic(() => import('@/components/views/prompt'), { loading: () => <ViewLoading /> });
 const PromptWikiView = dynamic(() => import('@/components/views/prompt-wiki'), { loading: () => <ViewLoading /> });
@@ -48,6 +50,7 @@ export default function ViewRouter() {
     case 'prompt':
       return <PromptDetailView key={params.id ?? 'none'} />;
     case 'project':
+      if (getLocalLittleWorld(params.id) || getLocalArcadeGame(params.id)) return <GamePlayView key={params.id} />;
       return <ProjectDetailView key={params.id ?? 'none'} />;
     case 'prompt-wiki':
       return <PromptWikiView />;

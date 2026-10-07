@@ -39,7 +39,7 @@ async function topPlayers(gameIds: string[]) {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const sort = searchParams.get('sort') || 'popular';
+    const sort = searchParams.get('sort') || 'recent';
     const scope = searchParams.get('scope') || 'public';
     const limit = Math.min(50, Number(searchParams.get('limit')) || 24);
 
@@ -64,8 +64,7 @@ export async function GET(req: NextRequest) {
     const shipped=pending?[]:await db.artifact.findMany({where:{type:'game',contentUrl:{in:LITTLE_WORLDS.map(g=>g.contentUrl)}},include:{owner:{select:{id:true,username:true}},_count:{select:{gamePlays:true}}}});
     const combined=[...games];for(const row of shipped)if(row.status==='published'&&row.visibility==='public'&&!combined.some(g=>g.id===row.id))combined.push(row);
     const leaders = await topPlayers(combined.map((g) => g.id));
-    return ok({
-      games: combined.map((g) => {
+    const listed = combined.map((g) => {
         let metadata: Record<string, unknown> = {};
         try { metadata = JSON.parse(g.metadata); } catch {}
         return {
@@ -79,11 +78,12 @@ export async function GET(req: NextRequest) {
           ownerName: g.owner.username,
           playCount: g._count.gamePlays,
           likeCount: g.likeCount,
-          createdAt: g.createdAt.toISOString(),
+          createdAt: LITTLE_WORLDS.find(item => item.contentUrl === g.contentUrl)?.publishedAt ?? g.createdAt.toISOString(),
           metadata,
         };
-      }).concat(pending?[]:LITTLE_WORLDS.filter(item=>!shipped.some(row=>row.contentUrl===item.contentUrl)).map(item=>({id:'builtin-'+item.slug,title:item.title,description:item.description,fileUrl:item.fileUrl,topPlayers:[],contentUrl:item.contentUrl,ownerId:'',ownerName:'PLAYLAB',playCount:0,likeCount:0,createdAt:'2026-10-07T00:00:00.000Z',metadata:{collection:'little-worlds',controls:item.controls}}))),
-    });
+      }).concat(pending?[]:LITTLE_WORLDS.filter(item=>!shipped.some(row=>row.contentUrl===item.contentUrl)).map(item=>({id:'builtin-'+item.slug,title:item.title,description:item.description,fileUrl:item.fileUrl,topPlayers:[],contentUrl:item.contentUrl,ownerId:'',ownerName:'PLAYLAB',playCount:0,likeCount:0,createdAt:item.publishedAt,metadata:{collection:'little-worlds',controls:item.controls}})));
+    listed.sort((a, b) => (sort === 'recent' ? 0 : b.likeCount - a.likeCount) || b.createdAt.localeCompare(a.createdAt));
+    return ok({ games: listed });
   } catch (e) {
     return fail(e);
   }
