@@ -68,6 +68,9 @@ export function mountHomepage(root, { icon }) {
         + shelf('live-images','이미지로 남긴 아이디어','프롬프트에서 시작된 새로운 장면',works.filter(w=>w.type==='image'),'/app#gallery?type=image',true)
         + shelf('live-games','보기만 하기엔 아까운 게임','게임룸에 공개된 게임을 바로 플레이',games,'/app#game-room') : '');
     root.querySelectorAll('img,video').forEach(el=>el.addEventListener('error',()=>el.remove(),{once:true}));
+    root.querySelectorAll('video').forEach(video=>video.addEventListener('loadedmetadata',()=>{
+      if (Number.isFinite(video.duration) && video.duration > 0) video.currentTime = Math.min(.1,video.duration/2);
+    },{once:true}));
   }
   async function request(path) {
     const response = await fetch(path,{cache:'no-store',signal:AbortSignal.timeout(15000)});
