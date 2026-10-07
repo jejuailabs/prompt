@@ -1,7 +1,7 @@
 const messages = {
   ko: {
     title: '게임룸',
-    subtitle: '바이브코딩으로 만든 게임을 플레이하세요',
+    subtitle: '한 판마다 새로운 선택, 나만의 최고 기록에 도전하세요',
     empty: '아직 등록된 게임이 없습니다',
     plays: '{n}회 플레이',
     likes: '{n}',
@@ -23,7 +23,7 @@ const messages = {
   },
   en: {
     title: 'Game Room',
-    subtitle: 'Play games built with vibe-coding',
+    subtitle: 'One little round. One new record.',
     empty: 'No games yet',
     plays: '{n} plays',
     likes: '{n}',

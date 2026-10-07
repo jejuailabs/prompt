@@ -28,6 +28,7 @@ function drop() {
 canvas.addEventListener('pointermove',e=>{dropX=clamp(pointerPosition(e,canvas).x,29+RADII[next],371-RADII[next]);});
 canvas.addEventListener('pointerdown',e=>{e.preventDefault();dropX=clamp(pointerPosition(e,canvas).x,29+RADII[next],371-RADII[next]);drop();});
 $('[data-action]').onclick=drop;
+$('[data-finish]').onclick=()=>{if(!assets||shell.finished||shell.paused)return;shell.finish(score,'A lovely harvest.',`오늘의 기록 ${score.toLocaleString()}점\n가장 큰 과일: ${names[maxLevel]}`);};
 document.addEventListener('keydown',e=>{
   if(e.target instanceof HTMLElement && e.target.closest('button,a'))return;
   if(['ArrowLeft','ArrowRight',' ','ArrowDown'].includes(e.key)){e.preventDefault();if(e.key==='ArrowLeft')dropX=clamp(dropX-18,29+RADII[next],371-RADII[next]);else if(e.key==='ArrowRight')dropX=clamp(dropX+18,29+RADII[next],371-RADII[next]);else if(!e.repeat)drop();}

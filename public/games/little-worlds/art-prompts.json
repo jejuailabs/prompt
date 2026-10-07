@@ -32,5 +32,10 @@
       "transparent": true,
       "prompt": "Use case: stylized-concept. Production fishing game sprite atlas on genuinely transparent background. Exact regular grid of 3 columns and 2 rows, landscape 3:2. One isolated fish per cell, all facing RIGHT, central with generous transparent padding and no overlap. Top row: small silver-blue sardine, small orange clownfish with white stripes, yellow round butterflyfish with dark stripes. Bottom row: lavender angelfish, teal spotted pufferfish, magical pale gold koi with flowing fins. Charming premium soft painted 2.5D illustration, tactile scales, clear silhouettes and friendly tiny eyes, warm highlights, delicate fins. NO water, no bubbles, no props, no panel backgrounds, no cast shadows, no text, no labels, no outlines around atlas cells."
     }
-  ]
+  ],
+  "sweetGames": {
+    "asset": "patisserie-garden.webp",
+    "tool": "ImageGen built-in",
+    "prompt": "Create one production-ready illustrated background for two cute browser minigames: Jelly Garden and Macaron Tower. Vertical 2:3 composition, high resolution. A dreamy tiny French patisserie garden seen straight-on: warm buttery cream sky, faint pink clouds, sage and mint foliage, small strawberry flowers framing the far left and right edges, a little peach-roof bakery with glowing windows tucked into the far lower right corner, gingham picnic cloth and a delicate ceramic pedestal along the bottom. Leave the central 70% of the image largely open, low contrast, pale warm ivory with just subtle atmospheric watercolor washes, because colorful jelly creatures and stacked macarons will be rendered over it by code. Sophisticated hand-painted gouache and colored pencil storybook illustration, tactile paper grain, softly rounded miniature details, no heavy outlines, cozy playful collectible toy aesthetic matching an upscale cute fruit-merge game. No text, no UI, no grid, no score, no borders, no visible jelly characters or macarons in the central gameplay space. Opaque full backdrop, no transparency."
+  }
 }

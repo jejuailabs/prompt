@@ -62,7 +62,7 @@ test('every public preview list entry opens a matching detail, including linked 
   }
   for (const artifact of artifacts) assert.equal((await get(`/api/artifacts/${artifact.id}`)).id, artifact.id);
   const games = (await get('/api/game-room')).games;
-  assert.deepEqual(games.map(g => g.id).sort(), artifacts.filter(a => a.type === 'game').map(a => a.id).sort());
+  assert.deepEqual(games.filter(g => !g.id.startsWith('builtin-')).map(g => g.id).sort(), artifacts.filter(a => a.type === 'game').map(a => a.id).sort());
   for (const game of games) {
     const detail = await get(`/api/game-room/${game.id}`);
     assert.equal(detail.contentUrl, game.contentUrl);

@@ -24,6 +24,16 @@ export const LITTLE_WORLDS = [
     tags: ['숨은그림찾기', '힐링'], controls: '탭/클릭 = 찾기, 확대 후 드래그 = 이동, 힌트 3회',
     palette: '#667447', emoji: '🐈', playHint: '온실 속 다섯 친구 찾기',
   },
+  {
+    slug:'jelly-garden',title:'젤리 정원',englishTitle:'Jelly Garden',description:'말랑한 젤리들을 모아 톡! 25번의 선택, 큰 무리와 반짝별·주문 보너스로 최고 점수에 도전하는 퍼즐.',
+    contentUrl:'/games/jelly-garden.html',fileUrl:'/games/thumbs/jelly-garden.png',artUrl:'/games/little-worlds/assets/patisserie-garden.webp',
+    tags:['젤리 퍼즐','기록 도전'],controls:'같은 젤리 2개 이상 탭/클릭, 방향키+Enter로 선택',palette:'#ab749d',emoji:'🍮',playHint:'25번의 선택, 나만의 최고 점수',
+  },
+  {
+    slug:'macaron-tower',title:'마카롱 타워',englishTitle:'Macaron Tower',description:'알록달록 마카롱을 차곡차곡! 삐져나온 부분은 떨어지고, PERFECT 콤보로 더 높은 탑과 점수에 도전하는 타이밍 게임.',
+    contentUrl:'/games/macaron-tower.html',fileUrl:'/games/thumbs/macaron-tower.png',artUrl:'/games/little-worlds/assets/patisserie-garden.webp',
+    tags:['타이밍','기록 도전'],controls:'탭/클릭/스페이스 = 마카롱 놓기',palette:'#c29b78',emoji:'🍰',playHint:'정확한 타이밍, 더 높은 기록',
+  },
 ] as const;
 
 export function getLocalLittleWorld(id: string | undefined) {
@@ -33,6 +43,6 @@ export function getLocalLittleWorld(id: string | undefined) {
     contentUrl: item.contentUrl, fileUrl: item.fileUrl,
     ownerName: 'PLAYLAB', ownerId: '', playCount: 0, likeCount: 0, likedByMe: false,
     createdAt: '2026-10-07T00:00:00.000Z',
-    metadata: { collection: 'little-worlds', controls: item.controls, localOnly: true },
+    metadata: { collection: 'little-worlds', controls: item.controls, builtin: true },
   } : undefined;
 }
