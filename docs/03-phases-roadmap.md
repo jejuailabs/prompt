@@ -383,3 +383,5 @@ TypeScript·JavaScript 구문 검사, 실제 메뉴 이동과 화면 캡처로 �
 기존 AcademyPlaylist/AcademyVideo/YoutubeAnalysis 모델 재사용. 스키마 변경과 운영 데이터 쓰기·삭제는 수행하지 않았다. 운영에 이미 있던 공개 2개 영상의 등록/분석 상태는 그대로 유지하며, 실 유료 분석·관리자 DB 쓰기의 운영 실검증은 하지 않았다.
 
 SocialKit 자막 요청은 공식 권장 130초 클라이언트 제한 적용. 키는 기존 서버 환경변수와 x-access-key 헤더 사용. 공식 문서: https://docs.socialkit.dev/api-reference/youtube-transcript-api
+
+통합 검증 — 원격 게임룸 커밋 `14d892c`를 강의 개편과 충돌 없이 병합. 통합본 TypeScript 검사와 강의·게임 회귀 테스트 24개 통과. 강의 미리보기 PC/모바일 검증과 운영 데이터 보존 범위는 위 기록과 동일.
