@@ -136,6 +136,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await requireUser();
     const body = await readJson<CreateBody>(req);
+    if (body.sourceModule === 'ai-events' && user.role !== 'admin') throw new HttpError('관리자 권한이 필요합니다', 403);
     if (!body.title || !body.title.trim()) throw new HttpError('제목을 입력해주세요', 400);
     if (!body.type) throw new HttpError('프로젝트 타입을 지정해주세요', 400);
 

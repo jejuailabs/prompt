@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Edit2, Heart, Loader2, Maximize2, Minimize2, Share2, Trash2, Trophy,
+  ArrowLeft, Edit2, Heart, Loader2, Maximize2, Minimize2, Share2, Trash2,
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import messages from './messages';
+import { useRuntime } from '@/components/runtime-context';
+import { GameScorePanel } from './game-score-panel';
 import { getLocalLittleWorld, LITTLE_WORLDS } from '@/lib/little-worlds';
 import { getLocalArcadeGame } from '@/lib/bundled-arcade-games';
 
@@ -45,7 +47,8 @@ export default function GamePlayView() {
   const t = messages[locale] ?? messages.ko;
   const gameId = params.id;
   const localGame = getLocalLittleWorld(gameId) ?? getLocalArcadeGame(gameId);
-  const isLocalPreview = Boolean(localGame);
+  const { previewMode } = useRuntime();
+  const isLocalPreview = previewMode;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [gameSrcdoc, setGameSrcdoc] = useState<string | null>(null);
@@ -55,26 +58,19 @@ export default function GamePlayView() {
   const [editForm, setEditForm] = useState({ title: '', description: '', contentUrl: '' });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [lbPeriod, setLbPeriod] = useState<'today' | 'week' | 'month' | 'all'>('today');
 
   const { data: savedGame, isLoading, isError, refetch } = useQuery({
     queryKey: ['game-play', gameId],
     queryFn: () => api.get<GameDetailDTO>(`/api/game-room/${gameId}`),
-    enabled: !!gameId && !isLocalPreview,
+    enabled: !!gameId,
   });
 
-  const game: GameDetailDTO | undefined = localGame ?? savedGame;
+  const game: GameDetailDTO | undefined = savedGame ?? localGame;
   const isLocalGame = game?.contentUrl?.startsWith('/') ?? false;
   const trackingEnabled = Boolean(game && !game.previewMode && !isLocalPreview);
   const isLittleWorld = LITTLE_WORLDS.some((item) => item.contentUrl === game?.contentUrl);
 
-  const { data: lbData } = useQuery({
-    queryKey: ['leaderboard', gameId, lbPeriod],
-    queryFn: () => api.get<{ rankings: Array<{ rank: number; username: string; score: number; playedAt: string }> }>(`/api/game-room/leaderboard?gameId=${gameId}&period=${lbPeriod}&limit=10`),
-    enabled: !!gameId && !isLocalPreview,
-    refetchInterval: 30000,
-  });
-  const canManage = !isLocalPreview && session && game && (session.role === 'admin' || session.id === game.ownerId);
+  const canManage = !isLocalPreview && session && game && game.ownerId && (session.role === 'admin' || session.id === game.ownerId);
 
   // For external games, fetch HTML via proxy for srcdoc rendering
   useEffect(() => {
@@ -86,7 +82,7 @@ export default function GamePlayView() {
   }, [game?.contentUrl, isLocalGame]);
 
   useEffect(() => {
-    if (!gameId || !trackingEnabled) return;
+    if (!gameId || !trackingEnabled || isLittleWorld) return;
     api.post('/api/game-room/play', { artifactId: gameId }).catch(() => undefined);
     startTime.current = Date.now();
     return () => {
@@ -95,32 +91,19 @@ export default function GamePlayView() {
         api.post('/api/game-room/play', { artifactId: gameId, durationMs: duration }).catch(() => undefined);
       }
     };
-  }, [gameId, trackingEnabled]);
-
-  // Listen for game score messages from iframe
-  useEffect(() => {
-    if (!gameId || !trackingEnabled) return;
-    const handler = (e: MessageEvent) => {
-      if (e.source !== iframeRef.current?.contentWindow) return;
-      if (e.data?.type === 'game-score' && typeof e.data.score === 'number' && Number.isFinite(e.data.score) && e.data.score > 0) {
-        api.post('/api/game-room/play', { artifactId: gameId, score: e.data.score }).catch(() => undefined);
-      }
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, [gameId, trackingEnabled]);
+  }, [gameId, trackingEnabled, isLittleWorld]);
 
   useEffect(() => {
-    if (!gameId || !trackingEnabled) return;
+    if (!gameId || !trackingEnabled || isLittleWorld) return;
     const timer = setTimeout(() => {
       api.post('/api/game-room/ad-impression', { artifactId: gameId, slotType: 'banner' }).catch(() => undefined);
     }, 2000);
     return () => clearTimeout(timer);
-  }, [gameId, trackingEnabled]);
+  }, [gameId, trackingEnabled, isLittleWorld]);
 
   const handleLike = async () => {
     if (isLocalPreview || !requireLogin() || !gameId) return;
-    await api.post('/api/vote', { targetType: 'artifact', targetId: gameId });
+    await api.post('/api/vote', { targetType: 'artifact', targetId: game?.id ?? gameId });
     qc.invalidateQueries({ queryKey: ['game-play', gameId] });
   };
 
@@ -150,7 +133,7 @@ export default function GamePlayView() {
     if (!gameId) return;
     setSaving(true);
     try {
-      await api.patch(`/api/game-room/${gameId}`, editForm);
+      await api.patch(`/api/game-room/${game?.id ?? gameId}`, editForm);
       toast({ title: '게임이 수정되었습니다' });
       setEditOpen(false);
       qc.invalidateQueries({ queryKey: ['game-play', gameId] });
@@ -164,7 +147,7 @@ export default function GamePlayView() {
   const handleDelete = async () => {
     if (!gameId) return;
     try {
-      await api.del(`/api/game-room/${gameId}`);
+      await api.del(`/api/game-room/${game?.id ?? gameId}`);
       toast({ title: '게임이 삭제되었습니다' });
       navigate('game-room');
     } catch (e) {
@@ -206,7 +189,7 @@ export default function GamePlayView() {
               isLocalGame ? (
                 <iframe
                   ref={iframeRef}
-                  src={isLittleWorld ? `${game.contentUrl}?embed=1` : game.contentUrl}
+                  src={isLittleWorld ? `${game.contentUrl}?embed=1${previewMode ? '&preview=1' : ''}` : game.contentUrl}
                   className="w-full h-full border-0"
                   title={game.title}
                   allow="autoplay"
@@ -241,6 +224,8 @@ export default function GamePlayView() {
             </Button>
           </div>
 
+          <GameScorePanel key={gameId} gameId={gameId} slug={LITTLE_WORLDS.find(item=>item.contentUrl===game.contentUrl)?.slug} iframeRef={iframeRef} previewMode={previewMode||Boolean(game.previewMode)} localGame={isLocalGame}/>
+
           {/* Actions */}
           <div className="flex items-center gap-3 mt-3">
             {!isLocalPreview && <Button variant="outline" size="sm" onClick={handleLike}>
@@ -273,40 +258,7 @@ export default function GamePlayView() {
               AdSense 300×250
             </div>
           </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Trophy className="h-4 w-4 text-yellow-500" />
-              <p className="text-sm font-semibold">랭킹</p>
-            </div>
-            <div className="flex gap-1 mb-3">
-              {(['today', 'week', 'month', 'all'] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setLbPeriod(p)}
-                  className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
-                    lbPeriod === p ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  {{ today: '오늘', week: '이번주', month: '이번달', all: '전체' }[p]}
-                </button>
-              ))}
-            </div>
-            {lbData?.rankings && lbData.rankings.length > 0 ? (
-              <div className="space-y-1.5">
-                {lbData.rankings.map((r) => (
-                  <div key={`${r.rank}-${r.username}`} className="flex items-center gap-2 text-xs">
-                    <span className={`w-5 text-center font-bold ${r.rank <= 3 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
-                      {r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : r.rank}
-                    </span>
-                    <span className="flex-1 truncate">{r.username}</span>
-                    <span className="font-mono font-semibold tabular-nums">{r.score.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground text-center py-4">아직 기록이 없습니다</p>
-            )}
-          </Card>
+
         </div>}
       </div>
 

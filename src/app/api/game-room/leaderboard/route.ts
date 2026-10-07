@@ -1,62 +1,16 @@
-// GET /api/game-room/leaderboard?period=today|week|month|all&gameId=...
-import { NextRequest } from 'next/server';
+// GET rankings — each player's best score per game, numeric ranks, Korean date windows.
 import { db } from '@/lib/db';
 import { fail, ok } from '@/lib/server/handler';
-
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const period = searchParams.get('period') || 'today';
-    const gameId = searchParams.get('gameId');
-    const limit = Math.min(50, Number(searchParams.get('limit')) || 20);
-
-    const now = new Date();
-    let since: Date;
-    switch (period) {
-      case 'week':
-        since = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-        break;
-      case 'month':
-        since = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        break;
-      case 'all':
-        since = new Date(0);
-        break;
-      default: // today
-        since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        break;
-    }
-
-    const where: Record<string, unknown> = {
-      score: { gt: 0 },
-      createdAt: { gte: since },
-      userId: { not: null },
-    };
-    if (gameId) where.artifactId = gameId;
-
-    const plays = await db.gamePlay.findMany({
-      where,
-      orderBy: { score: 'desc' },
-      take: limit,
-      include: {
-        user: { select: { id: true, username: true, avatarUrl: true } },
-        artifact: { select: { id: true, title: true } },
-      },
-    });
-
-    const rankings = plays.map((p, i) => ({
-      rank: i + 1,
-      userId: p.user?.id,
-      username: p.user?.username ?? '익명',
-      avatarUrl: p.user?.avatarUrl,
-      score: p.score,
-      gameId: p.artifact.id,
-      gameTitle: p.artifact.title,
-      playedAt: p.createdAt.toISOString(),
-    }));
-
-    return ok({ rankings, period });
-  } catch (e) {
-    return fail(e);
-  }
+import { builtinGame, findPlayableGame, periodStart } from '@/lib/server/game-records';
+export async function GET(req:Request){
+  try{
+    const params=new URL(req.url).searchParams,requested=params.get('gameId'),period=['today','week','month','all'].includes(params.get('period')??'')?params.get('period')!:'today';
+    const limit=Math.max(1,Math.min(50,Math.floor(Number(params.get('limit'))||20)));
+    let gameId=requested;if(requested){const game=await findPlayableGame(requested);if(!game&&builtinGame(requested))return ok({rankings:[],period});gameId=game?.id??requested;}
+    const best=await db.gamePlay.groupBy({by:['artifactId','userId'],where:{score:{gt:0},userId:{not:null},user:{banned:false},createdAt:{gte:periodStart(period)},artifact:{type:'game',status:'published',visibility:'public',owner:{banned:false}},...(gameId?{artifactId:gameId}:{})},_max:{score:true}});
+    const entries=best.sort((a,b)=>(b._max.score??0)-(a._max.score??0)||(a.userId??'').localeCompare(b.userId??'')||a.artifactId.localeCompare(b.artifactId)).slice(0,limit);
+    const details=await Promise.all(entries.map(entry=>db.gamePlay.findFirst({where:{artifactId:entry.artifactId,userId:entry.userId,score:entry._max.score??0,createdAt:{gte:periodStart(period)}},orderBy:{createdAt:'asc'},include:{user:{select:{id:true,username:true,avatarUrl:true}},artifact:{select:{id:true,title:true}}}})));
+    const rankings=details.filter(play=>play&&play.user).map((play,index)=>({rank:index+1,userId:play!.user!.id,username:play!.user!.username,avatarUrl:play!.user!.avatarUrl,score:play!.score,gameId:play!.artifact.id,gameTitle:play!.artifact.title,playedAt:play!.createdAt.toISOString()}));
+    return ok({rankings,period});
+  }catch(error){return fail(error);}
 }

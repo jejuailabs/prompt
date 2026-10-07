@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const user = await requireUser();
     const artifact = await db.artifact.findUnique({ where: { id } });
     if (!artifact) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
-    if (artifact.ownerId !== user.id) throw new HttpError('권한이 없습니다', 403);
+    if (artifact.sourceModule === 'ai-events' ? user.role !== 'admin' : artifact.ownerId !== user.id) throw new HttpError('권한이 없습니다', 403);
 
     const body = await readJson<PatchBody>(req);
     const data: { title?: string; description?: string; metadata?: string; status?: string; visibility?: string; version?: string } = {};
@@ -95,7 +95,7 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     const user = await requireUser();
     const artifact = await db.artifact.findUnique({ where: { id } });
     if (!artifact) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
-    if (artifact.ownerId !== user.id) throw new HttpError('권한이 없습니다', 403);
+    if (artifact.sourceModule === 'ai-events' ? user.role !== 'admin' : artifact.ownerId !== user.id) throw new HttpError('권한이 없습니다', 403);
 
     await db.$transaction([
       db.generationJob.updateMany({ where: { resultArtifactId: id }, data: { resultArtifactId: null } }),

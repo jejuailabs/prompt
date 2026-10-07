@@ -4,16 +4,7 @@ import { chatJson } from '@/lib/server/ai';
 import { YoutubeTranscript } from 'youtube-transcript';
 import type { YoutubeAnalysisDTO, YoutubeChapter } from '@/lib/types';
 
-export function parseYoutubeVideoId(value: string): string | null {
-  try {
-    const url = new URL(value.trim());
-    if (url.hostname === 'youtu.be') return url.pathname.split('/').filter(Boolean)[0]?.slice(0, 32) ?? null;
-    if (url.hostname.endsWith('youtube.com')) {
-      return url.searchParams.get('v') ?? url.pathname.match(/\/(?:embed|shorts|live)\/([^/?]+)/)?.[1] ?? null;
-    }
-  } catch { /* invalid URL */ }
-  return null;
-}
+export { youtubeVideoId as parseYoutubeVideoId } from '@/modules/academy/curriculum';
 
 function asJson<T>(raw: string, fallback: T): T {
   try { return JSON.parse(raw) as T; } catch { return fallback; }
@@ -87,7 +78,7 @@ async function fetchSocialKitTranscript(videoId: string): Promise<TranscriptResu
   const url = `https://www.youtube.com/watch?v=${videoId}`;
   try {
     const res = await fetch(`https://api.socialkit.dev/youtube/transcript?url=${encodeURIComponent(url)}`, {
-      headers: { 'x-access-key': key }, cache: 'no-store', signal: AbortSignal.timeout(45_000),
+      headers: { 'x-access-key': key }, cache: 'no-store', signal: AbortSignal.timeout(130_000),
     });
     const body = await res.json().catch(() => ({})) as SocialKitTranscript;
     if (!res.ok || !body.success) {

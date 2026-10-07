@@ -16,6 +16,7 @@ import { CreditsWidget } from './sidebar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ExploreMenu } from '@/components/experience/explore-menu';
 import { useModules } from '@/hooks/use-session';
+import { primarySpaceEntries } from '@/lib/site-navigation';
 import { moduleTitle } from '@/lib/registry/module-configs';
 import { CreatePromptDialog } from '@/components/shared/create-prompt-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -287,12 +288,9 @@ export default function Header({ poster = false }: { poster?: boolean }) {
         </a>
 
         <nav className="ribbon-nav" aria-label="주요 공간">
-          {poster ? ['home', 'prompt-wiki', 'gallery', 'game-room', 'academy', 'ai-tools'].map(key => {
-            const m = modules.find(item => item.entryView === key && !item.group && item.enabled && !item.adminOnly);
-            if (!m) return null;
-            const destination = key === 'home' ? '/#home' : `/app#${key}`;
-            const label = ({ home: '홈', 'prompt-wiki': '프롬프트', gallery: '둘러보기', 'game-room': '게임', academy: '강의', 'ai-tools': 'AI Tools' } as Record<string, string>)[key];
-            return <a key={m.id} href={destination} aria-current={view === key || (key === 'ai-tools' && view === 'tool') ? 'page' : undefined}>{locale === 'en' ? moduleTitle(m, locale) : label}</a>;
+          {poster ? primarySpaceEntries(modules).map(m => {
+            const key = m.entryView;
+            return <a key={m.id} href={m.href} aria-current={view === key || (key === 'ai-tools' && view === 'tool') ? 'page' : undefined}>{locale === 'en' ? moduleTitle(m, locale) : m.primary!.label}</a>;
           }) : modules.filter(m => ['gallery', 'prompt-wiki', 'community', 'ai-tools', 'lab'].includes(m.entryView) && !m.group).map(m => <button key={m.id} aria-current={view === m.entryView ? 'page' : undefined} onClick={() => navigate(m.entryView as ViewKey, m.entryView === 'gallery' ? { tab: 'artifacts' } : undefined)}>{moduleTitle(m, locale)}</button>)}
         </nav>
         <div className="header-actions">

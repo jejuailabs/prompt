@@ -28,6 +28,8 @@ let spaceNavigation = { sections: [], entries: [] };
 let navigationRole = null;
 function renderSpaces() {
   const entries = spaceNavigation.entries.filter(m => m.enabled && (!m.adminOnly || navigationRole === 'admin')).sort((a,b) => a.navOrder - b.navOrder);
+  const primary = entries.filter(m => m.primary).sort((a,b) => a.primary.order-b.primary.order);
+  $('.primary-nav').innerHTML = primary.map(m => `<a href="${esc(m.href)}"${m.entryView === 'home' ? ' data-page="home" class="active" aria-current="page"' : m.primary.order >= 4 ? ' class="secondary-nav"' : ''}>${esc(m.primary.label)}</a>`).join('');
   $('#creation-links').innerHTML = entries.filter(m => m.quick).sort((a,b) => a.quick.order - b.quick.order)
     .map(m => `<a href="${esc(m.href)}">${esc(m.quick.label)}</a>`).join('');
   $('#spaces-content').innerHTML = spaceNavigation.sections.map(section => {

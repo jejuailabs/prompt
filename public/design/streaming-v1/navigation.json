@@ -28,6 +28,34 @@
   ],
   "entries": [
     {
+      "id": "ai-events",
+      "phase": 1,
+      "titleKo": "AI 일정",
+      "titleEn": "AI Events",
+      "descKo": "AI 강의·공모전·행사를 포스터로 둘러보세요",
+      "descEn": "Discover AI courses, competitions and events",
+      "icon": "calendar-days",
+      "navOrder": 7.2,
+      "enabled": true,
+      "status": "active",
+      "mainScreenSlot": "none",
+      "entryView": "ai-events",
+      "requiresAuth": false,
+      "adminOnly": false,
+      "group": "learn",
+      "primaryNav": {
+        "label": "AI 일정",
+        "order": 6
+      },
+      "newUntil": null,
+      "href": "/app#ai-events",
+      "section": "learn",
+      "primary": {
+        "label": "AI 일정",
+        "order": 6
+      }
+    },
+    {
       "id": "game-room",
       "phase": 3,
       "titleKo": "게임룸",
@@ -44,7 +72,11 @@
       "adminOnly": false,
       "newUntil": null,
       "href": "/app#game-room",
-      "section": "explore"
+      "section": "explore",
+      "primary": {
+        "label": "게임",
+        "order": 3
+      }
     },
     {
       "id": "public-gallery",
@@ -63,7 +95,11 @@
       "adminOnly": false,
       "newUntil": null,
       "href": "/app#gallery",
-      "section": "explore"
+      "section": "explore",
+      "primary": {
+        "label": "둘러보기",
+        "order": 2
+      }
     },
     {
       "id": "tools-catalogue",
@@ -82,7 +118,11 @@
       "adminOnly": false,
       "newUntil": null,
       "href": "/app#ai-tools",
-      "section": "create"
+      "section": "create",
+      "primary": {
+        "label": "AI Tools",
+        "order": 5
+      }
     },
     {
       "id": "main-gallery",
@@ -101,7 +141,11 @@
       "adminOnly": false,
       "newUntil": null,
       "href": "/#home",
-      "section": "explore"
+      "section": "explore",
+      "primary": {
+        "label": "홈",
+        "order": 0
+      }
     },
     {
       "id": "my-projects",
@@ -139,7 +183,11 @@
       "adminOnly": false,
       "newUntil": null,
       "href": "/app#prompt-wiki",
-      "section": "explore"
+      "section": "explore",
+      "primary": {
+        "label": "프롬프트",
+        "order": 1
+      }
     },
     {
       "id": "model-lab",
@@ -257,7 +305,11 @@
       "adminOnly": false,
       "newUntil": null,
       "href": "/app#academy",
-      "section": "learn"
+      "section": "learn",
+      "primary": {
+        "label": "강의",
+        "order": 4
+      }
     },
     {
       "id": "vibe-setup",

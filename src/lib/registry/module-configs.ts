@@ -1,12 +1,15 @@
 // Module Registry — code-side source of truth (mirrored into `modules` table for runtime admin toggle).
 // Per docs/02: new feature = register a module, never hardcode UI.
+import { AI_EVENTS_MODULE } from '@/modules/ai-events/module.config';
 import type { ModuleDTO } from '@/lib/types';
 
 export interface ModuleConfigSeed extends Omit<ModuleDTO, 'newUntil'> {
   newUntilDays?: number;
+  primaryNav?: { label: string; order: number };
 }
 
 export const MODULE_CONFIGS: ModuleConfigSeed[] = [
+  AI_EVENTS_MODULE,
   { id: 'game-room', phase: 3, titleKo: '게임룸', titleEn: 'Game Room', descKo: '만든 게임을 함께 플레이하세요', descEn: 'Play community games', icon: 'gamepad-2', navOrder: 7.5, enabled: true, status: 'active', mainScreenSlot: 'none', entryView: 'game-room', requiresAuth: false, adminOnly: false },
   { id: 'public-gallery', phase: 1, titleKo: '둘러보기', titleEn: 'Explore', descKo: '만든 작품을 보고, 실행하고, 이야기하세요', descEn: 'Explore and play community creations', icon: 'images', navOrder: 1.5, enabled: true, status: 'active', mainScreenSlot: 'none', entryView: 'gallery', requiresAuth: false, adminOnly: false },
   { id: 'tools-catalogue', phase: 1, titleKo: 'AI Tools', titleEn: 'AI Tools', descKo: '작은 아이디어를 완성하는 도구들', descEn: 'Tools for your next idea', icon: 'wrench', navOrder: 3.5, enabled: true, status: 'active', mainScreenSlot: 'none', entryView: 'ai-tools', requiresAuth: false, adminOnly: false },

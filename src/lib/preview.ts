@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import artifacts from '../../preview/artifacts.json';
 import prompts from '../../preview/prompts.json';
 import modules from '../../preview/modules.json';
+import { LITTLE_WORLDS, getLocalLittleWorld } from '@/lib/little-worlds';
+import { AI_EVENTS } from '@/modules/ai-events/catalogue';
 import { MODULE_CONFIGS } from './registry/module-configs';
 import { artifactThumbnail } from './artifact-media';
-import { academyPreview } from '@/modules/academy/preview';
+import { academyPreview, academyLibraryPreview } from '@/modules/academy/preview';
 
 function previewGame(game: (typeof artifacts.data)[number]) {
   return {
@@ -32,6 +34,8 @@ export function previewResponse(request: NextRequest) {
   const ok = (data: unknown) => NextResponse.json({ ok: true, data });
   if (request.method !== 'GET') return NextResponse.json({ ok: false, error: '디자인 미리보기에서는 저장·생성을 실행하지 않습니다.' }, { status: 503 });
   if (path === '/api/auth/session') return ok(null);
+  if (path === '/api/ai-events') return ok(AI_EVENTS);
+  if (path === '/api/academy/library') return ok(academyLibraryPreview);
   if (path === '/api/academy/playlists') return ok(academyPreview);
   if (path === '/api/ranking') return ok({
     prompts: [...prompts.data].filter(p => p.status === 'active').sort((a, b) => b.likeCount - a.likeCount).slice(0, 5),
@@ -48,10 +52,11 @@ export function previewResponse(request: NextRequest) {
       const recent = request.nextUrl.searchParams.get('sort') === 'recent';
       games.sort((a, b) => recent ? b.createdAt.localeCompare(a.createdAt) : b.likeCount - a.likeCount || b.createdAt.localeCompare(a.createdAt));
       const limit = Math.max(1, Math.min(50, Number(request.nextUrl.searchParams.get('limit')) || 24));
-      return ok({ games: games.slice(0, limit).map(previewGame) });
+      return ok({ games: [...games.slice(0, limit).map(previewGame), ...LITTLE_WORLDS.filter(item=>!games.some(game=>game.contentUrl===item.contentUrl)).map(item=>({...getLocalLittleWorld('builtin-'+item.slug)!,ownerId:'',createdAt:'2026-10-07T00:00:00.000Z',metadata:{controls:item.controls},topPlayers:[],previewMode:true}))] });
     }
     const game = games.find(item => item.id === path.split('/')[3]);
-    return game ? ok(previewGame(game)) : NextResponse.json({ ok: false, error: '게임을 찾을 수 없습니다.' }, { status: 404 });
+    const shipped=getLocalLittleWorld(path.split('/')[3]);
+    return game ? ok(previewGame(game)) : shipped ? ok({...shipped,previewMode:true}) : NextResponse.json({ ok: false, error: '게임을 찾을 수 없습니다.' }, { status: 404 });
   }
   if (path === '/api/modules') {
     const current = new Map(modules.data.map(m => [m.id, m]));

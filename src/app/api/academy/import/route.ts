@@ -1,15 +1,9 @@
-import { NextRequest } from 'next/server';
 import { HttpError, requireAdmin } from '@/lib/auth';
-import { fail, ok, readJson } from '@/lib/server/handler';
-import { importSocialKitPlaylist } from '@/modules/academy/socialkit';
+import { fail } from '@/lib/server/handler';
 
-export const maxDuration = 180;
-
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     await requireAdmin();
-    const body = await readJson<{ url?: unknown }>(req);
-    if (typeof body.url !== 'string' || body.url.length > 2048) throw new HttpError('재생목록 주소를 입력해주세요.');
-    return ok(await importSocialKitPlaylist(body.url));
+    throw new HttpError('YouTube 재생목록 가져오기는 지원하지 않습니다. 개별 영상 URL을 등록한 뒤, 등록 영상을 선택해 강의로 묶어주세요.', 410);
   } catch (error) { return fail(error); }
 }

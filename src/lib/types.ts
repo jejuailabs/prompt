@@ -32,6 +32,7 @@ export type ViewKey =
   | 'community'
   | 'academy'
   | 'vibe-setup'
+  | 'ai-events'
   | 'ai-tools'
   | 'tool'
   | 'my-projects'
@@ -118,6 +119,16 @@ export interface AcademyPlaylistDTO {
   sortOrder: number;
   videos: AcademyVideoDTO[];
   isExample?: boolean;
+}
+
+export interface AcademyLessonDTO extends AcademyVideoDTO {
+  collectionId: string;
+  courseIds: string[];
+  isExample?: boolean;
+}
+export interface AcademyLibraryDTO {
+  lessons: AcademyLessonDTO[];
+  courses: AcademyPlaylistDTO[];
 }
 
 // ─── Artifact metadata JSON shapes ───

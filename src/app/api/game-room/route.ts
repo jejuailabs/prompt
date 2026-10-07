@@ -2,6 +2,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
+import { LITTLE_WORLDS } from '@/lib/little-worlds';
 import { fail, ok } from '@/lib/server/handler';
 
 // Built-in games (/games/<slug>.html) ship a gameplay screenshot at /games/thumbs/<slug>.png.
@@ -17,7 +18,7 @@ async function topPlayers(gameIds: string[]) {
   if (gameIds.length === 0) return new Map<string, { rank: number; username: string; score: number }[]>();
   const best = await db.gamePlay.groupBy({
     by: ['artifactId', 'userId'],
-    where: { artifactId: { in: gameIds }, userId: { not: null }, score: { gt: 0 } },
+    where: { artifactId: { in: gameIds }, userId: { not: null }, user: { banned: false }, score: { gt: 0 } },
     _max: { score: true },
   });
   const userIds = [...new Set(best.map((b) => b.userId).filter((id): id is string => Boolean(id)))];
@@ -60,9 +61,11 @@ export async function GET(req: NextRequest) {
       take: limit,
     });
 
-    const leaders = await topPlayers(games.map((g) => g.id));
+    const shipped=pending?[]:await db.artifact.findMany({where:{type:'game',contentUrl:{in:LITTLE_WORLDS.map(g=>g.contentUrl)}},include:{owner:{select:{id:true,username:true}},_count:{select:{gamePlays:true}}}});
+    const combined=[...games];for(const row of shipped)if(row.status==='published'&&row.visibility==='public'&&!combined.some(g=>g.id===row.id))combined.push(row);
+    const leaders = await topPlayers(combined.map((g) => g.id));
     return ok({
-      games: games.map((g) => {
+      games: combined.map((g) => {
         let metadata: Record<string, unknown> = {};
         try { metadata = JSON.parse(g.metadata); } catch {}
         return {
@@ -79,7 +82,7 @@ export async function GET(req: NextRequest) {
           createdAt: g.createdAt.toISOString(),
           metadata,
         };
-      }),
+      }).concat(pending?[]:LITTLE_WORLDS.filter(item=>!shipped.some(row=>row.contentUrl===item.contentUrl)).map(item=>({id:'builtin-'+item.slug,title:item.title,description:item.description,fileUrl:item.fileUrl,topPlayers:[],contentUrl:item.contentUrl,ownerId:'',ownerName:'PLAYLAB',playCount:0,likeCount:0,createdAt:'2026-10-07T00:00:00.000Z',metadata:{collection:'little-worlds',controls:item.controls}}))),
     });
   } catch (e) {
     return fail(e);

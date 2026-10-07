@@ -1,26 +1,24 @@
 import { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireAdmin, HttpError } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
-import { parseYoutubeVideoId } from '@/lib/server/youtube-analysis';
-import { analyzeAcademyVideo } from '@/lib/server/academy';
-
-// Adding a video analyzes it inline (transcript + AI study notes), which can take a while.
-export const maxDuration = 300;
+import { academyInclude, courseLessons, copyLesson } from '@/lib/server/academy-library';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const admin = await requireAdmin();
-    const { id: playlistId } = await params;
-    const body = await readJson<{ url?: string; title?: string; description?: string; sortOrder?: number }>(req);
-    const videoId = body.url ? parseYoutubeVideoId(body.url) : null;
-    if (!videoId || !body.url) throw new HttpError('유효한 YouTube URL을 입력해주세요');
-    const analysis = await db.youtubeAnalysis.upsert({ where: { videoId }, update: {}, create: { videoId, sourceUrl: body.url, thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` } });
-    const video = await db.academyVideo.create({ data: { playlistId, videoId, analysisId: analysis.id, title: body.title?.trim() || `YouTube 영상 ${videoId}`, description: body.description?.slice(0, 500) ?? '', thumbnailUrl: analysis.thumbnailUrl, sortOrder: body.sortOrder ?? 0 } });
-    // An admin-added curriculum video is immediately analyzed so learners see
-    // the player and its learning notes together, without a second manual step.
-    const result = analysis.status === 'done' ? null : await analyzeAcademyVideo(video.id, admin.id);
-    if (result?.title) video.title = result.title;
-    return ok(video, 201);
+    await requireAdmin();
+    const { id } = await params;
+    const parsed = z.object({ lessonId: z.string().min(1).max(100) }).strict().safeParse(await readJson<unknown>(req));
+    if (!parsed.success) throw new HttpError('개별 영상을 먼저 등록하고 목록에서 선택해주세요.');
+    const result = await db.$transaction(async tx => {
+      const course = await tx.academyPlaylist.findUnique({ where: { id }, include: academyInclude });
+      if (!course || !course.published || course.videos.length < 2) throw new HttpError('묶인 강의를 찾을 수 없어요.', 404);
+      if (course.videos.length >= 100) throw new HttpError('한 강의에는 최대 100개 영상을 담을 수 있어요.');
+      const [video] = await courseLessons(tx, [parsed.data.lessonId]);
+      if (course.videos.some(v => v.videoId === video.videoId)) throw new HttpError('이미 강의에 포함된 영상이에요.', 409);
+      return tx.academyVideo.create({ data: { playlistId: id, ...copyLesson(video, Math.max(...course.videos.map(v => v.sortOrder)) + 1) } });
+    }, { isolationLevel: 'Serializable', timeout: 30_000 });
+    return ok(result, 201);
   } catch (e) { return fail(e); }
 }

@@ -1,5 +1,7 @@
 // GET/PATCH/DELETE /api/game-room/[id]
 import { NextRequest } from 'next/server';
+import { getLocalLittleWorld } from '@/lib/little-worlds';
+import { builtinGame, findPlayableGame } from '@/lib/server/game-records';
 import { db } from '@/lib/db';
 import { getSessionUser, requireUser, HttpError } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
@@ -9,7 +11,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params;
+    const { id: requestedId } = await params;
+    const resolved=builtinGame(requestedId)?await findPlayableGame(requestedId):null;
+    if(builtinGame(requestedId)&&!resolved)return ok(getLocalLittleWorld(requestedId));
+    const id=resolved?.id??requestedId;
     const user = await getSessionUser().catch(() => null);
 
     const game = await db.artifact.findUnique({
