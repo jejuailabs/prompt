@@ -1,3 +1,4 @@
+import { buildAcademyLibrary } from './curriculum';
 import type { AcademyPlaylistDTO } from '@/lib/types';
 
 // Design-only curriculum. No real video, author or provider analysis is fabricated.
@@ -15,3 +16,9 @@ export const academyPreview: AcademyPlaylistDTO[] = [{
     sampleNote: `## 이번 차시의 학습 목표\n${description}\n\n## 직접 해보기\n${exercise}\n\n## 복습 체크\n- 배운 내용을 내 말로 설명할 수 있나요?\n- 직접 만든 결과물을 저장했나요?\n\n실제 강의를 등록하면 영상 자막을 기반으로 생성한 학습노트가 이 위치에 표시됩니다.`,
   })),
 }];
+
+// Explicit standalone example plus reusable videos from the sample course.
+export const academyLibraryPreview = buildAcademyLibrary([
+  { id: 'standalone-preview', title: '나만의 첫 AI 도구 만들기', description: '영상 하나로 시작하는 작은 실습의 구성 예시입니다.', sortOrder: 0, isExample: true, videos: [{ id: 'preview-standalone', videoId: '', title: '나만의 첫 AI 도구 만들기', description: '하나의 영상과 학습내용을 함께 살펴보세요.', sortOrder: 0, sampleNote: '## 학습내용 구성 예시\n\n영상에서 배우는 핵심 개념과 실습 순서를 정리하는 자리입니다.\n\n실제 영상이나 AI 분석 결과가 아닙니다.' }] },
+  ...academyPreview,
+]);

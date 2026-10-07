@@ -4,7 +4,7 @@ import prompts from '../../preview/prompts.json';
 import modules from '../../preview/modules.json';
 import { MODULE_CONFIGS } from './registry/module-configs';
 import { artifactThumbnail } from './artifact-media';
-import { academyPreview } from '@/modules/academy/preview';
+import { academyPreview, academyLibraryPreview } from '@/modules/academy/preview';
 
 function previewGame(game: (typeof artifacts.data)[number]) {
   return {
@@ -32,6 +32,7 @@ export function previewResponse(request: NextRequest) {
   const ok = (data: unknown) => NextResponse.json({ ok: true, data });
   if (request.method !== 'GET') return NextResponse.json({ ok: false, error: '디자인 미리보기에서는 저장·생성을 실행하지 않습니다.' }, { status: 503 });
   if (path === '/api/auth/session') return ok(null);
+  if (path === '/api/academy/library') return ok(academyLibraryPreview);
   if (path === '/api/academy/playlists') return ok(academyPreview);
   if (path === '/api/ranking') return ok({
     prompts: [...prompts.data].filter(p => p.status === 'active').sort((a, b) => b.likeCount - a.likeCount).slice(0, 5),
