@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { ArrowRight, ArrowUpRight, Search } from 'lucide-react';
 import { useModules } from '@/hooks/use-session';
-import { Icon } from '@/components/layout/icon';
+import { ToolPoster } from './tool-poster';
 import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
 import { useAppStore } from '@/lib/store';
 import { PreviewNotice } from '@/components/runtime-context';
@@ -17,12 +17,6 @@ function groupFor(id: string): Group {
   if (id === 'tool-metaprompt') return 'writing';
   if (['tool-converter','tool-qr','tool-url'].includes(id)) return 'utility';
   return 'visual';
-}
-function Artwork({ group, index }: { group: Group; index: number }) {
-  return <div className={`${styles.artwork} ${styles[group]}`} aria-hidden="true">
-    {group === 'visual' ? <img src={index % 2 ? '/design/streaming-v1/assets/midnight-station.png' : '/design/streaming-v1/assets/glass-garden.png'} alt="" loading="lazy" /> : group === 'writing' ? <><span className={styles.promptGlyph}>Aa<span>_</span></span><span className={styles.artCaption}>A FEW WORDS.<br />A WHOLE NEW WORLD.</span></> : group === 'utility' ? <div className={styles.orbit}><i /><i /><i /><span>↗</span></div> : <><div className={styles.wave}>{Array.from({ length: 25 }, (_, i) => <i key={i} style={{ height: `${18 + Math.abs(Math.sin(i * .79 + index)) * (68 - Math.abs(i - 12) * 3)}%` }} />)}</div><span className={styles.artCaption}>{group === 'music' ? 'FIND YOUR FREQUENCY.' : 'GIVE YOUR WORDS A VOICE.'}</span></>}
-    <span className={styles.artType}>{GROUPS[group][1].toUpperCase()} / {String(index + 1).padStart(2, '0')}</span>
-  </div>;
 }
 export default function AiToolsView() {
   const navigate = useAppStore(s => s.navigate);
@@ -45,8 +39,8 @@ export default function AiToolsView() {
       <div id="tool-collection" className={styles.collectionHead}><div><p className={styles.eyebrow}>CHOOSE YOUR NEXT TOOL</p><h2>{en ? 'What will you make?' : '오늘은 무엇을 만들까요?'} <small>{available.length}</small></h2></div><label className={styles.search}><Search size={16} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder={en ? 'Find a tool' : '어떤 도구가 필요하세요?'} aria-label={en ? 'Find a tool' : '도구 검색'} /></label></div>
       <div className={styles.filters} aria-label="도구 용도"><button aria-pressed={!group} onClick={() => setGroup('')}>{en ? 'All' : '전체'}</button>{(Object.keys(GROUPS) as Group[]).map(key => <button key={key} aria-pressed={group === key} onClick={() => setGroup(key)}>{GROUPS[key][en ? 1 : 0]}</button>)}</div>
       {modules.isError && <div className={styles.empty}>도구 목록을 갱신하지 못했어요. <button onClick={() => void modules.refetch()}>다시 불러오기</button></div>}
-      <div className={styles.grid}>{items.map(detail => { const tool = byId.get(detail.id)!; const live = LIVE_TOOL_IDS.has(tool.id); const index = available.findIndex(item => item.id === detail.id); return <article key={detail.id} className={styles.card}>
-        <button className={styles.cardButton} disabled={!live} onClick={() => navigate('tool', { slug: tool.id.replace('tool-', '') })} aria-label={`${detail.titleKo} ${live ? '열기' : '준비 중'}`}><Artwork group={groupFor(detail.id)} index={index} /><span className={styles.cardIcon}><Icon name={tool.icon} className="size-4" /></span><span className={styles.cardArrow}>{live ? <ArrowUpRight size={18} /> : '준비 중'}</span></button>
+      <div className={styles.grid}>{items.map(detail => { const tool = byId.get(detail.id)!; const live = LIVE_TOOL_IDS.has(tool.id); return <article key={detail.id} className={styles.card}>
+        <button className={styles.cardButton} disabled={!live} onClick={() => navigate('tool', { slug: tool.id.replace('tool-', '') })} aria-label={`${detail.titleKo} ${live ? '열기' : '준비 중'}`}><ToolPoster id={detail.id} title={detail.titleKo} icon={tool.icon} /><span className={styles.cardArrow}>{live ? <ArrowUpRight size={18} /> : '준비 중'}</span></button>
         <h3><button disabled={!live} onClick={() => navigate('tool', { slug: tool.id.replace('tool-', '') })}>{detail.titleKo}</button></h3><p>{detail.descKo}</p><span className={styles.cardMeta}>{['tool-qr','tool-converter'].includes(detail.id) ? '무료 · 브라우저에서 바로 사용' : live ? 'AI TOOL · 로그인 후 사용' : 'COMING SOON'}</span>
       </article>; })}</div>
       {!items.length && !modules.isError && <p className={styles.empty}>검색한 도구가 없어요. 다른 단어로 찾아보세요.</p>}
