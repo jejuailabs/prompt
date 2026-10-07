@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   ArrowLeft,
+  CalendarDays,
   Bell,
   Box,
   Check,
@@ -63,6 +64,7 @@ import { cn } from '@/lib/utils';
 // Static icon map — string keys match MODULE_CONFIGS / QUICK_ACTIONS / shell usage (CONTRACTS §6).
 // Unknown names fall back to Sparkles so a bad registry entry never crashes the UI.
 const ICON_MAP = {
+  'calendar-days': CalendarDays,
   wrench: Wrench,
   'git-fork': GitFork,
   film: Film,

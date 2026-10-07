@@ -1,3 +1,4 @@
+import { MODULE_CONFIGS } from './registry/module-configs';
 import { moduleDestination } from './module-navigation';
 import type { ModuleDTO } from './types';
 
@@ -19,7 +20,7 @@ export function spaceEntry(module: ModuleDTO) {
   const query = target.params ? `?${new URLSearchParams(target.params)}` : '';
   const href = target.view === 'home' ? '/#home' : `/app#${target.view}${query}`;
   const section = ['preparing', 'coming-soon'].includes(module.status) && ['smoke', 'market', 'revenue', 'pipeline-run'].includes(module.entryView) ? 'upcoming'
-    : ['vibe-setup', 'academy'].includes(module.id) ? 'learn'
+    : module.group === 'learn' || ['vibe-setup', 'academy'].includes(module.id) ? 'learn'
     : module.group === 'studio' || ['model-lab', 'tool-ace-music', 'tools-catalogue'].includes(module.id) ? 'create'
     : module.adminOnly || module.entryView === 'my-projects' ? 'account' : 'explore';
   const quick = ({
@@ -29,10 +30,17 @@ export function spaceEntry(module: ModuleDTO) {
     'tool-ace-music': { label: '음악 생성', order: 3 },
     'model-lab': { label: '모델 실험실', order: 4 },
   } as Record<string, { label: string; order: number }>)[module.id];
-  return { ...module, href, section, quick };
+  const legacyPrimary = ['home','prompt-wiki','gallery','game-room','academy','ai-tools'];
+  const primaryLabels: Record<string,string> = {home:'홈','prompt-wiki':'프롬프트',gallery:'둘러보기','game-room':'게임',academy:'강의','ai-tools':'AI Tools'};
+  const order = legacyPrimary.indexOf(module.entryView);
+  const declaredPrimary = MODULE_CONFIGS.find(seed=>seed.id===module.id)?.primaryNav;
+  const primary = !module.adminOnly && (declaredPrimary || !module.group) ? declaredPrimary ?? (order >= 0 ? {label:primaryLabels[module.entryView],order} : undefined) : undefined;
+  return { ...module, href, section, quick, primary };
 }
 
 export function spaceEntries(modules: ModuleDTO[], admin = false) {
   return modules.filter(m => m.enabled && isSpaceModule(m) && (!m.adminOnly || admin))
     .sort((a, b) => a.navOrder - b.navOrder).map(spaceEntry);
 }
+
+export function primarySpaceEntries(modules: ModuleDTO[]) { return spaceEntries(modules).filter(entry=>entry.primary).sort((a,b)=>a.primary!.order-b.primary!.order); }
