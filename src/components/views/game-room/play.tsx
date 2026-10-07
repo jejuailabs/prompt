@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import messages from './messages';
+import { getLocalLittleWorld, LITTLE_WORLDS } from '@/lib/little-worlds';
 
 interface GameDetailDTO {
   id: string;
@@ -42,6 +43,8 @@ export default function GamePlayView() {
   const qc = useQueryClient();
   const t = messages[locale] ?? messages.ko;
   const gameId = params.id;
+  const localGame = getLocalLittleWorld(gameId);
+  const isLocalPreview = Boolean(localGame);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [gameSrcdoc, setGameSrcdoc] = useState<string | null>(null);
@@ -53,22 +56,24 @@ export default function GamePlayView() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [lbPeriod, setLbPeriod] = useState<'today' | 'week' | 'month' | 'all'>('today');
 
-  const { data: game, isLoading, isError, refetch } = useQuery({
+  const { data: savedGame, isLoading, isError, refetch } = useQuery({
     queryKey: ['game-play', gameId],
     queryFn: () => api.get<GameDetailDTO>(`/api/game-room/${gameId}`),
-    enabled: !!gameId,
+    enabled: !!gameId && !isLocalPreview,
   });
 
+  const game: GameDetailDTO | undefined = localGame ?? savedGame;
   const isLocalGame = game?.contentUrl?.startsWith('/') ?? false;
-  const trackingEnabled = Boolean(game && !game.previewMode);
+  const trackingEnabled = Boolean(game && !game.previewMode && !isLocalPreview);
+  const isLittleWorld = LITTLE_WORLDS.some((item) => item.contentUrl === game?.contentUrl);
 
   const { data: lbData } = useQuery({
     queryKey: ['leaderboard', gameId, lbPeriod],
     queryFn: () => api.get<{ rankings: Array<{ rank: number; username: string; score: number; playedAt: string }> }>(`/api/game-room/leaderboard?gameId=${gameId}&period=${lbPeriod}&limit=10`),
-    enabled: !!gameId,
+    enabled: !!gameId && !isLocalPreview,
     refetchInterval: 30000,
   });
-  const canManage = session && game && (session.role === 'admin' || session.id === game.ownerId);
+  const canManage = !isLocalPreview && session && game && (session.role === 'admin' || session.id === game.ownerId);
 
   // For external games, fetch HTML via proxy for srcdoc rendering
   useEffect(() => {
@@ -96,7 +101,7 @@ export default function GamePlayView() {
     if (!gameId || !trackingEnabled) return;
     const handler = (e: MessageEvent) => {
       if (e.source !== iframeRef.current?.contentWindow) return;
-      if (e.data?.type === 'game-score' && typeof e.data.score === 'number' && e.data.score > 0) {
+      if (e.data?.type === 'game-score' && typeof e.data.score === 'number' && Number.isFinite(e.data.score) && e.data.score > 0) {
         api.post('/api/game-room/play', { artifactId: gameId, score: e.data.score }).catch(() => undefined);
       }
     };
@@ -113,7 +118,7 @@ export default function GamePlayView() {
   }, [gameId, trackingEnabled]);
 
   const handleLike = async () => {
-    if (!requireLogin() || !gameId) return;
+    if (isLocalPreview || !requireLogin() || !gameId) return;
     await api.post('/api/vote', { targetType: 'artifact', targetId: gameId });
     qc.invalidateQueries({ queryKey: ['game-play', gameId] });
   };
@@ -167,8 +172,8 @@ export default function GamePlayView() {
     setDeleteConfirm(false);
   };
 
-  if (isLoading) return <div className="flex justify-center py-20" role="status" aria-label="게임 불러오는 중"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-  if (isError) return <EmptyState title="게임을 불러오지 못했어요." action={<Button variant="outline" onClick={() => void refetch()}>다시 불러오기</Button>} />;
+  if (isLoading && !localGame) return <div className="flex justify-center py-20" role="status" aria-label="게임 불러오는 중"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  if (isError && !localGame) return <EmptyState title="게임을 불러오지 못했어요." action={<Button variant="outline" onClick={() => void refetch()}>다시 불러오기</Button>} />;
   if (!game) return <EmptyState title="Game not found" description="" />;
 
   return (
@@ -195,12 +200,12 @@ export default function GamePlayView() {
       <div className="flex gap-4 flex-col lg:flex-row">
         {/* Game iframe */}
         <div className="flex-1">
-          <div className="relative bg-black rounded-xl overflow-hidden aspect-[4/3]">
+          <div className={`relative rounded-xl overflow-hidden ${isLittleWorld ? 'bg-[#101010] h-[850px] sm:h-[900px]' : 'bg-black aspect-[4/3]'}`}>
             {game.contentUrl ? (
               isLocalGame ? (
                 <iframe
                   ref={iframeRef}
-                  src={game.contentUrl}
+                  src={isLittleWorld ? `${game.contentUrl}?embed=1` : game.contentUrl}
                   className="w-full h-full border-0"
                   title={game.title}
                   allow="autoplay"
@@ -237,10 +242,10 @@ export default function GamePlayView() {
 
           {/* Actions */}
           <div className="flex items-center gap-3 mt-3">
-            <Button variant="outline" size="sm" onClick={handleLike}>
+            {!isLocalPreview && <Button variant="outline" size="sm" onClick={handleLike}>
               <Heart className={`mr-1 h-4 w-4 ${game.likedByMe ? 'fill-primary text-primary' : ''}`} />
               {game.likeCount}
-            </Button>
+            </Button>}
             <Button variant="outline" size="sm" onClick={() => {
               navigator.clipboard.writeText(window.location.href);
               toast({ title: '링크가 복사되었습니다' });
@@ -260,7 +265,7 @@ export default function GamePlayView() {
         </div>
 
         {/* Right sidebar */}
-        <div className="w-full lg:w-[300px] shrink-0 space-y-4">
+        {!isLittleWorld && <div className="w-full lg:w-[300px] shrink-0 space-y-4">
           <Card className="p-4 bg-muted/30 border-dashed flex flex-col items-center justify-center min-h-[250px]">
             <p className="text-xs text-muted-foreground mb-2">{t.adLabel}</p>
             <div className="w-full h-[250px] bg-muted/50 rounded flex items-center justify-center text-muted-foreground text-sm">
@@ -301,7 +306,7 @@ export default function GamePlayView() {
               <p className="text-xs text-muted-foreground text-center py-4">아직 기록이 없습니다</p>
             )}
           </Card>
-        </div>
+        </div>}
       </div>
 
       {/* Edit Dialog */}
