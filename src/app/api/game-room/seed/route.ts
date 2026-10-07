@@ -1,8 +1,10 @@
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
+import { LITTLE_WORLDS } from '@/lib/little-worlds';
 
 const GAMES = [
+  ...LITTLE_WORLDS,
   {
     title: '스페이스 슈터',
     description: '우주선을 조종해 적을 물리치세요! 터치/클릭으로 발사, 좌우로 이동!',

@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import messages from './messages';
+import { LittleWorldsShelf } from './little-worlds-shelf';
 
 interface GameDTO {
   id: string;
@@ -94,6 +95,8 @@ export default function GameRoomView() {
       </div>
 
       {session?.role === 'admin' && (pending.data?.games.length ?? 0) > 0 && <Card className="p-4"><h2 className="font-semibold">게임 심사 대기</h2><div className="mt-3 space-y-2">{pending.data!.games.map((game) => <div key={game.id} className="flex flex-wrap items-center gap-3 rounded-md border p-3"><div className="min-w-0 flex-1"><p className="font-medium">{game.title}</p><a className="block truncate text-xs text-primary underline" href={game.contentUrl ?? '#'} target="_blank" rel="noreferrer">{game.contentUrl}</a></div><Button size="sm" onClick={() => void moderate(game.id, 'approve')}>승인</Button><Button size="sm" variant="destructive" onClick={() => void moderate(game.id, 'reject')}>반려</Button></div>)}</div></Card>}
+
+      <LittleWorldsShelf games={games} />
 
       {/* Game Grid */}
       {isLoading ? (

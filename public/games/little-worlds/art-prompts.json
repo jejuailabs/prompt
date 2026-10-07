@@ -1,0 +1,36 @@
+{
+  "tool": "built-in image_gen",
+  "created": "2026-10-07",
+  "assets": [
+    {
+      "name": "fruit-cafe",
+      "transparent": false,
+      "prompt": "Use case: illustration-story. Production game background, portrait 2:3, no UI, no text, no letters, no logo. Warm miniature artisan fruit cafe in a premium soft painterly 2.5D style. Peach cream palette, sunlight from upper left window, blurred wooden shelves, tiny ceramic dishes and potted herbs concentrated on outside edges. Straight-on view. Lower 30% a clean pale honey wood counter. Central 70% deliberately quiet softly lit peach wall and counter, lots of uncluttered space for a tall transparent game vessel to be overlaid by code. Absolutely NO fruit, no glass container, no characters in the center. Cozy tactile materials, editorial indie game quality, elegant atmospheric depth, delicate fine texture."
+    },
+    {
+      "name": "tidelight-harbor",
+      "transparent": false,
+      "prompt": "Use case: illustration-story. Production game scene background, tall portrait 2:3, no UI, no text, no letters, no logos. Beautiful premium cozy painterly 2.5D fishing game background. Sunset apricot sky occupies top 27%, distant island and a small lighthouse on horizon. Clear teal sea fills bottom 60% with softly visible sea grass and shafts of light. At x=25%, y=38%, an original adorable cream cat in a mustard raincoat sits on a small wooden pier extending from left edge, holds a simple rod whose tip is near x=52%, y=30%, without a fishing line (line added in code). Keep central and right water open for animated fish overlays, no prepainted fish. Side-view water cutaway, visible calm surface at 43% height. Warm apricot and deep turquoise palette, tactile wood, luminous water. Beautiful detailed art, calm readable composition."
+    },
+    {
+      "name": "hidden-greenhouse",
+      "transparent": false,
+      "prompt": "Use case: illustration-story. Production hidden object game background, portrait 2:3, no UI no text no letters no logos. A beautifully detailed cozy sage green and terracotta conservatory greenhouse, premium soft painterly 2.5D illustration. Straight-on cutaway view, easy to inspect. Top third: sunlit arched window, vine foliage, plant shelves at left and right. Middle third: wide plant shelves at left, a rattan chair at center-right with a plain cream cushion, watering can, books and terracotta pots. Lower third: checker tile floor with woven rug, a wooden stool at left, open wooden box at right, gardening tools. Five quiet clear small landing spaces: top left shelf (18%,24%), middle right plant shelf (80%,38%), chair cushion (55%,58%), bottom left terracotta pot (23%,78%), lower right open crate (80%,85%). These spaces will receive small cat sprites in code. NO CATS, no animals anywhere. Rich but legible lived-in objects, realistic warm shadows, high craft, warm sunlight. Everything fills frame, no borders."
+    },
+    {
+      "name": "fruit-sprites",
+      "transparent": true,
+      "prompt": "Use case: stylized-concept. Production game sprite atlas on genuinely transparent background. Exact 3 columns by 3 rows regular evenly spaced grid, square 1:1 image. Each cell has one centered isolated fruit with generous transparent margins, no neighboring overlaps, all sprites have similar visual diameter about 65% of their cell. Nine individual round chunky fruits, ordered left-to-right top-to-bottom: red cherry (single plump round cherry with tiny stem); strawberry; small golden apricot; mandarin orange; rosy peach; red apple; green pear (plump round bottom); cantaloupe melon; striped green watermelon. Premium adorable tactile soft 2.5D painted clay illustration, extremely subtle tiny friendly face, luminous fruit peel textures, coherent upper-left lighting. Flat front view suitable for circular physics bodies. NO cast shadows outside each fruit, no panels, no borders, no words, no labels, no background, no objects between sprites."
+    },
+    {
+      "name": "cat-sprites",
+      "transparent": true,
+      "prompt": "Use case: stylized-concept. Production hidden object game sprite atlas on genuinely transparent background. Exact 3 columns and 2 rows regular evenly spaced grid, landscape 3:2 image. One original small adorable curled or sitting kitten centered in each cell, generous transparent padding, no overlaps. Left-to-right top-to-bottom: sitting orange tabby with upright ears; curled sleeping cream kitten; sitting black tuxedo kitten; calico kitten peeking with front paws visible; curled gray striped kitten looking back; seated white kitten with beige ear patches. Premium soft painterly 2.5D illustration, warm natural sunlight from upper left, subtle fur texture, simple recognizable silhouettes, no floor no shadows outside the kitten, no words no labels no borders. Consistent character proportions and warm handcrafted indie game art style."
+    },
+    {
+      "name": "fish-sprites",
+      "transparent": true,
+      "prompt": "Use case: stylized-concept. Production fishing game sprite atlas on genuinely transparent background. Exact regular grid of 3 columns and 2 rows, landscape 3:2. One isolated fish per cell, all facing RIGHT, central with generous transparent padding and no overlap. Top row: small silver-blue sardine, small orange clownfish with white stripes, yellow round butterflyfish with dark stripes. Bottom row: lavender angelfish, teal spotted pufferfish, magical pale gold koi with flowing fins. Charming premium soft painted 2.5D illustration, tactile scales, clear silhouettes and friendly tiny eyes, warm highlights, delicate fins. NO water, no bubbles, no props, no panel backgrounds, no cast shadows, no text, no labels, no outlines around atlas cells."
+    }
+  ]
+}
