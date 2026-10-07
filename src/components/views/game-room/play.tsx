@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import messages from './messages';
 import { getLocalLittleWorld, LITTLE_WORLDS } from '@/lib/little-worlds';
+import { getLocalArcadeGame } from '@/lib/bundled-arcade-games';
 
 interface GameDetailDTO {
   id: string;
@@ -43,7 +44,7 @@ export default function GamePlayView() {
   const qc = useQueryClient();
   const t = messages[locale] ?? messages.ko;
   const gameId = params.id;
-  const localGame = getLocalLittleWorld(gameId);
+  const localGame = getLocalLittleWorld(gameId) ?? getLocalArcadeGame(gameId);
   const isLocalPreview = Boolean(localGame);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);

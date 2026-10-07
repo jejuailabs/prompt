@@ -15,8 +15,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import messages from './messages';
 import { LittleWorldsShelf } from './little-worlds-shelf';
+import { LOCAL_ARCADE_GAMES } from '@/lib/bundled-arcade-games';
 
 interface GameDTO {
+  previewMode?: boolean;
   id: string;
   title: string;
   description: string;
@@ -50,7 +52,7 @@ export default function GameRoomView() {
     queryFn: () => api.get<{ games: GameDTO[] }>(`/api/game-room?sort=${sort}`),
   });
 
-  const games = data?.games ?? [];
+  const games: GameDTO[] = data?.games ?? LOCAL_ARCADE_GAMES;
   const { data: lbData, isError: leaderboardError, isLoading: leaderboardLoading } = useQuery({
     queryKey: ['leaderboard-global', lbPeriod],
     queryFn: () => api.get<{ rankings: Array<{ rank: number; username: string; score: number; gameTitle: string; playedAt: string }> }>(`/api/game-room/leaderboard?period=${lbPeriod}&limit=10`),
@@ -96,15 +98,12 @@ export default function GameRoomView() {
 
       {session?.role === 'admin' && (pending.data?.games.length ?? 0) > 0 && <Card className="p-4"><h2 className="font-semibold">게임 심사 대기</h2><div className="mt-3 space-y-2">{pending.data!.games.map((game) => <div key={game.id} className="flex flex-wrap items-center gap-3 rounded-md border p-3"><div className="min-w-0 flex-1"><p className="font-medium">{game.title}</p><a className="block truncate text-xs text-primary underline" href={game.contentUrl ?? '#'} target="_blank" rel="noreferrer">{game.contentUrl}</a></div><Button size="sm" onClick={() => void moderate(game.id, 'approve')}>승인</Button><Button size="sm" variant="destructive" onClick={() => void moderate(game.id, 'reject')}>반려</Button></div>)}</div></Card>}
 
-      <LittleWorldsShelf games={games} />
-
       {/* Game Grid */}
-      {isLoading ? (
+      {isError && <p role="status" className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">목록 연결이 지연되어 기본 게임을 먼저 표시합니다.<Button variant="ghost" size="sm" onClick={() => void refetch()}>다시 불러오기</Button></p>}
+      {isLoading && games.length === 0 ? (
         <div className="flex justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      ) : isError ? (
-        <EmptyState title="게임 목록을 불러오지 못했어요." description="잠시 후 다시 시도해주세요." action={<Button variant="outline" onClick={() => void refetch()}>다시 불러오기</Button>} />
       ) : games.length === 0 ? (
         <EmptyState title={t.empty} description="" />
       ) : (
@@ -158,7 +157,7 @@ export default function GameRoomView() {
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <Play className="h-12 w-12 text-white fill-white" />
                 </div>
-                {session && (session.role === 'admin' || session.id === game.ownerId) && (
+                {!game.previewMode && session && (session.role === 'admin' || session.id === game.ownerId) && (
                   <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <Button variant="secondary" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); navigate('game-play', { id: game.id }); }}>
                       <Edit2 className="h-3.5 w-3.5" />
@@ -176,14 +175,14 @@ export default function GameRoomView() {
                 <p className="text-xs text-muted-foreground mt-0.5 truncate">
                   {t.by} @{game.ownerName}
                 </p>
-                <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                {game.previewMode ? <p className="mt-2 text-xs text-primary">바로 플레이</p> : <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Play className="h-3 w-3" /> {game.playCount}
                   </span>
                   <span className="flex items-center gap-1">
                     <Heart className="h-3 w-3" /> {game.likeCount}
                   </span>
-                </div>
+                </div>}
                 {game.metadata?.tags && game.metadata.tags.length > 0 && (
                   <div className="flex gap-1 mt-2 flex-wrap">
                     {game.metadata.tags.slice(0, 2).map((tag) => (
@@ -198,6 +197,8 @@ export default function GameRoomView() {
           ))}
         </div>
       )}
+
+      <LittleWorldsShelf games={games} />
 
       {/* Leaderboard */}
       <Card className="p-4">
