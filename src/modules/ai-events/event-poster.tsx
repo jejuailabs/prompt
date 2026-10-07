@@ -11,7 +11,9 @@ function Motif({kind}:{kind:AiEvent['motif']}) {
   return <svg viewBox="0 0 240 150">{nodes.slice(0,-1).map(([x,y],i)=><path key={i} d={`M${x} ${y}L120 ${kind==='network'?81:79}`}/>)}{nodes.map(([x,y],i)=><g key={i}><circle cx={x} cy={y} r={i===nodes.length-1?24:17}/>{i===nodes.length-1&&<path d={`M${x-8} ${y}h16m-8-8v16`}/>}</g>)}</svg>;
 }
 export function EventPoster({item,now}:{item:AiEvent;now:Date}) {
-  const palette={'--accent':item.accent,'--surface':item.surface} as CSSProperties;
+  const longest=Math.max(1,...item.posterLines.map(line=>Array.from(line).reduce((sum,char)=>sum+(/[\u0000-\u007f]/.test(char)?.6:1),0)));
+  const palette={'--accent':item.accent,'--surface':item.surface,'--title-font':Math.min(13,80/longest)+'cqi'} as CSSProperties;
+  if(item.posterUrl) return <div className={styles.posterImage} style={palette} aria-hidden="true"><img src={item.posterUrl} alt="" /></div>;
   return <div className={styles.poster} style={palette} aria-hidden="true">
     <div className={styles.posterTop}><span>{EVENT_KINDS[item.kind]}</span><b>{eventCountdown(item,now)}</b></div>
     <div className={styles.posterTitle}>{item.posterLines.map((line,i)=><span key={i}>{line}</span>)}</div>

@@ -55,3 +55,9 @@ export async function downloadBuffer(pathname: string): Promise<Buffer> {
 export function publicStorageUrl(pathname: string): string {
   return supabase.storage.from(BUCKET).getPublicUrl(pathname).data.publicUrl;
 }
+
+/** Remove a newly uploaded file when its associated record failed to save. */
+export async function removeUpload(pathname: string): Promise<void> {
+  const { error } = await supabase.storage.from(BUCKET).remove([pathname]);
+  if (error) throw new Error('Storage cleanup failed: '+error.message);
+}

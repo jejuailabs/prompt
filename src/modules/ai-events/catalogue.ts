@@ -6,6 +6,7 @@ export type AiEvent = {
   tags: string[]; accent: string; surface: string; motif: 'award' | 'code' | 'network' | 'chat' | 'learning' | 'agents';
   applyFrom?: string; applyUntil?: string; applyTime?: string; startsAt?: string; endsAt?: string;
   registrationClosed?: boolean; sourceNote?: string;
+  posterUrl?: string; ownerId?: string; authorName?: string; published?: boolean; origin?: 'admin';
 };
 export const EVENT_KINDS = { course: '강의 · 교육', contest: '공모전 · 대회', event: '행사 · 세미나' };
 // Editorial records verified against organizer notices. Unknown fees and deadlines are not inferred.
