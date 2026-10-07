@@ -2,7 +2,7 @@
 // Each GuideStep is BOTH a manual line (text) and a mock screen the motion player animates.
 // Targets: 'b0' button, 'o1' option, 'f0' field, 'l0' list-row action, 'p0' palette item.
 
-export type DbChoice = 'firebase' | 'supabase';
+export type DbChoice = 'firebase';
 export type ColumnId = 'pc' | 'ai' | 'account' | 'project';
 
 export interface MockOption { label: string; checked?: boolean; type?: 'radio' | 'check' | 'toggle' }
@@ -85,89 +85,59 @@ $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [En
 git --version; node -v; npm -v; code -v`;
 
 // ─── DB-dependent pieces ───
-function dbAccount(db: DbChoice): GuideItem {
-  if (db === 'firebase') {
-    return {
-      id: 'db-account', column: 'account', order: 11, icon: 'flame', minutes: 2,
-      title: 'Firebase 계정',
-      summary: '구글 계정 하나로 DB·로그인·파일 저장소를 바로 쓰게 해주는 서비스',
-      links: [{ label: 'Firebase 콘솔 열기', href: 'https://console.firebase.google.com/', primary: true }, { label: '공식 문서', href: 'https://firebase.google.com/docs/web/setup?hl=ko' }],
-      steps: [
-        { text: 'firebase.google.com에서 "콘솔로 이동(Go to console)"을 눌러요.', target: 'b0', screen: { kind: 'browser', url: 'firebase.google.com', heading: 'Firebase', sub: '앱 개발과 운영을 위한 Google 플랫폼', buttons: [{ label: '콘솔로 이동', primary: true }, { label: '시작하기' }] } },
-        { text: '평소 쓰는 구글 계정을 선택해 로그인해요. (Gmail 계정이면 OK)', target: 'l0', screen: { kind: 'browser', url: 'accounts.google.com', heading: '계정 선택', sub: 'Firebase(으)로 이동', list: [{ label: '내 이름', meta: 'me@gmail.com', action: '선택' }, { label: '다른 계정 사용' }] } },
-        { text: '처음이면 약관 동의 체크 후 "계속". 이제 콘솔 첫 화면이 보이면 가입 끝!', target: 'b0', screen: { kind: 'browser', url: 'console.firebase.google.com', heading: 'Firebase에 오신 것을 환영합니다', options: [{ label: 'Firebase 약관에 동의합니다', checked: true, type: 'check' }], buttons: [{ label: '계속', primary: true }] } },
-      ],
-      notes: ['별도 회원가입 없이 구글 계정이 곧 Firebase 계정이에요.', '무료(Spark) 요금제로 시작하면 카드 등록 없이 쓸 수 있어요.'],
-    };
-  }
+function dbAccount(): GuideItem {
   return {
-    id: 'db-account', column: 'account', order: 11, icon: 'database', minutes: 2,
-    title: 'Supabase 계정',
-    summary: 'Postgres DB·로그인·파일 저장소를 한 번에 주는 오픈소스 백엔드',
-    links: [{ label: 'Supabase 가입하기', href: 'https://supabase.com/dashboard/sign-up', primary: true }, { label: '공식 문서', href: 'https://supabase.com/docs/guides/getting-started' }],
+    id: 'db-account', column: 'account', order: 11, icon: 'flame', minutes: 2,
+    title: 'Firebase 계정',
+    summary: '구글 계정 하나로 DB·로그인·파일 저장소를 바로 쓰게 해주는 서비스',
+    links: [{ label: 'Firebase 콘솔 열기', href: 'https://console.firebase.google.com/', primary: true }, { label: '공식 문서', href: 'https://firebase.google.com/docs/web/setup?hl=ko' }],
     steps: [
-      { text: '가입 화면에서 "Continue with GitHub"를 눌러요. (GitHub 가입이 먼저!)', target: 'b0', screen: { kind: 'browser', url: 'supabase.com/dashboard/sign-up', heading: 'Get started', sub: 'Create a new account', buttons: [{ label: 'Continue with GitHub', primary: true }, { label: 'Continue with SSO' }], fields: [{ label: 'Email', value: '' }, { label: 'Password', value: '' }] } },
-      { text: 'GitHub 권한 요청 화면에서 "Authorize supabase"를 눌러요.', target: 'b0', screen: { kind: 'browser', url: 'github.com/login/oauth/authorize', heading: 'Authorize Supabase', sub: 'Supabase by supabase wants to access your account', buttons: [{ label: 'Authorize supabase', primary: true }, { label: 'Cancel' }] } },
-      { text: '조직(Organization)을 만들어요. 이름 아무거나, Type은 Personal, Plan은 Free.', target: 'b0', screen: { kind: 'browser', url: 'supabase.com/dashboard/new', heading: 'Create a new organization', fields: [{ label: 'Name', value: 'my-org' }, { label: 'Type', value: 'Personal ▾' }, { label: 'Plan', value: 'Free - $0/month ▾' }], buttons: [{ label: 'Create organization', primary: true }] } },
+      { text: 'firebase.google.com에서 "콘솔로 이동(Go to console)"을 눌러요.', target: 'b0', screen: { kind: 'browser', url: 'firebase.google.com', heading: 'Firebase', sub: '앱 개발과 운영을 위한 Google 플랫폼', buttons: [{ label: '콘솔로 이동', primary: true }, { label: '시작하기' }] } },
+      { text: '평소 쓰는 구글 계정을 선택해 로그인해요. (Gmail 계정이면 OK)', target: 'l0', screen: { kind: 'browser', url: 'accounts.google.com', heading: '계정 선택', sub: 'Firebase(으)로 이동', list: [{ label: '내 이름', meta: 'me@gmail.com', action: '선택' }, { label: '다른 계정 사용' }] } },
+      { text: '처음이면 약관 동의 체크 후 "계속". 이제 콘솔 첫 화면이 보이면 가입 끝!', target: 'b0', screen: { kind: 'browser', url: 'console.firebase.google.com', heading: 'Firebase에 오신 것을 환영합니다', options: [{ label: 'Firebase 약관에 동의합니다', checked: true, type: 'check' }], buttons: [{ label: '계속', primary: true }] } },
     ],
-    notes: ['무료 플랜은 프로젝트 2개까지, 1주일 미사용 시 일시정지돼요(대시보드에서 다시 켜면 됨).'],
+    notes: ['별도 회원가입 없이 구글 계정이 곧 Firebase 계정이에요.', '무료(Spark) 요금제로 시작하면 카드 등록 없이 쓸 수 있어요.'],
   };
 }
 
-function dbProject(db: DbChoice): GuideItem {
-  if (db === 'firebase') {
-    return {
-      id: 'db-project', column: 'project', order: 13, icon: 'flame', minutes: 5,
-      title: 'Firebase 프로젝트 만들기',
-      summary: '이 서비스 전용 DB·로그인 공간을 만들고 연결 키(firebaseConfig)를 받기',
-      links: [{ label: 'Firebase 콘솔', href: 'https://console.firebase.google.com/', primary: true }, { label: '웹 앱 추가 문서', href: 'https://firebase.google.com/docs/web/setup?hl=ko' }],
-      steps: [
-        { text: '콘솔 첫 화면에서 "Firebase 프로젝트 만들기"를 눌러요.', target: 'b0', screen: { kind: 'browser', url: 'console.firebase.google.com', heading: '프로젝트', buttons: [{ label: '+ Firebase 프로젝트 만들기', primary: true }] } },
-        { text: '프로젝트 이름을 입력하고(GitHub 리포지토리와 같게 추천) 약관 체크 → 계속.', target: 'f0', screen: { kind: 'browser', url: 'console.firebase.google.com/u/0/', heading: '프로젝트 이름 지정', fields: [{ label: '프로젝트 이름', value: 'my-first-app' }], options: [{ label: 'Firebase 약관에 동의합니다', checked: true, type: 'check' }], buttons: [{ label: '계속', primary: true }] } },
-        { text: 'Gemini·Google 애널리틱스는 처음엔 꺼도 돼요 → "프로젝트 만들기". 30초 정도 기다려요.', target: 'b0', fast: true, screen: { kind: 'browser', url: 'console.firebase.google.com/u/0/', heading: 'Google 애널리틱스', options: [{ label: '이 프로젝트에서 Google 애널리틱스 사용 설정', checked: false, type: 'toggle' }], buttons: [{ label: '프로젝트 만들기', primary: true }, { label: '이전' }] } },
-        { text: '프로젝트 개요 화면에서 웹 아이콘 "</>"를 눌러 웹 앱을 추가해요.', target: 'b2', screen: { kind: 'browser', url: 'console.firebase.google.com/project/my-first-app/overview', heading: '앱에 Firebase를 추가하여 시작하기', buttons: [{ label: 'iOS+' }, { label: 'Android' }, { label: '</> 웹', primary: true }, { label: 'Unity' }] } },
-        { text: '앱 닉네임 입력. "Firebase 호스팅"은 체크하지 않아요(배포는 Vercel로 할 거라서) → 앱 등록.', target: 'b0', screen: { kind: 'browser', url: 'console.firebase.google.com/project/my-first-app/overview', heading: '웹 앱에 Firebase 추가', fields: [{ label: '앱 닉네임', value: 'my-first-app-web' }], options: [{ label: '이 앱의 Firebase 호스팅도 설정하세요.', checked: false, type: 'check' }], buttons: [{ label: '앱 등록', primary: true }] } },
-        { text: '화면에 나온 firebaseConfig { ... } 블록을 통째로 복사해 두세요. 다음 "환경변수" 단계에 붙여넣어요.', target: 'b0', screen: { kind: 'browser', url: 'console.firebase.google.com/project/my-first-app/overview', heading: 'Firebase SDK 추가', code: ['const firebaseConfig = {', '  apiKey: "AIza...",', '  authDomain: "my-first-app.firebaseapp.com",', '  projectId: "my-first-app",', '  storageBucket: "my-first-app.firebasestorage.app",', '  messagingSenderId: "1234567890",', '  appId: "1:1234567890:web:abc123"', '};'], buttons: [{ label: '📋 복사', primary: true }, { label: '콘솔로 이동' }] } },
-        { text: '왼쪽 "빌드" 메뉴에서 필요한 기능을 켜요: Authentication → 시작하기 → Google 사용 설정 / Firestore Database → 데이터베이스 만들기.', target: 'l0', screen: { kind: 'browser', url: 'console.firebase.google.com/project/my-first-app', heading: '빌드', list: [{ label: 'Authentication', meta: '로그인', action: '시작하기' }, { label: 'Firestore Database', meta: 'DB', action: '만들기' }, { label: 'Storage', meta: '파일 저장' }] } },
-      ],
-      troubles: [
-        { q: 'apiKey가 노출돼도 괜찮나요?', a: 'Firebase 웹 apiKey는 공개용이에요. 대신 Firestore "보안 규칙"으로 접근을 막아야 해요. 테스트 모드는 30일 뒤 막히니 규칙을 꼭 설정하세요.' },
-        { q: 'Storage가 결제 정보를 요구해요', a: '2024년 이후 새 프로젝트의 Storage는 Blaze(종량제) 요금제가 필요할 수 있어요. 처음엔 Authentication + Firestore만으로 시작하세요.' },
-      ],
-    };
-  }
+function dbProject(): GuideItem {
   return {
-    id: 'db-project', column: 'project', order: 13, icon: 'database', minutes: 5,
-    title: 'Supabase 프로젝트 만들기',
-    summary: '이 서비스 전용 DB를 만들고 연결 주소(URL)와 키를 받기',
-    links: [{ label: 'Supabase 대시보드', href: 'https://supabase.com/dashboard/projects', primary: true }, { label: 'Next.js 연동 문서', href: 'https://supabase.com/docs/guides/getting-started/quickstarts/nextjs' }],
+    id: 'db-project', column: 'project', order: 13, icon: 'flame', minutes: 5,
+    title: 'Firebase 프로젝트 만들기',
+    summary: '이 서비스 전용 DB·로그인 공간을 만들고 연결 키(firebaseConfig)를 받기',
+    links: [{ label: 'Firebase 콘솔', href: 'https://console.firebase.google.com/', primary: true }, { label: '웹 앱 추가 문서', href: 'https://firebase.google.com/docs/web/setup?hl=ko' }],
     steps: [
-      { text: '대시보드에서 "New project"를 눌러요.', target: 'b0', screen: { kind: 'browser', url: 'supabase.com/dashboard/projects', heading: 'Projects', buttons: [{ label: '+ New project', primary: true }] } },
-      { text: '이름 입력, DB 비밀번호는 "Generate a password" 후 꼭 메모장에 저장! 지역은 Northeast Asia (Seoul).', target: 'f1', screen: { kind: 'browser', url: 'supabase.com/dashboard/new', heading: 'Create a new project', fields: [{ label: 'Project name', value: 'my-first-app' }, { label: 'Database Password', value: '●●●●●●●●●●●●  Generate a password' }, { label: 'Region', value: 'Northeast Asia (Seoul) ▾' }], buttons: [{ label: 'Create new project', primary: true }] } },
-      { text: '"Setting up project" 화면이 1~2분 돌아가요. 기다리면 돼요.', fast: true, screen: { kind: 'browser', url: 'supabase.com/dashboard/project/abcd', heading: 'Setting up project…', sub: 'This may take a few minutes', buttons: [] } },
-      { text: '상단 "Connect" 버튼(또는 Project Settings → API Keys)에서 Project URL과 Publishable key를 복사해요.', target: 'f1', screen: { kind: 'browser', url: 'supabase.com/dashboard/project/abcd/settings/api-keys', heading: 'API Keys', fields: [{ label: 'Project URL', value: 'https://abcd.supabase.co', mono: true }, { label: 'Publishable key', value: 'sb_publishable_xxxx…   📋', mono: true }, { label: 'Secret key', value: '•••••••• (절대 공개 금지)', mono: true }] } },
+      { text: '콘솔 첫 화면에서 "Firebase 프로젝트 만들기"를 눌러요.', target: 'b0', screen: { kind: 'browser', url: 'console.firebase.google.com', heading: '프로젝트', buttons: [{ label: '+ Firebase 프로젝트 만들기', primary: true }] } },
+      { text: '프로젝트 이름을 입력하고(GitHub 리포지토리와 같게 추천) 약관 체크 → 계속.', target: 'f0', screen: { kind: 'browser', url: 'console.firebase.google.com/u/0/', heading: '프로젝트 이름 지정', fields: [{ label: '프로젝트 이름', value: 'my-first-app' }], options: [{ label: 'Firebase 약관에 동의합니다', checked: true, type: 'check' }], buttons: [{ label: '계속', primary: true }] } },
+      { text: 'Gemini·Google 애널리틱스는 처음엔 꺼도 돼요 → "프로젝트 만들기". 30초 정도 기다려요.', target: 'b0', fast: true, screen: { kind: 'browser', url: 'console.firebase.google.com/u/0/', heading: 'Google 애널리틱스', options: [{ label: '이 프로젝트에서 Google 애널리틱스 사용 설정', checked: false, type: 'toggle' }], buttons: [{ label: '프로젝트 만들기', primary: true }, { label: '이전' }] } },
+      { text: '프로젝트 개요 화면에서 웹 아이콘 "</>"를 눌러 웹 앱을 추가해요.', target: 'b2', screen: { kind: 'browser', url: 'console.firebase.google.com/project/my-first-app/overview', heading: '앱에 Firebase를 추가하여 시작하기', buttons: [{ label: 'iOS+' }, { label: 'Android' }, { label: '</> 웹', primary: true }, { label: 'Unity' }] } },
+      { text: '앱 닉네임 입력. "Firebase 호스팅"은 체크하지 않아요(배포는 Vercel로 할 거라서) → 앱 등록.', target: 'b0', screen: { kind: 'browser', url: 'console.firebase.google.com/project/my-first-app/overview', heading: '웹 앱에 Firebase 추가', fields: [{ label: '앱 닉네임', value: 'my-first-app-web' }], options: [{ label: '이 앱의 Firebase 호스팅도 설정하세요.', checked: false, type: 'check' }], buttons: [{ label: '앱 등록', primary: true }] } },
+      { text: '화면에 나온 firebaseConfig { ... } 블록을 통째로 복사해 두세요. 다음 "환경변수" 단계에 붙여넣어요.', target: 'b0', screen: { kind: 'browser', url: 'console.firebase.google.com/project/my-first-app/overview', heading: 'Firebase SDK 추가', code: ['const firebaseConfig = {', '  apiKey: "AIza...",', '  authDomain: "my-first-app.firebaseapp.com",', '  projectId: "my-first-app",', '  storageBucket: "my-first-app.firebasestorage.app",', '  messagingSenderId: "1234567890",', '  appId: "1:1234567890:web:abc123"', '};'], buttons: [{ label: '📋 복사', primary: true }, { label: '콘솔로 이동' }] } },
+      { text: '왼쪽 "빌드" 메뉴에서 필요한 기능을 켜요: Authentication → 시작하기 → Google 사용 설정 / Firestore Database → 데이터베이스 만들기.', target: 'l0', screen: { kind: 'browser', url: 'console.firebase.google.com/project/my-first-app', heading: '빌드', list: [{ label: 'Authentication', meta: '로그인', action: '시작하기' }, { label: 'Firestore Database', meta: 'DB', action: '만들기' }, { label: 'Storage', meta: '파일 저장' }] } },
     ],
     troubles: [
-      { q: 'anon key라고 적혀 있어요', a: '예전 이름이에요. anon(공개) key = Publishable key로 쓰면 돼요. service_role / Secret key는 브라우저 코드에 절대 넣지 마세요.' },
-      { q: 'DB 비밀번호를 잊어버렸어요', a: 'Project Settings → Database → Reset database password에서 다시 만들 수 있어요.' },
+      { q: 'apiKey가 노출돼도 괜찮나요?', a: 'Firebase 웹 설정은 브라우저에 전달되는 공개 설정이에요. 데이터 접근은 Authentication과 Firestore 보안 규칙으로 제어해요. 서비스 계정 비공개 키를 여기에 넣으면 안 돼요.' },
+      { q: 'Storage가 결제 정보를 요구해요', a: '파일 저장소 설정은 이번 입문 과정에서 생략해요. 먼저 Authentication과 Firestore를 연결하세요.' },
     ],
+    notes: ['Firestore는 프로덕션 모드로 시작해요. AI 도구에 로그인한 사용자가 자기 데이터만 읽고 쓰도록 보안 규칙을 작성해 달라고 요청하세요.'],
+    commands: [{ label: 'AI 코딩 도구에 붙여넣기', code: '이 프로젝트에 Firebase 웹 SDK를 설치하고 .env.local의 NEXT_PUBLIC_FIREBASE_ 환경변수로 초기화해줘. Firebase Authentication의 Google 로그인과 로그아웃, Firestore의 사용자별 데이터 저장을 구현해줘. 보안 규칙은 로그인한 사용자가 자기 데이터만 읽고 쓸 수 있도록 작성해줘. 서비스 계정 키는 브라우저에 넣지 마. 로컬에서 로그인과 저장을 확인하는 방법도 알려줘.' }],
   };
 }
 
-function envVars(db: DbChoice): GuideItem {
+function envVars(): GuideItem {
   return {
     id: 'env-vars', column: 'project', order: 14, icon: 'key', minutes: 3,
     title: '환경변수(.env.local) 넣기',
-    summary: `${db === 'firebase' ? 'Firebase' : 'Supabase'} 연결 키를 코드에 직접 쓰지 않고 안전하게 보관하는 파일`,
+    summary: 'Firebase 웹 앱 설정을 .env.local과 Vercel 환경변수에 연결하기',
     links: [{ label: 'Next.js 환경변수 문서', href: 'https://nextjs.org/docs/app/guides/environment-variables', primary: true }],
     widget: 'env-vars',
     steps: [
       { text: 'VS Code 왼쪽 탐색기에서 프로젝트 최상위 폴더에 새 파일 ".env.local"을 만들어요.', target: 'p0', screen: { kind: 'editor', files: ['app/', 'public/', 'package.json', '.gitignore'], palette: { query: '새 파일 이름', items: ['.env.local'] } } },
-      { text: '아래 변환기가 만들어준 "키=값" 줄을 그대로 붙여넣고 저장(Ctrl+S).', screen: { kind: 'editor', files: ['app/', 'public/', '.env.local', 'package.json', '.gitignore'], active: 2, code: db === 'firebase' ? ['NEXT_PUBLIC_FIREBASE_API_KEY=AIza...', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=my-first-app.firebaseapp.com', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID=my-first-app', 'NEXT_PUBLIC_FIREBASE_APP_ID=1:123:web:abc'] : ['NEXT_PUBLIC_SUPABASE_URL=https://abcd.supabase.co', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxx'] } },
+      { text: '아래 변환기가 만들어준 "키=값" 줄을 그대로 붙여넣고 저장(Ctrl+S).', screen: { kind: 'editor', files: ['app/', 'public/', '.env.local', 'package.json', '.gitignore'], active: 2, code: ['NEXT_PUBLIC_FIREBASE_API_KEY=AIza...', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=my-first-app.firebaseapp.com', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID=my-first-app', 'NEXT_PUBLIC_FIREBASE_APP_ID=1:123:web:abc'] } },
       { text: '.gitignore 안에 ".env*" 줄이 있는지 확인! 있어야 키가 GitHub에 안 올라가요.', screen: { kind: 'editor', files: ['app/', 'public/', '.env.local', 'package.json', '.gitignore'], active: 4, code: ['# env files', '.env*', '', 'node_modules', '.next'] } },
       { text: '개발 서버를 껐다 켜야(Ctrl+C → npm run dev) 새 값이 적용돼요.', screen: term({ cmd: 'npm run dev', out: ['▲ Next.js', '- Local: http://localhost:3000', '- Environments: .env.local'] }) },
     ],
-    notes: ['브라우저에서 쓰는 값은 이름이 반드시 NEXT_PUBLIC_ 으로 시작해야 해요.', '같은 키=값을 다음 단계(Vercel)에도 그대로 붙여넣어요.'],
+    notes: ['NEXT_PUBLIC_ 값은 브라우저에 공개되는 Firebase 웹 설정이에요. 서비스 계정 비공개 키는 넣지 마세요.', '같은 키=값을 다음 단계(Vercel)에도 그대로 붙여넣어요.'],
     troubles: [
       { q: '값이 undefined로 나와요', a: '① 파일 이름이 정확히 .env.local 인지(.txt 붙지 않았는지) ② 프로젝트 최상위 폴더인지 ③ 서버를 재시작했는지 확인하세요.' },
     ],
@@ -292,7 +262,7 @@ export function getItems(db: DbChoice): GuideItem[] {
     {
       id: 'github-signup', column: 'account', order: 5, icon: 'github', minutes: 4,
       title: 'GitHub',
-      summary: '내 코드를 인터넷에 보관하는 저장소. Vercel · Supabase가 여기서 코드를 가져가요',
+      summary: '내 코드를 인터넷에 보관하는 저장소. Vercel이 여기서 코드를 가져와 배포해요',
       links: [{ label: 'GitHub 가입하기', href: 'https://github.com/signup', primary: true }, { label: 'GitHub 문서', href: 'https://docs.github.com/ko/get-started' }],
       steps: [
         { text: '이메일 · 비밀번호 · 아이디(Username) 입력. 아이디는 영문 소문자로 — 주소가 github.com/아이디 가 돼요.', target: 'b0', screen: { kind: 'browser', url: 'github.com/signup', heading: 'Sign up to GitHub', fields: [{ label: 'Email', value: 'me@example.com' }, { label: 'Password', value: '••••••••••' }, { label: 'Username', value: 'my-id' }, { label: 'Your Country/Region', value: 'South Korea ▾' }], buttons: [{ label: 'Continue', primary: true }] } },
@@ -316,7 +286,7 @@ export function getItems(db: DbChoice): GuideItem[] {
       ],
       notes: ['Hobby는 개인·비상업용 무료 플랜이에요. 수익화하면 Pro 전환을 검토하세요.'],
     },
-    dbAccount(db),
+    dbAccount(),
     // ═══ PROJECT ═══
     {
       id: 'github-repo', column: 'project', order: 12, icon: 'folder-git', minutes: 3,
@@ -336,8 +306,8 @@ export function getItems(db: DbChoice): GuideItem[] {
         { q: 'rejected (fetch first)', a: '리포지토리를 만들 때 README를 체크했다면 git pull origin main --allow-unrelated-histories 후 다시 push 하세요.' },
       ],
     },
-    dbProject(db),
-    envVars(db),
+    dbProject(),
+    envVars(),
     {
       id: 'vercel-project', column: 'project', order: 15, icon: 'rocket', minutes: 3,
       title: 'Vercel 프로젝트 연결 · 배포',
@@ -348,6 +318,8 @@ export function getItems(db: DbChoice): GuideItem[] {
         { text: 'Framework Preset은 자동(Next.js). "Environment Variables"를 펼쳐 .env.local 내용을 통째로 붙여넣어요.', target: 'f2', screen: { kind: 'browser', url: 'vercel.com/new/import', heading: 'Configure Project', fields: [{ label: 'Project Name', value: 'my-first-app' }, { label: 'Framework Preset', value: 'Next.js ▾' }, { label: 'Environment Variables', value: '📋 .env 내용 붙여넣기 (Key=Value 자동 분리)' }], buttons: [{ label: 'Deploy', primary: true }] } },
         { text: 'Deploy를 누르고 1~2분 기다려요.', target: 'b0', screen: { kind: 'browser', url: 'vercel.com/new/import', heading: 'Configure Project', sub: 'Building…', buttons: [{ label: 'Deploy', primary: true }] } },
         { text: '🎉 Congratulations! 나온 주소(my-first-app.vercel.app)가 내 서비스 주소예요.', target: 'f0', screen: { kind: 'browser', url: 'vercel.com/my-id/my-first-app', heading: 'Congratulations!', fields: [{ label: 'Domains', value: 'my-first-app.vercel.app', mono: true }], buttons: [{ label: 'Continue to Dashboard', primary: true }] } },
+        { text: 'Firebase 콘솔 → Authentication → 설정 → 승인된 도메인에 배포 주소(예: my-first-app.vercel.app)를 추가해요. 로컬 로그인을 테스트할 때는 localhost도 등록해요.', screen: { kind: 'browser', url: 'console.firebase.google.com', heading: 'Authentication · 승인된 도메인', fields: [{ label: '도메인', value: 'my-first-app.vercel.app' }], buttons: [{ label: '추가', primary: true }] } },
+        { text: '배포 주소에서 Google 로그인 → 데이터 저장 → 새로고침 후 다시 보이는지 확인하면 끝이에요.', screen: { kind: 'browser', url: 'my-first-app.vercel.app', heading: '내 첫 서비스', sub: '로그인과 데이터 저장 확인', buttons: [{ label: 'Google로 로그인', primary: true }] } },
         { text: '이후로는 코드를 고치고 push만 하면 Vercel이 자동으로 다시 배포해요.', screen: term({ cmd: 'git add .' }, { cmd: 'git commit -m "update"' }, { cmd: 'git push', out: ['→ Vercel: Building… → Ready ✓'] }) },
       ],
       commands: [

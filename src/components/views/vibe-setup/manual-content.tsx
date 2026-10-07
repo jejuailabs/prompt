@@ -15,8 +15,6 @@ function docCommands(doc: ManualDoc): { label: string; code: string }[] {
       return [{ label: '프로젝트 폴더 터미널에서 실행 (아이디·리포지토리 이름만 바꾸기)', code: 'git init\ngit add .\ngit commit -m "first commit"\ngit branch -M main\ngit remote add origin https://github.com/내아이디/my-first-app.git\ngit push -u origin main' }];
     case 'env-firebase':
       return [{ label: '.env.local 예시', code: 'NEXT_PUBLIC_FIREBASE_API_KEY=\nNEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=\nNEXT_PUBLIC_FIREBASE_PROJECT_ID=\nNEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=\nNEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=\nNEXT_PUBLIC_FIREBASE_APP_ID=' }];
-    case 'env-supabase':
-      return [{ label: '.env.local 예시', code: 'NEXT_PUBLIC_SUPABASE_URL=\nNEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=' }];
     default:
       return base;
   }

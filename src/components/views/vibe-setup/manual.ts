@@ -4,7 +4,7 @@ import { COLUMNS, getItems, type DbChoice, type GuideItem } from './data';
 
 export const MANUAL_PATH = '/guide/vibe-coding';
 export const MANUAL_TITLE = '바이브코딩 매뉴얼';
-export const MANUAL_DESCRIPTION = '코딩을 몰라도 AI로 웹 서비스를 만드는 바이브코딩 준비 매뉴얼. Git·Node.js·VS Code 설치, PowerShell PATH 설정, Claude·ChatGPT Codex·Antigravity AI 코딩 도구, GitHub·Vercel·Firebase·Supabase 가입과 첫 배포까지 초보자 기준으로 정리했습니다.';
+export const MANUAL_DESCRIPTION = '코딩을 몰라도 AI로 웹 서비스를 만드는 바이브코딩 준비 매뉴얼. Git·Node.js·VS Code 설치, PowerShell PATH 설정, Claude·ChatGPT Codex·Antigravity AI 코딩 도구, GitHub·Vercel·Firebase 가입과 첫 배포까지 초보자 기준으로 정리했습니다.';
 export const MANUAL_UPDATED = '2026-10-04';
 
 interface DocSeo {
@@ -90,12 +90,6 @@ const SEO: Record<string, DocSeo> = {
     keywords: ['firebase 가입', '파이어베이스 시작하기', 'firebase 콘솔', 'firebase 무료', '파이어베이스 사용법'],
     answer: 'Firebase는 별도 회원가입 없이 구글 계정으로 console.firebase.google.com에 로그인하고 약관에 동의하면 바로 사용할 수 있습니다. 무료 Spark 요금제로 시작하면 카드 등록이 필요 없습니다.',
   },
-  'supabase-signup': {
-    title: 'Supabase 회원가입 · 조직 만들기',
-    description: 'Continue with GitHub로 Supabase에 가입하고 Personal·Free 조직을 만드는 방법.',
-    keywords: ['supabase 가입', '수파베이스 회원가입', 'supabase 무료', 'supabase github 로그인', '수파베이스 사용법'],
-    answer: 'supabase.com/dashboard/sign-up에서 Continue with GitHub로 가입하고 Authorize supabase를 누른 뒤, 조직(Organization)을 Type: Personal, Plan: Free로 만들면 됩니다. 무료 플랜은 프로젝트 2개까지 쓸 수 있습니다.',
-  },
   'github-repo-push': {
     title: 'GitHub 리포지토리 만들고 첫 push 하기',
     description: 'GitHub에서 새 리포지토리를 만들고 내 PC 프로젝트 폴더를 git init, git remote add origin, git push -u origin main으로 올리는 방법과 자주 나는 오류 해결.',
@@ -108,23 +102,11 @@ const SEO: Record<string, DocSeo> = {
     keywords: ['firebase 프로젝트 만들기', 'firebaseconfig', 'firebase 웹 앱 추가', 'firestore 시작', 'firebase authentication 설정', 'firebase apikey 노출'],
     answer: 'Firebase 콘솔에서 프로젝트를 만들고, 프로젝트 개요의 웹(</>) 아이콘으로 앱을 등록하면 firebaseConfig가 나옵니다. 이 값을 .env.local과 Vercel 환경변수에 넣어 사용합니다. 필요한 기능은 빌드 메뉴에서 Authentication과 Firestore Database를 켜세요.',
   },
-  'supabase-project': {
-    title: 'Supabase 프로젝트 생성 · URL과 Publishable key 찾기',
-    description: 'Supabase 새 프로젝트를 서울 리전으로 만들고 Project URL과 Publishable key(anon key)를 복사하는 방법.',
-    keywords: ['supabase 프로젝트 생성', 'supabase url key', 'supabase anon key', 'supabase publishable key', '수파베이스 서울 리전'],
-    answer: 'Supabase 대시보드에서 New project를 누르고 이름, DB 비밀번호(꼭 저장), 지역 Northeast Asia (Seoul)을 정해 만듭니다. 1~2분 뒤 상단 Connect 또는 Settings → API Keys에서 Project URL과 Publishable key를 복사하세요. Secret key는 절대 공개하면 안 됩니다.',
-  },
   'env-firebase': {
     title: 'Next.js .env.local에 Firebase 환경변수 넣기',
     description: 'firebaseConfig 값을 NEXT_PUBLIC_FIREBASE_ 환경변수로 바꿔 .env.local과 Vercel에 넣는 방법. undefined 오류 해결.',
     keywords: ['env.local 설정', 'next.js 환경변수', 'next_public_firebase', 'firebase 환경변수', '환경변수 undefined'],
     answer: '프로젝트 최상위 폴더에 .env.local 파일을 만들고 NEXT_PUBLIC_FIREBASE_API_KEY=값 형식으로 firebaseConfig 값을 한 줄씩 넣습니다. .gitignore에 .env*가 있는지 확인하고, 개발 서버를 재시작해야 적용됩니다. 같은 내용을 Vercel 환경변수에도 넣으세요.',
-  },
-  'env-supabase': {
-    title: 'Next.js .env.local에 Supabase 환경변수 넣기',
-    description: 'Supabase Project URL과 Publishable key를 NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY로 .env.local과 Vercel에 넣는 방법.',
-    keywords: ['supabase 환경변수', 'next_public_supabase_url', 'next.js supabase env', 'env.local 설정', '환경변수 undefined'],
-    answer: '프로젝트 최상위 폴더의 .env.local에 NEXT_PUBLIC_SUPABASE_URL과 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY 두 줄을 넣으면 됩니다. 저장 후 개발 서버를 재시작하고, 같은 값을 Vercel 프로젝트 환경변수에도 등록하세요.',
   },
   'vercel-deploy': {
     title: 'Vercel 배포 방법 · GitHub 리포지토리 Import',
@@ -151,11 +133,11 @@ function slugFor(item: GuideItem, db: DbChoice): string {
   return map[item.id] ?? item.id;
 }
 
-/** All manual documents in reading order (Firebase variants before Supabase). */
+/** Firebase manual documents in reading order. */
 export function getManualDocs(): ManualDoc[] {
   const seen = new Set<string>();
   const docs: ManualDoc[] = [];
-  for (const db of ['firebase', 'supabase'] as const) {
+  for (const db of ['firebase'] as const) {
     for (const item of getItems(db)) {
       const slug = slugFor(item, db);
       if (seen.has(slug) || !SEO[slug]) continue;

@@ -17,6 +17,13 @@ const icon = (name) => `<svg aria-hidden="true" viewBox="0 0 24 24">${icons[name
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const liveHomepage = location.pathname === '/';
 document.body.classList.toggle('live-homepage', liveHomepage);
+const liveHomeReady = liveHomepage ? import('/design/streaming-v1/live-home.js').then(m => m.mountHomepage($('#content'), { icon })).catch(() => {
+  $('#content').innerHTML = '<section class="live-welcome"><h1>작품을 불러오지 못했어요.</h1><p>화면을 새로고침하거나 둘러보기에서 작품을 확인해 주세요.</p><a class="btn btn-primary" href="/app#gallery">작품 둘러보기 ↗</a></section>';
+}) : null;
+if (liveHomepage) {
+  const libraryButton = $('[data-action="library"]');
+  if (libraryButton) { libraryButton.setAttribute('aria-label','내 작업'); libraryButton.innerHTML = icon('bookmark') + '<span>내 작업</span>'; }
+}
 let spaceNavigation = { sections: [], entries: [] };
 let navigationRole = null;
 function renderSpaces() {
@@ -136,6 +143,8 @@ function detailTab(w, tab) {
 }
 function render() {
   const route=(location.hash.slice(1).split('?')[0]||'home');
+  if (liveHomepage && route === 'home') { document.title='PLAYLAB — 보고, 만들고, 같이 놀자.'; void liveHomeReady.then(home => home?.render()); return; }
+  if (liveHomepage && route === 'detail') { location.replace('/app#gallery'); return; }
   const liveDestinations = { prompts:'/app#prompt-wiki', films:'/app#gallery?type=video', games:'/app#game-room' };
   if (liveHomepage && liveDestinations[route]) { location.replace(liveDestinations[route]); return; }
   if(route==='content') { $('#content').focus(); return; }
@@ -160,6 +169,7 @@ function toggleSave(id) {
 }
 document.addEventListener('click',async e=>{
   const el=e.target.closest('button,a');if(!el)return;
+  if(liveHomepage && ['search','library'].includes(el.dataset.action)){location.assign(el.dataset.action==='search'?'/app#gallery':'/app#my-projects');return;}
   if(el.dataset.action==='spaces'){spacesDialog.showModal();document.body.style.overflow='hidden';$$('[data-action="spaces"]').forEach(button=>button.setAttribute('aria-expanded','true'));return;}
   if(el.dataset.action==='close-spaces'){spacesDialog.close();return;}
   if(el.dataset.action==='retry-spaces'){void loadSpaceNavigation();return;}

@@ -36,8 +36,16 @@ function ItemIcon({ name, className }: { name: string; className?: string }) {
 }
 
 export default function VibeSetupView() {
-  const [db, setDb] = useStored<DbChoice>('vibe-setup:db', 'firebase');
+  const db: DbChoice = 'firebase';
   const [done, setDone] = useStored<string[]>('vibe-setup:done', []);
+  useEffect(() => {
+    try {
+      const previous = localStorage.getItem('vibe-setup:db');
+      if (!previous) return;
+      localStorage.removeItem('vibe-setup:db');
+      if (JSON.parse(previous) !== 'firebase') setDone(done.filter(id => !['db-account', 'db-project', 'env-vars'].includes(id)));
+    } catch { /* The guide also works with storage disabled. */ }
+  }, [done, setDone]);
   const [openStep, setOpenStep] = useState<ColumnId | null>(null);
   const [openItem, setOpenItem] = useState<string | null>(null);
   const items = useMemo(() => getItems(db), [db]);
@@ -88,7 +96,7 @@ export default function VibeSetupView() {
         subtitle="1단계부터 차례대로 한 번씩만 따라 하면, 누구나 첫 서비스를 인터넷에 올릴 수 있어요."
       />
 
-      {/* progress + db choice */}
+      {/* progress + Firebase learning path */}
       <div className="mb-6 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
         <div className="rounded-xl border bg-card p-4">
           <div className="mb-2 flex items-center justify-between gap-2 text-sm">
@@ -106,21 +114,8 @@ export default function VibeSetupView() {
         </div>
         <div className="rounded-xl border bg-card p-4">
           <div className="mb-2 text-sm font-semibold">DB · 로그인 서비스</div>
-          <div role="radiogroup" aria-label="DB 서비스 선택" className="inline-flex rounded-lg bg-muted p-1">
-            {(['firebase', 'supabase'] as const).map((d) => (
-              <button
-                key={d}
-                role="radio"
-                aria-checked={db === d}
-                onClick={() => setDb(d)}
-                className={cn('flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors', db === d ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground')}
-              >
-                {d === 'firebase' ? <Flame className="size-4" /> : <Database className="size-4" />}
-                {d === 'firebase' ? 'Firebase' : 'Supabase'}
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 max-w-64 text-[11px] text-muted-foreground">{db === 'firebase' ? '구글 계정으로 바로 시작. NoSQL(문서형) DB' : 'GitHub로 가입. SQL(표 형식) DB, 이 플랫폼도 사용'}</p>
+          <div className="flex items-center gap-2 text-lg font-semibold"><Flame className="size-5 text-primary" />Firebase</div>
+          <p className="mt-2 max-w-64 text-xs leading-6 text-muted-foreground">Google 로그인 · Firestore DB<br />프로젝트 연결부터 Vercel 배포까지</p>
         </div>
       </div>
 
@@ -267,7 +262,7 @@ function ItemDetail({ item, db, done, onToggleDone, onTop }: { item: GuideItem; 
       </div>}
 
       {item.widget === 'repo-commands' && <RepoCommandsWidget />}
-      {item.widget === 'env-vars' && <EnvVarsWidget db={db} />}
+      {item.widget === 'env-vars' && <EnvVarsWidget />}
 
       {item.commands && (
         <div className="space-y-2">

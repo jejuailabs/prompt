@@ -44,7 +44,7 @@ export default function ManualHubPage() {
       <p className="mt-2 text-sm text-muted-foreground">설치부터 첫 배포까지 · {MANUAL_UPDATED} 기준</p>
       <p className="mt-6 rounded-lg border-l-4 border-primary bg-primary/5 px-4 py-3 text-[15px] leading-7">
         바이브코딩은 코드를 직접 짜는 대신 AI에게 말로 요청해 서비스를 만드는 방식입니다. 시작하려면 ① PC에 Git·Node.js·VS Code를 설치하고 PowerShell PATH를 설정한 뒤,
-        ② Claude·ChatGPT Codex·Antigravity 중 AI 코딩 도구를 하나 고르고, ③ GitHub·Vercel·Firebase(또는 Supabase)에 가입한 다음,
+        ② Claude·ChatGPT Codex·Antigravity 중 AI 코딩 도구를 하나 고르고, ③ GitHub·Vercel·Firebase에 가입한 다음,
         ④ 프로젝트마다 리포지토리·DB·환경변수를 만들어 Vercel로 배포하면 됩니다. 처음 한 번은 1시간 정도 걸립니다.
       </p>
 

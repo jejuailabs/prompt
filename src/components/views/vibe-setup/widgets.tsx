@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import type { DbChoice } from './data';
 
 // ─── storage (per-viewer convenience only; never required to render) ───
 export function useStored<T>(key: string, init: T): [T, (v: T) => void] {
@@ -200,36 +199,24 @@ const FB_KEYS: [string, string][] = [
   ['measurementId', 'NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID'],
 ];
 
-export function EnvVarsWidget({ db }: { db: DbChoice }) {
+export function EnvVarsWidget() {
   // Not persisted on purpose — keys stay in memory only.
   const [config, setConfig] = useState('');
-  const [sbUrl, setSbUrl] = useState('');
-  const [sbKey, setSbKey] = useState('');
 
   const env = useMemo(() => {
-    if (db === 'supabase') {
-      return [`NEXT_PUBLIC_SUPABASE_URL=${sbUrl.trim()}`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${sbKey.trim()}`].join('\n');
-    }
     return FB_KEYS.flatMap(([k, envKey]) => {
-      const m = config.match(new RegExp(`${k}\\s*:\\s*["'\`]([^"'\`]+)["'\`]`));
+      const m = config.match(new RegExp(`["']?${k}["']?\\s*:\\s*["'\`]([^"'\`]+)["'\`]`));
       if (!m && k === 'measurementId') return [];
       return [`${envKey}=${m?.[1] ?? ''}`];
     }).join('\n');
-  }, [db, config, sbUrl, sbKey]);
+  }, [config]);
 
-  const filled = db === 'supabase' ? Boolean(sbUrl.trim() && sbKey.trim()) : /apiKey/.test(config);
+  const filled = /apiKey/.test(config);
 
   return (
     <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
-      <div className="text-sm font-semibold">🔁 {db === 'firebase' ? 'firebaseConfig를 붙여넣으면 .env 형식으로 바꿔줘요' : 'URL과 키를 넣으면 .env 형식으로 만들어줘요'}</div>
-      {db === 'firebase' ? (
-        <Textarea rows={5} className="font-mono text-xs" value={config} placeholder={'const firebaseConfig = {\n  apiKey: "AIza...",\n  ...\n};'} onChange={(e) => setConfig(e.target.value)} />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="space-y-1"><span className="text-xs font-medium">Project URL</span><Input className="font-mono text-xs" value={sbUrl} placeholder="https://abcd.supabase.co" onChange={(e) => setSbUrl(e.target.value)} /></label>
-          <label className="space-y-1"><span className="text-xs font-medium">Publishable key (anon)</span><Input className="font-mono text-xs" value={sbKey} placeholder="sb_publishable_..." onChange={(e) => setSbKey(e.target.value)} /></label>
-        </div>
-      )}
+      <div className="text-sm font-semibold">🔁 firebaseConfig를 붙여넣으면 .env 형식으로 바꿔줘요</div>
+        <Textarea aria-label="Firebase 웹 앱 설정" rows={5} className="font-mono text-xs" value={config} placeholder={'const firebaseConfig = {\n  apiKey: "AIza...",\n  ...\n};'} onChange={(e) => setConfig(e.target.value)} />
       <CommandBlock label=".env.local 에 붙여넣을 내용" note={filled ? 'Vercel의 Environment Variables 칸에도 그대로 붙여넣으면 돼요' : '위에 값을 넣으면 오른쪽 값이 채워져요'} code={env} copyLabel="전체 복사" />
       {PRIVACY}
     </div>
