@@ -1,6 +1,18 @@
 /** Shipped games stay playable before an administrator registers them in the database. */
 const SHIPPED_GAMES = [
   {
+    slug: 'donut-pop', title: '도넛 꽂기', englishTitle: 'Donut Pop', publishedAt: '2026-10-07T23:01:54.000Z',
+    description: '돌아가는 도넛의 빈틈에 토핑을 톡! 딸기 보너스와 도넛 완성으로 더 달콤한 최고 기록에 도전하세요.',
+    contentUrl: '/games/donut-pop.html', fileUrl: '/games/thumbs/donut-pop.png', artUrl: '/games/thumbs/donut-pop.png',
+    tags: ['타이밍', '기록 도전'], controls: '탭/클릭/스페이스 = 토핑 꽂기', palette: '#d994ac', emoji: '🍩', playHint: '빈틈을 노려, 토핑을 톡!',
+  },
+  {
+    slug: 'cat-bridge', title: '고양이 다리 건너기', englishTitle: 'Cat Bridge', publishedAt: '2026-10-07T23:01:54.000Z',
+    description: '꾹 눌러 다리를 늘리고 손을 떼어 고양이를 건너게 해주세요. 발판 중앙의 PERFECT 콤보로 더 높은 점수에 도전!',
+    contentUrl: '/games/cat-bridge.html', fileUrl: '/games/thumbs/cat-bridge.png', artUrl: '/games/thumbs/cat-bridge.png',
+    tags: ['길이 맞추기', '기록 도전'], controls: '꾹 누르고 놓기 / 스페이스 누르고 떼기, ← → 길이 조절 + Enter', palette: '#86a999', emoji: '🐈', playHint: '조금 더 길게? 사뿐한 한 걸음',
+  },
+  {
     slug: 'fruit-atelier', title: '과일 아틀리에', englishTitle: 'Fruit Atelier', publishedAt: '2026-10-07T01:23:45.000Z',
     description: '햇살 드는 과일 가게에서 같은 과일을 합쳐 수박을 만들어보세요. 작고 달콤한 물리 퍼즐.',
     contentUrl: '/games/fruit-atelier.html', fileUrl: '/games/thumbs/fruit-atelier.png',
