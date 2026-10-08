@@ -1,6 +1,18 @@
 /** Shipped games stay playable before an administrator registers them in the database. */
 const SHIPPED_GAMES = [
   {
+    slug: 'hamster-pinball', title: '햄스터 간식 핀볼', englishTitle: 'Snack Picnic', publishedAt: '2026-10-08T00:24:05.000Z',
+    description: '볼빵빵한 햄스터를 통통! 다섯 번의 드롭과 두 번의 흔들기로 간식을 모으고, 움직이는 바구니 보너스로 최고 기록에 도전하세요.',
+    contentUrl: '/games/hamster-pinball.html', fileUrl: '/games/thumbs/hamster-pinball.png', artUrl: '/games/thumbs/hamster-pinball.png',
+    tags: ['물리 핀볼', '기록 도전'], controls: '탭 = 드롭, ← → = 위치 조절 / 떨어지는 동안 두 번 흔들기, 스페이스 = 드롭', palette: '#dba77a', emoji: '🐹', playHint: '다섯 번의 드롭, 달콤한 간식 소풍',
+  },
+  {
+    slug: 'penguin-ice', title: '펭귄 얼음 소동', englishTitle: 'Ice Picnic', publishedAt: '2026-10-08T00:24:05.000Z',
+    description: '얼음벽을 만들고 깨며 물개를 따돌리세요! 150초 동안 생선을 모으고 연속 수집 콤보로 기록을 겨루는 귀여운 생존 게임.',
+    contentUrl: '/games/penguin-ice.html', fileUrl: '/games/thumbs/penguin-ice.png', artUrl: '/games/thumbs/penguin-ice.png',
+    tags: ['얼음벽 전략', '생존'], controls: '방향키/WASD/화면 화살표 = 이동, 스페이스/얼음 버튼 = 얼음 만들기·깨기', palette: '#9bbdce', emoji: '🐧', playHint: '생선은 내 거야! 얼음 위의 작은 추격전',
+  },
+  {
     slug: 'donut-pop', title: '도넛 꽂기', englishTitle: 'Donut Pop', publishedAt: '2026-10-07T23:01:54.000Z',
     description: '돌아가는 도넛의 빈틈에 토핑을 톡! 딸기 보너스와 도넛 완성으로 더 달콤한 최고 기록에 도전하세요.',
     contentUrl: '/games/donut-pop.html', fileUrl: '/games/thumbs/donut-pop.png', artUrl: '/games/thumbs/donut-pop.png',
