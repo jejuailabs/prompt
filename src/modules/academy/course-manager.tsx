@@ -59,10 +59,11 @@ export function CourseManager({ lessons, courses, selected, selectedLesson, prev
         <div className={styles.formGrid}><label>영상 제목 (선택)<Input value={videoTitle} maxLength={160} onChange={e => setVideoTitle(e.target.value)} placeholder="자동 분석 시 영상 제목을 가져옵니다" /></label><label>영상 소개 (선택)<Input value={videoDescription} maxLength={500} onChange={e => setVideoDescription(e.target.value)} /></label></div>
         <label>직접 작성한 학습내용 (선택)<textarea value={studyContent} maxLength={50000} onChange={e => setStudyContent(e.target.value)} placeholder="비워두면 영상 자막을 바탕으로 학습내용을 만들 수 있어요. 마크다운을 지원합니다." /></label>
         <label className={styles.checkLabel}><input type="checkbox" checked={analyze} onChange={e => setAnalyze(e.target.checked)} disabled={!!studyContent.trim()} />등록과 함께 자막·학습내용 자동 생성</label>
-        <p className={styles.small}>{studyContent.trim() ? '직접 작성한 학습내용을 저장합니다. 자동 분석은 실행하지 않아요.' : '자동 생성은 SocialKit 자막과 AI 분석을 사용하며 수 분이 걸릴 수 있어요. 이미 분석된 영상은 기존 결과를 재사용합니다.'}</p>
+        <p className={styles.small}>{studyContent.trim() ? '직접 작성한 학습내용을 저장합니다. 자동 분석은 실행하지 않아요.' : 'SocialKit으로 시간별 자막을 먼저 저장한 뒤 AI 학습노트를 만듭니다. 학습노트 생성에 실패해도 추출된 자막은 남아요. 이미 분석된 영상은 기존 결과를 재사용합니다.'}</p>
         <div><Button disabled={preview || !!busy || !url.trim().startsWith('https://') || !youtubeVideoId(url)} onClick={() => void run('register', async () => {
           const lesson = await api.post<AcademyLessonDTO>('/api/academy/lessons', { url, title: videoTitle, description: videoDescription, studyContent, analyze });
           onLessonCreated(lesson.id);
+          if (lesson.analysis?.status === 'failed') setError(lesson.analysis.error || '영상은 등록됐지만 학습내용 생성에 실패했어요.');
         })}>{busy === 'register' ? '영상 등록·학습내용 준비 중…' : '영상 강의 등록'}</Button></div>
       </section>
       {!!lessons.length && <section className={styles.managerSection}>
@@ -71,7 +72,8 @@ export function CourseManager({ lessons, courses, selected, selectedLesson, prev
         {editing && <>
           <div className={styles.formGrid}><label>영상 제목<Input value={editTitle} maxLength={160} onChange={e => setEditTitle(e.target.value)} /></label><label>영상 소개<Input value={editDescription} maxLength={500} onChange={e => setEditDescription(e.target.value)} /></label></div>
           <label>학습내용 편집<textarea value={editNotes} maxLength={50000} onChange={e => setEditNotes(e.target.value)} /></label>
-          {editing.analysis?.status === 'failed' && <p role="alert" className={styles.error}>영상은 등록되어 있지만 분석에 실패했어요. {editing.analysis.error} 다시 생성하거나 학습내용을 직접 작성해주세요.</p>}
+          {editing.analysis?.status === 'failed' && <p role="alert" className={styles.error}>{editing.analysis.transcript ? '자막 추출·저장 완료. 학습노트 생성은 완료되지 않았어요.' : '영상은 등록되어 있지만 자막·학습내용 준비에 실패했어요.'} {editing.analysis.error} 다시 생성하거나 학습내용을 직접 작성해주세요.</p>}
+          {editing.analysis?.transcript && <p className={styles.small}>자막 {editing.analysis.transcript.length.toLocaleString()}자 저장됨 · 영상의 자막 탭에서 확인할 수 있어요.</p>}
           <div className={styles.actions}><Button disabled={preview || !!busy || !editTitle.trim()} onClick={() => void run('save-lesson', async () => { await api.patch(`/api/academy/lessons/${editing.id}`, { title: editTitle, description: editDescription, studyContent: editNotes }); setNotice('영상과 학습내용을 저장했어요.'); })}>영상 내용 저장</Button><Button variant="outline" disabled={preview || !!busy} onClick={() => {
             if (editing.analysis?.studyContent && !window.confirm('기존 학습내용을 새 분석 결과로 교체할까요?')) return;
             void run('analyze', async () => { const result = await api.post<{ status: string; error?: string }>(`/api/academy/lessons/${editing.id}/analyze`); if (result.status === 'failed') setError(result.error || '분석에 실패했어요. 다시 시도해주세요.'); else setNotice('자막과 학습내용을 갱신했어요.'); });

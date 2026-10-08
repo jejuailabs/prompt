@@ -4,7 +4,7 @@ import { requireUser, HttpError } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 import { processYoutubeAnalysis, toYoutubeAnalysisDTO } from '@/lib/server/youtube-analysis';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser(); const { id } = await params;

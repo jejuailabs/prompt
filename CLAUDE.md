@@ -95,3 +95,11 @@ Phase 2(모델 비교)와 Phase 3(파이프라인)는 시장 반응에 따라 �
 3. 신규 모듈이면 `docs/02-architecture-core-principles.md`의 인터페이스 계약을 따라 등록
 4. 실행/렌더링이 필요한 기능이면 `docs/07-sandbox-execution-engine.md` 기준 적정 tier 선택
 5. 완료 후 `docs/03-phases-roadmap.md` 체크리스트 업데이트
+
+
+## 강의 YouTube 내용 추출 원칙 (2026-10-08 사용자 지시)
+
+- 기준 구현은 `C:/Users/na/Desktop/newproject/ssoktube/lib/transcript.ts`의 `getTranscriptViaSocialKit` 및 `detectTranscriptLang`이다. 해당 프로젝트의 package.json 이름은 `nextcurator`다.
+- 강의 내용 추출은 이 SocialKit 구현을 기준으로 유지한다. `x-access-key`, 구간 자막 우선, 모든 `[MM:SS]` 시간표시 보존, 전문 대체 응답, 관리자 품질 필터 우회 방식을 임의로 다른 스크래핑이나 제목 기반 생성으로 바꾸지 않는다.
+- 추출 자막은 AI 학습노트 호출 **전에** 저장한다. 후속 AI 오류/결제 부족으로 성공한 자막을 버리지 않는다. 실패를 `done`으로 위장하지 않는다.
+- API 키와 공급자 원문 오류는 클라이언트/로그에 노출하지 않는다. SocialKit 추출과 Gemini 학습노트 생성의 성공·실패를 구분한다.

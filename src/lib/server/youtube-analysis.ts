@@ -1,7 +1,8 @@
 // YouTube analysis pipeline. Provider credentials never leave the server.
 import { db } from '@/lib/db';
 import { chatJson } from '@/lib/server/ai';
-import { YoutubeTranscript } from 'youtube-transcript';
+import { fetchSocialKitTranscript } from '@/lib/server/socialkit';
+export { isTranscriptQualityAcceptable } from '@/lib/server/socialkit';
 import type { YoutubeAnalysisDTO, YoutubeChapter } from '@/lib/types';
 
 export { youtubeVideoId as parseYoutubeVideoId } from '@/modules/academy/curriculum';
@@ -32,7 +33,7 @@ export function toYoutubeAnalysisDTO(a: {
 }
 
 async function fetchOembed(url: string) {
-  const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, { cache: 'no-store' });
+  const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, { cache: 'no-store', signal: AbortSignal.timeout(15_000) });
   if (!res.ok) return {};
   const data = await res.json() as { title?: string; author_name?: string; thumbnail_url?: string };
   return { title: data.title ?? '', channelTitle: data.author_name ?? '', thumbnailUrl: data.thumbnail_url ?? null };
@@ -42,8 +43,8 @@ async function fetchYoutubeData(videoId: string) {
   const key = process.env.YOUTUBE_DATA_API_KEY;
   if (!key) return { title: '', channelTitle: '', description: '', thumbnailUrl: null as string | null, comments: '' };
   const [videoRes, commentsRes] = await Promise.all([
-    fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${encodeURIComponent(videoId)}&key=${encodeURIComponent(key)}`, { cache: 'no-store' }).catch(() => null),
-    fetch(`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${encodeURIComponent(videoId)}&maxResults=20&order=relevance&key=${encodeURIComponent(key)}`, { cache: 'no-store' }).catch(() => null),
+    fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${encodeURIComponent(videoId)}&key=${encodeURIComponent(key)}`, { cache: 'no-store', signal: AbortSignal.timeout(15_000) }).catch(() => null),
+    fetch(`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${encodeURIComponent(videoId)}&maxResults=20&order=relevance&key=${encodeURIComponent(key)}`, { cache: 'no-store', signal: AbortSignal.timeout(15_000) }).catch(() => null),
   ]);
   const videoData = videoRes?.ok ? await videoRes.json() as { items?: { snippet?: { title?: string; channelTitle?: string; description?: string; thumbnails?: { high?: { url?: string } } } }[] } : {};
   const commentData = commentsRes?.ok ? await commentsRes.json() as { items?: { snippet?: { topLevelComment?: { snippet?: { textDisplay?: string } } } }[] } : {};
@@ -51,85 +52,9 @@ async function fetchYoutubeData(videoId: string) {
   return { title: snippet?.title ?? '', channelTitle: snippet?.channelTitle ?? '', description: snippet?.description ?? '', thumbnailUrl: snippet?.thumbnails?.high?.url ?? null, comments: (commentData.items ?? []).map((c) => c.snippet?.topLevelComment?.snippet?.textDisplay ?? '').filter(Boolean).join('\n') };
 }
 
-type TranscriptResult = { text: string; timed?: string; language?: string; source?: string };
-
-interface SocialKitTranscript {
-  success?: boolean;
-  message?: string;
-  data?: { transcript?: string; transcriptSegments?: { text?: string; start?: number; timestamp?: string }[] };
-}
-
-/** Transcript text with a [mm:ss] marker roughly every minute, so chapter timestamps are real. */
-function withTimestamps(segments: { text?: string; start?: number; timestamp?: string }[]): string {
-  let nextMark = 0;
-  return segments.map((s) => {
-    const start = s.start ?? 0;
-    const text = (s.text ?? '').trim();
-    if (start >= nextMark && s.timestamp) { nextMark = start + 60; return `[${s.timestamp}] ${text}`; }
-    return text;
-  }).join(' ').replace(/\s+/g, ' ').trim();
-}
-
-// SocialKit — https://docs.socialkit.dev/api-reference/youtube-transcript-api
-// GET /youtube/transcript?url=<youtube url>, key in the x-access-key header.
-async function fetchSocialKitTranscript(videoId: string): Promise<TranscriptResult | null> {
-  const key = process.env.SOCIALKIT_API_KEY;
-  if (!key) return null;
-  const url = `https://www.youtube.com/watch?v=${videoId}`;
-  try {
-    const res = await fetch(`https://api.socialkit.dev/youtube/transcript?url=${encodeURIComponent(url)}`, {
-      headers: { 'x-access-key': key }, cache: 'no-store', signal: AbortSignal.timeout(130_000),
-    });
-    const body = await res.json().catch(() => ({})) as SocialKitTranscript;
-    if (!res.ok || !body.success) {
-      console.warn(`[youtube] SocialKit transcript failed for ${videoId}: ${res.status} ${body.message ?? ''}`);
-      return null;
-    }
-    const text = (body.data?.transcript ?? '').replace(/\s+/g, ' ').trim();
-    if (!isTranscriptQualityAcceptable(text)) return null;
-    const segments = body.data?.transcriptSegments ?? [];
-    return { text, timed: segments.length ? withTimestamps(segments) : undefined, source: 'socialkit' };
-  } catch (e) {
-    console.warn(`[youtube] SocialKit transcript error for ${videoId}:`, e instanceof Error ? e.message : e);
-    return null;
-  }
-}
-
-async function fetchTranscriptFromProvider(videoId: string): Promise<TranscriptResult | null> {
-  // 1) SocialKit first: direct caption scraping is usually blocked from cloud (Vercel) IPs.
-  const socialKit = await fetchSocialKitTranscript(videoId);
-  if (socialKit) return socialKit;
-
-  // 2) youtube-transcript fallback (no key — scrapes YouTube captions directly; works locally)
-  try {
-    const items = await YoutubeTranscript.fetchTranscript(videoId, { lang: 'ko' }).catch(() =>
-      YoutubeTranscript.fetchTranscript(videoId)
-    );
-    if (items?.length) {
-      const text = items.map((i) => i.text).join(' ').replace(/\s+/g, ' ').trim();
-      if (isTranscriptQualityAcceptable(text)) return { text, language: 'ko', source: 'youtube-captions' };
-    }
-  } catch { /* no captions available */ }
-  return null;
-}
-
-export function isTranscriptQualityAcceptable(text: string): boolean {
-  const words = text.trim().split(/\s+/).filter(Boolean).length;
-  // A transcript must contain enough natural language to be useful. Duration is
-  // unavailable in provider fallbacks, so use a conservative absolute floor.
-  return words >= 30;
-}
-
 async function makeSummary(input: { title: string; channel: string; description: string; transcript: string; comments: string }) {
-  const source = input.transcript || `${input.title}\n${input.description}`;
-  if (!process.env.GEMINI_API_KEY) {
-    return {
-      category: 'YouTube', summary: input.description || `${input.title}에 대한 영상입니다.`,
-      reportSummary: input.description || '자막을 확보하지 못해 제목 중심으로 정리했습니다.',
-      chapters: [] as YoutubeChapter[], keywords: input.title.split(/\s+/).filter(Boolean).slice(0, 5),
-      studyContent: '', commentsSummary: '', contextSummary: input.description || input.title,
-    };
-  }
+  const source = input.transcript;
+  if (!process.env.GEMINI_API_KEY?.trim()) throw new Error('GEMINI_API_KEY 미설정');
   return chatJson<{
     category: string; summary: string; reportSummary: string; chapters: YoutubeChapter[];
     keywords: string[]; studyContent: string; commentsSummary: string; contextSummary: string;
@@ -158,26 +83,43 @@ export async function processYoutubeAnalysis(jobId: string) {
   await db.youtubeAnalysisJob.update({ where: { id: job.id }, data: { status: 'running' } });
   await db.youtubeAnalysis.update({ where: { id: job.analysisId }, data: { status: 'running', error: null } });
   try {
-    const [oembed, youtube] = await Promise.all([fetchOembed(job.analysis.sourceUrl), fetchYoutubeData(job.analysis.videoId)]);
-    const transcript = await fetchTranscriptFromProvider(job.analysis.videoId);
-    const summary = await makeSummary({
-      title: youtube.title || oembed.title || job.analysis.title || job.analysis.videoId,
-      channel: youtube.channelTitle || oembed.channelTitle || job.analysis.channelTitle,
-      description: youtube.description || job.analysis.description,
-      transcript: transcript?.timed ?? transcript?.text ?? '',
-      comments: youtube.comments,
-    });
-    const warning = transcript ? null : '자막을 확보하지 못해 제목·설명 중심으로 요약했습니다. 정확도가 제한될 수 있습니다.';
+    // Persist extraction before optional AI generation. A billing/AI error must
+    // never discard a successful SocialKit transcript or hide the video title.
+    const transcript = await fetchSocialKitTranscript(job.analysis.videoId);
     await db.youtubeAnalysis.update({ where: { id: job.analysisId }, data: {
-      title: youtube.title || oembed.title || job.analysis.title || job.analysis.videoId,
-      channelTitle: youtube.channelTitle || oembed.channelTitle || job.analysis.channelTitle,
+      transcript: transcript.text, transcriptSource: transcript.source,
+      transcriptLanguage: transcript.language, qualityWarning: null,
+    } });
+    const [oembed, youtube] = await Promise.all([
+      fetchOembed(job.analysis.sourceUrl).catch(() => ({})),
+      fetchYoutubeData(job.analysis.videoId),
+    ]);
+    const metadata = {
+      title: youtube.title || ('title' in oembed && oembed.title) || job.analysis.title || job.analysis.videoId,
+      channelTitle: youtube.channelTitle || ('channelTitle' in oembed && oembed.channelTitle) || job.analysis.channelTitle,
       description: youtube.description || job.analysis.description,
-      thumbnailUrl: youtube.thumbnailUrl || oembed.thumbnailUrl || job.analysis.thumbnailUrl,
-      transcript: transcript?.text ?? '', transcriptLanguage: transcript?.language ?? null,
-      transcriptSource: transcript?.source ?? null, qualityWarning: warning,
+      thumbnailUrl: youtube.thumbnailUrl || ('thumbnailUrl' in oembed && oembed.thumbnailUrl) || job.analysis.thumbnailUrl,
+    };
+    await db.youtubeAnalysis.update({ where: { id: job.analysisId }, data: {
+      ...metadata,
+    } });
+    let summary: Awaited<ReturnType<typeof makeSummary>>;
+    try {
+      summary = await makeSummary({ ...metadata, channel: metadata.channelTitle, transcript: transcript.timed, comments: youtube.comments });
+      if (!summary.studyContent?.trim()) throw new Error('Empty study notes');
+    } catch (e) {
+      const message = e instanceof Error ? e.message : '';
+      const reason = /402|prepayment|credits are depleted/i.test(message)
+        ? 'Gemini 선불 크레딧이 소진되어 학습노트를 만들지 못했습니다. 크레딧 충전 후 다시 생성해주세요.'
+        : /GEMINI_API_KEY/.test(message)
+          ? 'Gemini API 키가 설정되지 않아 학습노트를 만들지 못했습니다.'
+          : 'AI 학습노트 생성에 실패했습니다. 잠시 후 다시 생성해주세요.';
+      throw new Error(`SocialKit 자막은 추출·저장했습니다. ${reason}`);
+    }
+    await db.youtubeAnalysis.update({ where: { id: job.analysisId }, data: {
       category: summary.category, summary: summary.summary, reportSummary: summary.reportSummary,
       chapterJson: JSON.stringify(summary.chapters ?? []), keywordsJson: JSON.stringify(summary.keywords ?? []),
-      studyContent: summary.studyContent ?? '', commentsSummary: summary.commentsSummary ?? '', contextSummary: summary.contextSummary,
+      studyContent: summary.studyContent, commentsSummary: summary.commentsSummary ?? '', contextSummary: summary.contextSummary,
       status: 'done', error: null,
     } });
     await db.youtubeAnalysisJob.update({ where: { id: job.id }, data: { status: 'done', completedAt: new Date() } });
