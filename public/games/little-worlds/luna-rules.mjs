@@ -76,7 +76,8 @@ export function rampPosition(t) {
 export function flipper(s, side) {
   const angle = side ? Math.PI - .43 + s.flippers[1] * .98 : .43 - s.flippers[0] * .98;
   const x = side ? 308 : 142, y = 675;
-  return { x, y, ex: x + Math.cos(angle) * 75, ey: y + Math.sin(angle) * 75, angle, omega: s.velocities[side] * (side ? .98 : -.98) };
+  // Keep the resting tip gap wider than a ball plus both rubber radii.
+  return { x, y, ex: x + Math.cos(angle) * 68, ey: y + Math.sin(angle) * 68, angle, omega: s.velocities[side] * (side ? .98 : -.98) };
 }
 export function collideSegment(b, x1, y1, x2, y2, radius = 0, restitution = .72, surface = null) {
   const dx = x2 - x1, dy = y2 - y1, length = dx * dx + dy * dy;

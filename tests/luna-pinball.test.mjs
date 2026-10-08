@@ -35,6 +35,17 @@ test('drain uses a single early ball save, then spends exactly three balls', () 
   b = s.balls[0]; b.y = 799; step(s, dt); assert.equal(s.phase, 'over');
   const score = s.score; assert.equal(launch(s), false); advance(s, 5); assert.equal(s.score, score);
 });
+
+test('released flipper tips leave a real drain gap and unattended launches reach the next ball', () => {
+  const s = newGame(); const left = flipper(s, 0), right = flipper(s, 1);
+  assert.ok(right.ex - left.ex > 2 * (8 + 10));
+  for (const power of [.3, .65, 1]) {
+    const round = newGame(); launch(round, power); advance(round, 60);
+    assert.equal(round.phase, 'ready'); assert.equal(round.ballNo, 2);
+  }
+  const middle = newGame(); liveBall(middle, 225, 684, 0, 100); middle.saver = 0;
+  advance(middle, 2); assert.equal(middle.phase, 'ready'); assert.equal(middle.ballNo, 2);
+});
 test('LUNA lanes raise the multiplier with a cap, and repeat contacts cannot farm the same lit lane', () => {
   const s = newGame(); lightLane(s, 0); const first = s.score; lightLane(s, 0); assert.equal(s.score, first);
   for (let cycle = 0; cycle < 8; cycle++) {
