@@ -1,6 +1,12 @@
 /** Shipped games stay playable before an administrator registers them in the database. */
 const SHIPPED_GAMES = [
   {
+    slug: 'luna-pinball', title: '루나 가든 핀볼', englishTitle: 'Luna Garden', publishedAt: '2026-10-08T01:01:31.000Z',
+    description: '달빛 정원의 본격적인 3볼 핀볼. 황동 플리퍼로 꽃 범퍼와 오비트 램프를 공략하고 배수·잭팟·멀티볼로 최고 점수에 도전하세요.',
+    contentUrl: '/games/luna-pinball.html', fileUrl: '/games/thumbs/luna-pinball.png', artUrl: '/games/thumbs/luna-pinball.png',
+    tags: ['플리퍼 핀볼', '멀티볼'], controls: '← → / A·D = 플리퍼, 스페이스 누르고 놓기 = 발사, ↑ / X = 흔들기, 터치 버튼 지원', palette: '#769b8b', emoji: '🌙', playHint: '한 번 더, 달빛을 깨우는 한 방',
+  },
+  {
     slug: 'hamster-pinball', title: '햄스터 간식 핀볼', englishTitle: 'Snack Picnic', publishedAt: '2026-10-08T00:24:05.000Z',
     description: '볼빵빵한 햄스터를 통통! 다섯 번의 드롭과 두 번의 흔들기로 간식을 모으고, 움직이는 바구니 보너스로 최고 기록에 도전하세요.',
     contentUrl: '/games/hamster-pinball.html', fileUrl: '/games/thumbs/hamster-pinball.png', artUrl: '/games/thumbs/hamster-pinball.png',
