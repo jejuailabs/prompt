@@ -1,6 +1,12 @@
 /** Shipped games stay playable before an administrator registers them in the database. */
 const SHIPPED_GAMES = [
   {
+    slug: 'skybloom-pinball', title: '스카이블룸 핀볼', englishTitle: 'Sky Bloom', publishedAt: '2026-10-08T01:42:40.000Z',
+    description: '점수가 테이블을 키워요! 1,500점에 공방, 5,000점에 상층 정원을 열고 별 세 개로 축제 멀티볼에 도전하는 성장형 3볼 핀볼.',
+    contentUrl: '/games/skybloom-pinball.html', fileUrl: '/games/thumbs/skybloom-pinball.png', artUrl: '/games/thumbs/skybloom-pinball.png',
+    tags: ['성장형 핀볼', '상층 플레이필드'], controls: '← → / A·D = 양층 플리퍼, 스페이스 누르고 놓기 = 발사, ↑ / X = 흔들기, 터치 지원', palette: '#aa92bd', emoji: '🌠', playHint: '점수를 쌓아, 하늘까지 정원을 펼쳐요',
+  },
+  {
     slug: 'luna-pinball', title: '루나 가든 핀볼', englishTitle: 'Luna Garden', publishedAt: '2026-10-08T01:01:31.000Z',
     description: '달빛 정원의 본격적인 3볼 핀볼. 황동 플리퍼로 꽃 범퍼와 오비트 램프를 공략하고 배수·잭팟·멀티볼로 최고 점수에 도전하세요.',
     contentUrl: '/games/luna-pinball.html', fileUrl: '/games/thumbs/luna-pinball.png', artUrl: '/games/thumbs/luna-pinball.png',
