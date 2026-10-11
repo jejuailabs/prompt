@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { HttpError, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
-import { initialWorkflowStages, parseMeta, toProject } from '../../route';
+import { initialWorkflowStages, parseMeta, toProject } from '@/lib/server/asset3d-project';
 import { queueCharacterPreparation, queueSkinTokensRigging, updateWorkflowStage } from '@/lib/server/asset3d-character';
 
 interface AdvanceBody {

@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { HttpError, requireUser } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 import { getRunpodJobStatus } from '@/lib/server/runpod';
-import { parseMeta, toProject, type ProjectMeta } from '../route';
+import { parseMeta, toProject, type ProjectMeta } from '@/lib/server/asset3d-project';
 import { finishMeteredOperation } from '@/lib/server/operation-ledger';
 import { downloadBuffer, publicStorageUrl, uploadBuffer } from '@/lib/server/storage';
 import { inspectRiggedGlb, inspectTrellisGlb } from '@/lib/server/asset3d-qc';

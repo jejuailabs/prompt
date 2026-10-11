@@ -109,5 +109,3 @@ export async function POST(req: NextRequest) {
     return fail(e);
   }
 }
-
-export { parseMetadata };

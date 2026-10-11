@@ -2,7 +2,7 @@ import { zipSync, strToU8 } from 'fflate';
 import { db } from '@/lib/db';
 import { requireUser, HttpError } from '@/lib/auth';
 import { fail } from '@/lib/server/handler';
-import { parseMeta } from '../../route';
+import { parseMeta } from '@/lib/server/asset3d-project';
 import { uploadBuffer } from '@/lib/server/storage';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {

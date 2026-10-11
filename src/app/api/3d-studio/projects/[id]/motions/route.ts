@@ -6,7 +6,7 @@ import { loadMotionLibrary } from '@/lib/server/motion-library';
 import { queueRunpodJob, getRunpodJobStatus, cancelRunpodJob } from '@/lib/server/runpod';
 import { inspectRiggedGlb } from '@/lib/server/asset3d-qc';
 import { createSignedWorkerUploads, downloadBuffer, publicStorageUrl, uploadBuffer } from '@/lib/server/storage';
-import { parseMeta } from '../../route';
+import { parseMeta } from '@/lib/server/asset3d-project';
 import { updateWorkflowStage } from '@/lib/server/asset3d-character';
 
 const roles = ['Hips', 'Spine', 'Head', 'LeftUpperArm', 'LeftLowerArm', 'LeftHand', 'RightUpperArm', 'RightLowerArm', 'RightHand', 'LeftUpperLeg', 'LeftLowerLeg', 'LeftFoot', 'RightUpperLeg', 'RightLowerLeg', 'RightFoot'] as const;

@@ -4,7 +4,7 @@ import { queueSkinTokensRigging, updateWorkflowStage } from '@/lib/server/asset3
 import { finishMeteredOperation } from '@/lib/server/operation-ledger';
 import type { RunpodJobStatus } from '@/lib/server/runpod';
 import { downloadBuffer, publicStorageUrl, uploadBuffer } from '@/lib/server/storage';
-import type { ProjectMeta } from '@/app/api/3d-studio/projects/route';
+import type { ProjectMeta } from '@/lib/server/asset3d-project';
 
 /** Persist a terminal TRELLIS result independently of the user's browser session. */
 export async function finalizeTrellisProject(projectId: string, ownerId: string, job: RunpodJobStatus) {

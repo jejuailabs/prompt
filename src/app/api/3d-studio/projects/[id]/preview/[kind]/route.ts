@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { HttpError, requireUser } from '@/lib/auth';
 import { downloadBuffer } from '@/lib/server/storage';
-import { parseMeta } from '../../../route';
+import { parseMeta } from '@/lib/server/asset3d-project';
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string; kind: string }> }) {
   try {

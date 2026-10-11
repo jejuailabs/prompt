@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 
-export const MONTHLY_LIMIT = 50000;
+const MONTHLY_LIMIT = 50000;
 
 export async function GET() {
   try {
