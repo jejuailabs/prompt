@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "prism-stack",
+  "version": "1.1.0",
+  "title": "프리즘 타워",
+  "englishTitle": "Prism Stack",
+  "entry": "index.html",
+  "thumbnail": "cover.png",
+  "description": "납작한 식빵 고양이를 두 방향에서 포개 쌓는 3D 타이밍 게임. 정중앙이면 골골골, 어긋난 조각은 떨어지고 가로·깊이가 줄어드는 발판 위로 다음 냥이가 이어집니다.",
+  "controls": "탭/클릭/스페이스 = 블록 놓기, Esc = 일시정지",
+  "files": [
+    "README.md",
+    "SOURCES.md",
+    "cats.mjs",
+    "cover.png",
+    "game.css",
+    "game.manifest.json",
+    "game.mjs",
+    "index.html",
+    "rules.mjs",
+    "runtime.mjs",
+    "scene.mjs",
+    "vendor/RoundedBoxGeometry.mjs",
+    "vendor/THREE-LICENSE.txt",
+    "vendor/three.core.min.js",
+    "vendor/three.module.min.js"
+  ],
+  "assets": [
+    "cover.png"
+  ],
+  "requirements": {
+    "webgl": 2,
+    "modules": true,
+    "server": false,
+    "externalNetwork": false
+  },
+  "dependencies": [
+    {
+      "name": "three",
+      "version": "0.172.0",
+      "license": "MIT",
+      "files": [
+        "vendor/three.module.min.js",
+        "vendor/three.core.min.js",
+        "vendor/THREE-LICENSE.txt"
+      ]
+    }
+  ],
+  "contract": {
+    "version": 1,
+    "events": [
+      "game-ready",
+      "game-start",
+      "game-paused",
+      "game-resumed",
+      "game-score",
+      "game-finished"
+    ],
+    "commands": [
+      "start",
+      "pause",
+      "resume",
+      "restart",
+      "resize",
+      "dispose"
+    ]
+  },
+  "presentation": {
+    "id": "prism-stack",
+    "title": "프리즘 타워",
+    "englishTitle": "Prism Stack",
+    "description": "납작한 식빵 고양이를 두 방향에서 포개 쌓는 3D 타이밍 게임. 정중앙이면 골골골, 어긋난 조각은 떨어지고 가로·깊이가 줄어드는 발판 위로 다음 냥이가 이어집니다.",
+    "tags": [
+      "3D 고양이 쌓기",
+      "두 축 타이밍"
+    ],
+    "controls": "탭/클릭/스페이스 = 블록 놓기, Esc = 일시정지",
+    "palette": "#ada1d1",
+    "emoji": "🐱",
+    "playHint": "한 마리 더, 포근한 냥이 탑",
+    "publishedAt": "2026-10-11T01:32:10.000Z",
+    "version": "1.1.0"
+  }
+}

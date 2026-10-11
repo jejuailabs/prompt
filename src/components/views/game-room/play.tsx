@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft, Edit2, Heart, Loader2, Maximize2, Minimize2, Share2, Trash2,
+  Edit2, Heart, Loader2, Maximize2, Minimize2, Share2, Trash2, Trophy, X,
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
@@ -19,6 +19,11 @@ import { useRuntime } from '@/components/runtime-context';
 import { GameScorePanel } from './game-score-panel';
 import { getLocalLittleWorld, LITTLE_WORLDS } from '@/lib/little-worlds';
 import { getLocalArcadeGame } from '@/lib/bundled-arcade-games';
+import GameRoomView from './index';
+import { PORTABLE_GAMES } from '@/lib/portable-games.generated';
+import { GameAdSpace } from './game-ad-space';
+import { useGameAds } from './use-game-ads';
+import styles from './play-modal.module.css';
 
 interface GameDetailDTO {
   id: string;
@@ -50,6 +55,12 @@ export default function GamePlayView() {
   const { previewMode } = useRuntime();
   const isLocalPreview = previewMode;
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
+  const closing = useRef(false);
+  useEffect(()=>()=>{if(closeTimer.current)clearTimeout(closeTimer.current);},[]);
+  const [infoOpen,setInfoOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [gameSrcdoc, setGameSrcdoc] = useState<string | null>(null);
   const startTime = useRef(Date.now());
@@ -69,6 +80,11 @@ export default function GamePlayView() {
   const isLocalGame = game?.contentUrl?.startsWith('/') ?? false;
   const trackingEnabled = Boolean(game && !game.previewMode && !isLocalPreview);
   const isLittleWorld = LITTLE_WORLDS.some((item) => item.contentUrl === game?.contentUrl);
+  const isPortableGame = isLittleWorld && Boolean(game?.contentUrl?.endsWith('/index.html'));
+  const slug = LITTLE_WORLDS.find(item=>item.contentUrl===game?.contentUrl)?.slug;
+  const supportsRewardedContinuation = isPortableGame&&Boolean(PORTABLE_GAMES.find(item=>item.slug===slug)?.rewardedContinue);
+  const adBusy = useGameAds({iframeRef,slug,enabled:supportsRewardedContinuation});
+  const parentOrigin = typeof window === 'undefined' ? '' : encodeURIComponent(window.location.origin);
 
   const canManage = !isLocalPreview && session && game && game.ownerId && (session.role === 'admin' || session.id === game.ownerId);
 
@@ -108,7 +124,7 @@ export default function GamePlayView() {
   };
 
   const toggleFullscreen = () => {
-    const el = iframeRef.current?.parentElement;
+    const el = modalRef.current;
     if (!el) return;
     if (!document.fullscreenElement) {
       el.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => undefined);
@@ -156,111 +172,55 @@ export default function GamePlayView() {
     setDeleteConfirm(false);
   };
 
-  if (isLoading && !localGame) return <div className="flex justify-center py-20" role="status" aria-label="게임 불러오는 중"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-  if (isError && !localGame) return <EmptyState title="게임을 불러오지 못했어요." action={<Button variant="outline" onClick={() => void refetch()}>다시 불러오기</Button>} />;
-  if (!game) return <EmptyState title="Game not found" description="" />;
+  const closeGame = () => {
+    if(closing.current)return;closing.current=true;
+    if(supportsRewardedContinuation&&iframeRef.current?.contentWindow){
+      iframeRef.current.contentWindow.postMessage({type:'game-command',gameId:slug,contractVersion:1,command:'finalize'},window.location.origin);
+      closeTimer.current=setTimeout(()=>navigate('game-room'),150);
+    }else navigate('game-room');
+  };
+  const showInfo = () => {
+    if (!infoOpen && isPortableGame) iframeRef.current?.contentWindow?.postMessage({type:'game-command',contractVersion:1,gameId:slug,command:'pause'},window.location.origin);
+    setInfoOpen(value=>!value);
+  };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-4 px-5 py-8 md:px-8">
-      {/* Back + Title + Management */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('game-room')}>
-          <ArrowLeft className="mr-1 h-4 w-4" /> {t.back}
-        </Button>
-        <h1 className="text-xl font-bold truncate">{game.title}</h1>
-        {canManage && (
-          <div className="flex gap-1 ml-auto">
-            <Button variant="outline" size="sm" onClick={handleEdit}>
-              <Edit2 className="h-3.5 w-3.5 mr-1" /> 수정
-            </Button>
-            <Button variant="destructive" size="sm" onClick={() => setDeleteConfirm(true)}>
-              <Trash2 className="h-3.5 w-3.5 mr-1" /> 삭제
-            </Button>
-          </div>
-        )}
-      </div>
-
-      {/* Game + Ad Layout */}
-      <div className="flex gap-4 flex-col lg:flex-row">
-        {/* Game iframe */}
-        <div className="flex-1">
-          <div className={`relative rounded-xl overflow-hidden ${isLittleWorld ? 'bg-[#101010] h-[850px] sm:h-[900px]' : 'bg-black aspect-[4/3]'}`}>
-            {game.contentUrl ? (
-              isLocalGame ? (
-                <iframe
-                  ref={iframeRef}
-                  src={isLittleWorld ? `${game.contentUrl}?embed=1${previewMode ? '&preview=1' : ''}` : game.contentUrl}
-                  className="w-full h-full border-0"
-                  title={game.title}
-                  allow="autoplay"
-                />
-              ) : gameSrcdoc ? (
-                <iframe
-                  ref={iframeRef}
-                  srcDoc={gameSrcdoc}
-                  sandbox="allow-scripts"
-                  className="w-full h-full border-0"
-                  title={game.title}
-                  allow="autoplay"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-white/50" />
-                </div>
-              )
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-white/50">
-                게임 콘텐츠를 불러올 수 없습니다
-              </div>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white"
-              aria-label={isFullscreen ? t.exitFullscreen : t.fullscreen}
-              onClick={toggleFullscreen}
-            >
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
-          </div>
-
-          <GameScorePanel key={gameId} gameId={gameId} slug={LITTLE_WORLDS.find(item=>item.contentUrl===game.contentUrl)?.slug} iframeRef={iframeRef} previewMode={previewMode||Boolean(game.previewMode)} localGame={isLocalGame}/>
-
-          {/* Actions */}
-          <div className="flex items-center gap-3 mt-3">
-            {!isLocalPreview && <Button variant="outline" size="sm" onClick={handleLike}>
-              <Heart className={`mr-1 h-4 w-4 ${game.likedByMe ? 'fill-primary text-primary' : ''}`} />
-              {game.likeCount}
-            </Button>}
-            <Button variant="outline" size="sm" onClick={() => {
-              navigator.clipboard.writeText(window.location.href);
-              toast({ title: '링크가 복사되었습니다' });
-            }}>
-              <Share2 className="mr-1 h-4 w-4" /> {t.shareBtn}
-            </Button>
-            <span className="text-sm text-muted-foreground ml-auto">
-              {t.by} @{game.ownerName}
-            </span>
-          </div>
-
-          {game.description && (
-            <Card className="mt-3 p-3">
-              <p className="text-sm whitespace-pre-wrap">{game.description}</p>
-            </Card>
-          )}
-        </div>
-
-        {/* Right sidebar */}
-        {!isLittleWorld && <div className="w-full lg:w-[300px] shrink-0 space-y-4">
-          <Card className="p-4 bg-muted/30 border-dashed flex flex-col items-center justify-center min-h-[250px]">
-            <p className="text-xs text-muted-foreground mb-2">{t.adLabel}</p>
-            <div className="w-full h-[250px] bg-muted/50 rounded flex items-center justify-center text-muted-foreground text-sm">
-              AdSense 300×250
+    <>
+      <GameRoomView />
+      <Dialog open onOpenChange={open=>{if(!open)closeGame();}}>
+        <DialogContent ref={modalRef} showCloseButton={false} aria-describedby={undefined}
+          className={styles.shell+' flex h-[100dvh] max-h-[100dvh] w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none border-white/15 bg-[#101010] p-0 sm:h-[calc(100dvh-48px)] sm:w-[calc(100vw-48px)] sm:max-w-[1200px] sm:rounded-2xl'}
+          onOpenAutoFocus={event=>{event.preventDefault();closeRef.current?.focus();}}
+          onInteractOutside={event=>event.preventDefault()}>
+          <header className={styles.header}>
+            <div className={styles.heading}><small>PLAYLAB / ARCADE</small><DialogTitle>{game?.title??'게임'}</DialogTitle></div>
+            <div className={styles.toolbar}>
+              <Button variant="ghost" size="icon" data-game-info aria-label={infoOpen?'게임 화면으로':'게임 정보와 랭킹'} aria-pressed={infoOpen} onClick={showInfo}><Trophy className="h-4 w-4"/></Button>
+              <Button variant="ghost" size="icon" data-game-fullscreen aria-label={isFullscreen?t.exitFullscreen:t.fullscreen} onClick={toggleFullscreen}>{isFullscreen?<Minimize2 className="h-4 w-4"/>:<Maximize2 className="h-4 w-4"/>}</Button>
+              <Button ref={closeRef} variant="ghost" size="icon" data-game-close aria-label="게임 닫기" onClick={closeGame}><X className="h-5 w-5"/></Button>
             </div>
-          </Card>
-
-        </div>}
-      </div>
+          </header>
+          <GameAdSpace placement="top"/>
+          <div className={styles.stage} data-game-stage>
+            {isLoading&&!localGame?<div className={styles.loading} role="status"><Loader2 className="h-7 w-7 animate-spin"/></div>:isError&&!localGame?<EmptyState title="게임을 불러오지 못했어요." action={<Button variant="outline" onClick={()=>void refetch()}>다시 불러오기</Button>}/>:game?.contentUrl?(
+              isLocalGame?<iframe ref={iframeRef} src={isLittleWorld?`${game.contentUrl}?embed=1${isPortableGame?`&parentOrigin=${parentOrigin}`:''}${previewMode?'&preview=1':''}`:game.contentUrl} className={styles.frame} title={game.title} allow="autoplay; fullscreen"/>:
+              gameSrcdoc?<iframe ref={iframeRef} srcDoc={gameSrcdoc} sandbox="allow-scripts" className={styles.frame} title={game.title} allow="autoplay; fullscreen"/>:<div className={styles.loading}><Loader2 className="h-7 w-7 animate-spin"/></div>
+            ):<div className={styles.loading}>게임 콘텐츠를 불러올 수 없습니다</div>}
+            <section className={styles.details} hidden={!infoOpen} aria-label="게임 정보와 랭킹">
+              <div className={styles.detailsHeader}><h2 className="text-sm font-semibold">게임 정보와 랭킹</h2><Button variant="outline" size="sm" onClick={()=>setInfoOpen(false)}>게임으로 돌아가기</Button></div>
+              {game?.description&&<p className="mt-4 whitespace-pre-wrap">{game.description}</p>}
+              <GameScorePanel key={gameId} gameId={gameId} portable={isPortableGame} slug={slug} iframeRef={iframeRef} previewMode={previewMode||Boolean(game?.previewMode)} localGame={isLocalGame}/>
+              <div className={styles.detailsActions}>
+                {!isLocalPreview&&game&&<Button variant="outline" size="sm" onClick={handleLike}><Heart className={`mr-1 h-4 w-4 ${game.likedByMe?'fill-primary text-primary':''}`}/>{game.likeCount}</Button>}
+                <Button variant="outline" size="sm" onClick={()=>{navigator.clipboard.writeText(window.location.href);toast({title:'링크가 복사되었습니다'});}}><Share2 className="mr-1 h-4 w-4"/>{t.shareBtn}</Button>
+                {canManage&&<><Button variant="outline" size="sm" onClick={handleEdit}><Edit2 className="mr-1 h-4 w-4"/>수정</Button><Button variant="destructive" size="sm" onClick={()=>setDeleteConfirm(true)}><Trash2 className="mr-1 h-4 w-4"/>삭제</Button></>}
+              </div>
+            </section>
+            <div className={styles.busy} hidden={!adBusy} role="status"><Loader2 className="h-7 w-7 animate-spin"/><span>광고를 준비하고 있어요</span><small>완료하면 같은 판에서 이어갑니다</small></div>
+          </div>
+          <GameAdSpace placement="bottom"/>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -281,13 +241,13 @@ export default function GamePlayView() {
       <Dialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>게임 삭제</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">"{game.title}" 게임을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</p>
+          <p className="text-sm text-muted-foreground">"{game?.title}" 게임을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</p>
           <div className="flex gap-2 justify-end mt-4">
             <Button variant="outline" onClick={() => setDeleteConfirm(false)}>취소</Button>
             <Button variant="destructive" onClick={() => void handleDelete()}>삭제</Button>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

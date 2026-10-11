@@ -1,0 +1,5 @@
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+let playwright;try{playwright=require('playwright');}catch{playwright=require(path.join(os.homedir(),'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright'));}
+const {chromium}=playwright;
+function options(){const launch={headless:true,args:['--enable-unsafe-swiftshader','--enable-webgl']};if(fs.existsSync(chromium.executablePath()))return launch;const cache=path.join(os.homedir(),'AppData/Local/ms-playwright');if(fs.existsSync(cache))for(const name of fs.readdirSync(cache).filter(n=>n.startsWith('chromium_headless_shell-')).sort().reverse()){const exe=path.join(cache,name,'chrome-headless-shell-win64/chrome-headless-shell.exe');if(fs.existsSync(exe)){launch.executablePath=exe;break;}}return launch;}
+module.exports={chromium,options};

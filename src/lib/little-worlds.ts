@@ -1,5 +1,7 @@
+import { PORTABLE_GAMES } from '@/lib/portable-games.generated';
 /** Shipped games stay playable before an administrator registers them in the database. */
 const SHIPPED_GAMES = [
+  ...PORTABLE_GAMES,
   {
     slug: 'skybloom-pinball', title: '스카이블룸 핀볼', englishTitle: 'Sky Bloom', publishedAt: '2026-10-08T01:42:40.000Z',
     description: '점수가 테이블을 키워요! 1,500점에 공방, 5,000점에 상층 정원을 열고 별 세 개로 축제 멀티볼에 도전하는 성장형 3볼 핀볼.',
@@ -82,6 +84,6 @@ export function getLocalLittleWorld(id: string | undefined) {
     contentUrl: item.contentUrl, fileUrl: item.fileUrl,
     ownerName: 'PLAYLAB', ownerId: '', playCount: 0, likeCount: 0, likedByMe: false,
     createdAt: item.publishedAt,
-    metadata: { collection: 'little-worlds', controls: item.controls, builtin: true },
+    metadata: { collection: 'little-worlds', controls: item.controls, builtin: true, portable: item.contentUrl.endsWith('/index.html') },
   } : undefined;
 }

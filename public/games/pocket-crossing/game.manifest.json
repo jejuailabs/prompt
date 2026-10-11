@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "pocket-crossing",
+  "version": "1.0.1",
+  "title": "포켓 크로싱",
+  "englishTitle": "Pocket Crossing",
+  "entry": "index.html",
+  "thumbnail": "cover.png",
+  "description": "작은 입체 캐릭터로 도로·강·철도를 한 칸씩 건너세요. 차량 사이의 틈, 떠가는 통나무와 기차 경고를 읽고 독수리가 오기 전에 다음 칸으로 나아갑니다.",
+  "controls": "방향키/WASD/터치 방향 버튼 = 이동, 탭 = 앞으로, 스와이프 = 네 방향, Esc = 일시정지",
+  "files": [
+    "README.md",
+    "SOURCES.md",
+    "cover.png",
+    "game.css",
+    "game.manifest.json",
+    "game.mjs",
+    "index.html",
+    "rules.mjs",
+    "runtime.mjs",
+    "scene.mjs",
+    "vendor/THREE-LICENSE.txt",
+    "vendor/three.core.min.js",
+    "vendor/three.module.min.js"
+  ],
+  "assets": [
+    "cover.png"
+  ],
+  "requirements": {
+    "webgl": 2,
+    "modules": true,
+    "server": false,
+    "externalNetwork": false
+  },
+  "dependencies": [
+    {
+      "name": "three",
+      "version": "0.172.0",
+      "license": "MIT",
+      "files": [
+        "vendor/three.module.min.js",
+        "vendor/three.core.min.js",
+        "vendor/THREE-LICENSE.txt"
+      ]
+    }
+  ],
+  "contract": {
+    "version": 1,
+    "events": [
+      "game-ready",
+      "game-start",
+      "game-paused",
+      "game-resumed",
+      "game-score",
+      "game-finished"
+    ],
+    "commands": [
+      "start",
+      "pause",
+      "resume",
+      "restart",
+      "resize",
+      "dispose"
+    ]
+  },
+  "presentation": {
+    "id": "pocket-crossing",
+    "title": "포켓 크로싱",
+    "englishTitle": "Pocket Crossing",
+    "description": "작은 입체 캐릭터로 도로·강·철도를 한 칸씩 건너세요. 차량 사이의 틈, 떠가는 통나무와 기차 경고를 읽고 독수리가 오기 전에 다음 칸으로 나아갑니다.",
+    "tags": [
+      "3D 길 건너기",
+      "타이밍 생존"
+    ],
+    "controls": "방향키/WASD/터치 방향 버튼 = 이동, 탭 = 앞으로, 스와이프 = 네 방향, Esc = 일시정지",
+    "palette": "#aac88e",
+    "emoji": "🐥",
+    "playHint": "작은 발로, 한 칸 더 멀리",
+    "publishedAt": "2026-10-11T01:32:10.000Z",
+    "version": "1.0.1"
+  }
+}

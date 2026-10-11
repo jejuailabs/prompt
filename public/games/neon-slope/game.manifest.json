@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "id": "neon-slope",
+  "version": "1.3.0",
+  "title": "네온 슬로프",
+  "englishTitle": "Neon Slope",
+  "entry": "index.html",
+  "thumbnail": "cover.png",
+  "description": "햄스터·고양이·강아지를 골라 천천히 데굴데굴! LIFE 네 글자로 생명을 모으고 스피드 업·다운 아이템을 골라 달려요. 180m부터 점프와 좌우 경사가 있는 스테이지 2.",
+  "controls": "← → / A·D / 터치 / 드래그 = 좌우, 스테이지 2: Space / ↑ / W / 점프 버튼, Esc = 일시정지",
+  "files": [
+    "README.md",
+    "SOURCES.md",
+    "art.mjs",
+    "continuation.mjs",
+    "course.mjs",
+    "cover.png",
+    "game.css",
+    "game.manifest.json",
+    "game.mjs",
+    "index.html",
+    "items.mjs",
+    "rules.mjs",
+    "runtime.mjs",
+    "scene.mjs",
+    "slope.css",
+    "vendor/THREE-LICENSE.txt",
+    "vendor/three.core.min.js",
+    "vendor/three.module.min.js"
+  ],
+  "assets": [
+    "cover.png"
+  ],
+  "requirements": {
+    "webgl": 2,
+    "modules": true,
+    "server": false,
+    "externalNetwork": false
+  },
+  "dependencies": [
+    {
+      "name": "three",
+      "version": "0.172.0",
+      "license": "MIT",
+      "files": [
+        "vendor/three.module.min.js",
+        "vendor/three.core.min.js",
+        "vendor/THREE-LICENSE.txt"
+      ]
+    }
+  ],
+  "contract": {
+    "version": 1,
+    "extensions": {
+      "rewardedContinuation": {
+        "version": 1,
+        "oncePerRound": true,
+        "commands": [
+          "finalize"
+        ],
+        "reward": "one-life",
+        "events": [
+          "game-ad-ready",
+          "game-continue-request"
+        ],
+        "messages": [
+          "game-ad-capabilities",
+          "game-reward-result"
+        ]
+      }
+    },
+    "events": [
+      "game-ready",
+      "game-start",
+      "game-paused",
+      "game-resumed",
+      "game-score",
+      "game-finished"
+    ],
+    "commands": [
+      "start",
+      "pause",
+      "resume",
+      "restart",
+      "resize",
+      "dispose"
+    ]
+  },
+  "presentation": {
+    "id": "neon-slope",
+    "title": "네온 슬로프",
+    "englishTitle": "Neon Slope",
+    "description": "햄스터·고양이·강아지를 골라 천천히 데굴데굴! LIFE 네 글자로 생명을 모으고 스피드 업·다운 아이템을 골라 달려요. 180m부터 점프와 좌우 경사가 있는 스테이지 2.",
+    "tags": [
+      "3D 동물",
+      "LIFE 모으기"
+    ],
+    "controls": "← → / A·D / 터치 / 드래그 = 좌우, 스테이지 2: Space / ↑ / W / 점프 버튼, Esc = 일시정지",
+    "palette": "#ffd29f",
+    "emoji": "🐹",
+    "playHint": "친구 선택 · LIFE 생명 +1 · 180m부터 점프",
+    "publishedAt": "2026-10-11T01:32:10.000Z",
+    "version": "1.3.0",
+    "styles": [
+      "slope.css"
+    ],
+    "rewardedContinue": true
+  }
+}

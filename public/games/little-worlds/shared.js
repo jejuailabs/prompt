@@ -129,3 +129,12 @@ export class GameShell {
     this.dialog(title, description, '한 번 더 플레이', () => this.restart(), { label: '다른 게임 둘러보기', action: () => { location.href = '/games/little-worlds.html'; } });
   }
 }
+
+// Fit only the embedded presentation; standalone illustrated pages stay unchanged.
+if(new URLSearchParams(location.search).get('embed')==='1'){
+ const card=document.querySelector('.game-card'),stage=card?.querySelector('.stage');
+ if(card&&stage){let pending=0;const fit=()=>{pending=0;const layout=card.parentElement,availableWidth=layout.clientWidth-16,availableHeight=layout.clientHeight;const parts=getComputedStyle(stage).aspectRatio.split('/').map(Number),ratio=parts.length===2&&parts[0]>0&&parts[1]>0?parts[0]/parts[1]:2/3;
+  card.style.width=Math.min(430,availableWidth)+'px';for(let i=0;i<3;i++){const chrome=card.getBoundingClientRect().height-stage.getBoundingClientRect().height;card.style.width=Math.max(100,Math.min(430,availableWidth,(availableHeight-chrome-2)*ratio))+'px';}}
+  const schedule=()=>{cancelAnimationFrame(pending);pending=requestAnimationFrame(fit);};const observer=new ResizeObserver(schedule);observer.observe(card.parentElement);window.addEventListener('resize',schedule);window.addEventListener('pagehide',()=>{observer.disconnect();window.removeEventListener('resize',schedule);cancelAnimationFrame(pending);},{once:true});document.fonts?.ready.then(schedule);fit();
+ }
+}

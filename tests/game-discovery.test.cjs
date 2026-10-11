@@ -44,7 +44,7 @@ test('new games precede older shipped games in the default and recent public lis
   const api = listingFixture();
   for (const sort of ['', 'recent']) {
     const rows = await games(await api.GET(request(sort)));
-    assert.deepEqual(rows.slice(0, 4).map(g => g.id), ['builtin-skybloom-pinball', 'builtin-luna-pinball', 'builtin-hamster-pinball', 'builtin-penguin-ice']);
+    assert.deepEqual(rows.slice(0, 7).map(g => g.id), ['builtin-prism-stack', 'builtin-neon-slope', 'builtin-pocket-crossing', 'builtin-skybloom-pinball', 'builtin-luna-pinball', 'builtin-hamster-pinball', 'builtin-penguin-ice']);
     assert.ok(rows[0].createdAt > rows.find(g => g.id === 'builtin-fruit-atelier').createdAt);
   }
 });
@@ -55,7 +55,7 @@ test('saving an old game score does not make its publication newer or duplicate 
     _count: { gamePlays: 0 }, likeCount: 99, createdAt: new Date('2026-10-09T00:00:00Z'), metadata: '{}' };
   const api = listingFixture([stored]);
   const rows = await games(await api.GET(request('recent')));
-  assert.equal(rows[0].id, 'builtin-skybloom-pinball');
+  assert.equal(rows[0].id, 'builtin-prism-stack');
   assert.equal(rows.filter(g => g.contentUrl === stored.contentUrl).length, 1);
   assert.equal(rows.find(g => g.contentUrl === stored.contentUrl).id, 'legacy-fruit');
   assert.equal((await games(await api.GET(request('popular'))))[0].id, 'legacy-fruit');

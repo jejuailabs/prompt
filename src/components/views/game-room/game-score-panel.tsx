@@ -8,31 +8,32 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 type Round={score:number;roundId:string;durationMs:number};
 type Ranking={rank:number;username:string;score:number;playedAt:string};
-function restoreRound(slug?:string):Round|null{if(!slug||typeof window==='undefined')return null;try{const round=JSON.parse(localStorage.getItem('little-worlds:'+slug+':pending-score')??'null');return round&&Number.isSafeInteger(round.score)&&round.score>0&&typeof round.roundId==='string'?round:null;}catch{return null;}}
-export function GameScorePanel({gameId,slug,iframeRef,previewMode,localGame}:{gameId:string;slug?:string;iframeRef:RefObject<HTMLIFrameElement|null>;previewMode:boolean;localGame:boolean}){
+function roundKey(slug:string,portable:boolean){return portable?'portable-game:1:'+slug+':pending-score':'little-worlds:'+slug+':pending-score';}
+function restoreRound(slug?:string,portable=false):Round|null{if(!slug||typeof window==='undefined')return null;try{const round=JSON.parse(localStorage.getItem(roundKey(slug,portable))??'null');return round&&Number.isSafeInteger(round.score)&&round.score>0&&typeof round.roundId==='string'?round:null;}catch{return null;}}
+export function GameScorePanel({gameId,slug,iframeRef,previewMode,localGame,portable=false}:{gameId:string;slug?:string;iframeRef:RefObject<HTMLIFrameElement|null>;previewMode:boolean;localGame:boolean;portable?:boolean}){
   const sessionId=useAppStore(s=>s.session?.id),requireLogin=useAppStore(s=>s.requireLogin),qc=useQueryClient();
-  const [pending,setPending]=useState<Round|null>(()=>restoreRound(slug)),[status,setStatus]=useState<'idle'|'saved'|'error'>('idle'),[savedScore,setSavedScore]=useState(0),[retry,setRetry]=useState(0),[period,setPeriod]=useState('all');
+  const [pending,setPending]=useState<Round|null>(()=>restoreRound(slug,portable)),[status,setStatus]=useState<'idle'|'saved'|'error'>('idle'),[savedScore,setSavedScore]=useState(0),[retry,setRetry]=useState(0),[period,setPeriod]=useState('all');
   const sent=useRef('');
   const ranking=useQuery({queryKey:['leaderboard',gameId,period],queryFn:()=>api.get<{rankings:Ranking[]}>('/api/game-room/leaderboard?'+new URLSearchParams({gameId,period,limit:'10'})),enabled:!previewMode,refetchInterval:30000});
   useEffect(()=>{
     const listen=(event:MessageEvent)=>{
       if(event.source!==iframeRef.current?.contentWindow||(localGame&&event.origin!==window.location.origin))return;
-      const data=event.data;if(data?.type!=='game-score'||!Number.isSafeInteger(data.score)||data.score<=0||data.score>100000000)return;
+      const data=event.data;if(portable&&(data?.gameId!==slug||data?.contractVersion!==1))return;if(data?.type!=='game-score'||!Number.isSafeInteger(data.score)||data.score<=0||data.score>100000000)return;
       const round={score:data.score,roundId:typeof data.roundId==='string'?data.roundId:crypto.randomUUID(),durationMs:typeof data.durationMs==='number'?Math.max(0,Math.min(86400000,Math.floor(data.durationMs))):0};
       setStatus('idle');setPending(round);
     };window.addEventListener('message',listen);return()=>window.removeEventListener('message',listen);
-  },[iframeRef,localGame]);
+  },[iframeRef,localGame,portable,slug]);
   useEffect(()=>{
     if(!pending||!sessionId||previewMode)return;
     const key=pending.roundId+':'+retry;if(sent.current===key)return;sent.current=key;
     let mounted=true;
     api.post<{score:number}>('/api/game-room/play',{artifactId:gameId,...pending}).then(result=>{
-      iframeRef.current?.contentWindow?.postMessage({type:'game-score-saved',roundId:pending.roundId,score:pending.score},localGame?window.location.origin:'*');
-      if(slug){try{const stored=restoreRound(slug);if(stored?.roundId===pending.roundId)localStorage.removeItem('little-worlds:'+slug+':pending-score');}catch{}}
+      iframeRef.current?.contentWindow?.postMessage({type:'game-score-saved',gameId:slug,contractVersion:1,roundId:pending.roundId,score:pending.score},localGame?window.location.origin:'*');
+      if(slug){try{const stored=restoreRound(slug,portable);if(stored?.roundId===pending.roundId)localStorage.removeItem(roundKey(slug,portable));}catch{}}
       void qc.invalidateQueries({queryKey:['leaderboard']});void qc.invalidateQueries({queryKey:['leaderboard-global']});void qc.invalidateQueries({queryKey:['game-room']});
       if(mounted){setSavedScore(result.score??pending.score);setStatus('saved');setPending(current=>current?.roundId===pending.roundId?null:current);}
     }).catch(()=>{if(mounted)setStatus('error');});return()=>{mounted=false;if(sent.current===key)sent.current='';};
-  },[pending,sessionId,previewMode,gameId,iframeRef,localGame,slug,qc,retry]);
+  },[pending,sessionId,previewMode,gameId,iframeRef,localGame,portable,slug,qc,retry]);
   return <Card className="mt-4 p-4 sm:p-5">
     <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 text-sm font-semibold"><Trophy className="h-4 w-4 text-amber-300"/>최고 기록 랭킹</h2><div className="flex flex-wrap gap-1">{Object.entries({all:'전체',today:'오늘',week:'이번 주',month:'이번 달'}).map(([id,label])=><button key={id} onClick={()=>setPeriod(id)} aria-pressed={period===id} className={'rounded-full border px-3 py-1 text-[11px] '+(period===id?'bg-primary text-primary-foreground border-primary':'border-border text-muted-foreground')}>{label}</button>)}</div></div>
     <p className="mb-3 text-[11px] text-muted-foreground">한 사람의 최고 점수만 순위에 표시됩니다.</p>

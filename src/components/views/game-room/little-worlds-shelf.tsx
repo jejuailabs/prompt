@@ -21,7 +21,7 @@ export function LittleWorldsShelf({ games }: { games: Array<{ id: string; conten
           <button key={item.slug} type="button" onClick={() => navigate('game-play', { id: games.find((game) => game.contentUrl === item.contentUrl)?.id ?? `builtin-${item.slug}` })} className="group overflow-hidden rounded-lg border border-border bg-background text-left transition hover:-translate-y-1 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">
             <div className="relative aspect-[4/3] overflow-hidden bg-muted">
               <img src={item.fileUrl} alt={`${item.title} 플레이 화면`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-              <span className="absolute left-3 top-3 rounded border border-white/20 bg-black/75 px-2.5 py-1 text-[9px] tracking-wider text-white">0{index + 1} / {item.tags[0]}</span>
+              <span className="absolute left-3 top-3 rounded border border-white/20 bg-black/75 px-2.5 py-1 text-[9px] tracking-wider text-white">{String(index + 1).padStart(2, '0')} / {item.tags[0]}</span>
             </div>
             <div className="p-4">
               <h3 className="font-serif text-2xl">{item.englishTitle}</h3>
