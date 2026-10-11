@@ -1,18 +1,20 @@
 {
   "schemaVersion": 1,
   "id": "prism-stack",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": "프리즘 타워",
   "englishTitle": "Prism Stack",
   "entry": "index.html",
   "thumbnail": "cover.png",
-  "description": "납작한 식빵 고양이를 두 방향에서 포개 쌓는 3D 타이밍 게임. 정중앙이면 골골골, 어긋난 조각은 떨어지고 가로·깊이가 줄어드는 발판 위로 다음 냥이가 이어집니다.",
+  "description": "두툼하고 둥근 식빵 고양이를 두 방향에서 쌓는 3D 타이밍 게임. 정중앙이면 골골골! 한 판이 끝나면 쌓인 냥이들이 웃음·윙크·환호 표정으로 다 같이 다이빙하며, 높이 쌓을수록 더 긴 낙하와 통통 튀는 착지를 즐깁니다.",
   "controls": "탭/클릭/스페이스 = 블록 놓기, Esc = 일시정지",
   "files": [
     "README.md",
     "SOURCES.md",
+    "cats.css",
     "cats.mjs",
     "cover.png",
+    "finale.mjs",
     "game.css",
     "game.manifest.json",
     "game.mjs",
@@ -69,7 +71,7 @@
     "id": "prism-stack",
     "title": "프리즘 타워",
     "englishTitle": "Prism Stack",
-    "description": "납작한 식빵 고양이를 두 방향에서 포개 쌓는 3D 타이밍 게임. 정중앙이면 골골골, 어긋난 조각은 떨어지고 가로·깊이가 줄어드는 발판 위로 다음 냥이가 이어집니다.",
+    "description": "두툼하고 둥근 식빵 고양이를 두 방향에서 쌓는 3D 타이밍 게임. 정중앙이면 골골골! 한 판이 끝나면 쌓인 냥이들이 웃음·윙크·환호 표정으로 다 같이 다이빙하며, 높이 쌓을수록 더 긴 낙하와 통통 튀는 착지를 즐깁니다.",
     "tags": [
       "3D 고양이 쌓기",
       "두 축 타이밍"
@@ -77,8 +79,11 @@
     "controls": "탭/클릭/스페이스 = 블록 놓기, Esc = 일시정지",
     "palette": "#ada1d1",
     "emoji": "🐱",
-    "playHint": "한 마리 더, 포근한 냥이 탑",
+    "playHint": "통통 냥이 탑, 다 같이 야호!",
     "publishedAt": "2026-10-11T01:32:10.000Z",
-    "version": "1.1.0"
+    "version": "1.2.0",
+    "styles": [
+      "cats.css"
+    ]
   }
 }

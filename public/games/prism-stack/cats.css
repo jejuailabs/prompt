@@ -1,0 +1,6 @@
+.cat-cheers{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+.cat-cheer{position:absolute;transform:translate(-50%,-100%) rotate(-5deg);padding:7px 12px;border:2px solid #fff;border-radius:18px 18px 18px 4px;background:#fff4cceF;color:#705173;box-shadow:0 4px 16px #60465d18;font-size:13px;font-weight:800;white-space:nowrap}
+.cat-cheer[hidden]{display:none}.cheer-1{background:#ffe4ebeF;transform:translate(-50%,-100%) rotate(5deg)}.cheer-2{background:#e6f6eeeF}.cheer-3{background:#ebe5ffeF;transform:translate(-50%,-100%) rotate(4deg)}
+.cat-diving .status{color:#775294}.cat-diving .touch-controls button{font-size:12px;color:#775294;background:#fff6e1}.cat-diving .touch-controls button:disabled{cursor:default;opacity:1}.cat-diving .toast{opacity:0}
+@media(max-width:550px){.cat-cheer{font-size:11px;padding:6px 9px}}
+@media(prefers-reduced-motion:reduce){.cat-cheer{transform:translate(-50%,-100%)}}

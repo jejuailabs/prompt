@@ -8,6 +8,7 @@ const shell = new GameShell('fruit-atelier', reset);
 const randomFruit = () => Math.floor(Math.random() * 4);
 
 function reset() {
+  cancelAim();
   score=0;maxLevel=0;cooldown=0;danger=0;elapsed=0;particles=[];next=0;following=1;
   world = new FruitWorld((body, points) => {
     score += points; maxLevel = Math.max(maxLevel, body.level); shell.setScore(score); shell.save(score);
@@ -25,8 +26,44 @@ function drop() {
   if(!assets || shell.paused || shell.finished || cooldown > 0)return;
   world.add(next,dropX); cooldown=.43; next=following; following=randomFruit();updateNext();shell.tone(240,.06);
 }
-canvas.addEventListener('pointermove',e=>{dropX=clamp(pointerPosition(e,canvas).x,29+RADII[next],371-RADII[next]);});
-canvas.addEventListener('pointerdown',e=>{e.preventDefault();dropX=clamp(pointerPosition(e,canvas).x,29+RADII[next],371-RADII[next]);drop();});
+// A contact aims first; only its release drops the fruit.
+let aimingPointer = null;
+const canAim = () => assets && !shell.paused && !shell.finished;
+function aim(event) {
+  dropX = clamp(pointerPosition(event, canvas).x, 29 + RADII[next], 371 - RADII[next]);
+}
+function cancelAim() {
+  const pointer = aimingPointer;
+  aimingPointer = null;
+  if (pointer !== null && canvas.hasPointerCapture(pointer)) canvas.releasePointerCapture(pointer);
+}
+canvas.addEventListener('pointerdown', event => {
+  if (!canAim() || !event.isPrimary || event.button !== 0 || aimingPointer !== null) return;
+  event.preventDefault();
+  aimingPointer = event.pointerId;
+  canvas.setPointerCapture(event.pointerId);
+  aim(event);
+});
+canvas.addEventListener('pointermove', event => {
+  if (!canAim()) return;
+  if (aimingPointer !== null ? event.pointerId === aimingPointer : event.pointerType === 'mouse' && event.buttons === 0) aim(event);
+});
+canvas.addEventListener('pointerup', event => {
+  if (event.pointerId !== aimingPointer) return;
+  event.preventDefault();
+  const ready = canAim();
+  if (ready) aim(event);
+  cancelAim();
+  if (ready) drop();
+});
+for (const type of ['pointercancel', 'lostpointercapture']) canvas.addEventListener(type, event => {
+  if (event.pointerId === aimingPointer) cancelAim();
+});
+window.addEventListener('blur', cancelAim);
+window.addEventListener('pagehide', cancelAim);
+document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAim(); });
+const modalObserver = new MutationObserver(() => { if (!canAim()) cancelAim(); });
+modalObserver.observe($('.modal-layer'), { attributes: true, attributeFilter: ['hidden'] });
 $('[data-action]').onclick=drop;
 $('[data-finish]').onclick=()=>{if(!assets||shell.finished||shell.paused)return;shell.finish(score,'A lovely harvest.',`오늘의 기록 ${score.toLocaleString()}점\n가장 큰 과일: ${names[maxLevel]}`);};
 document.addEventListener('keydown',e=>{
@@ -47,7 +84,7 @@ function draw(dt){
     const x=clamp(dropX,29+RADII[next],371-RADII[next]);
     ctx.save();ctx.setLineDash([3,6]);ctx.beginPath();ctx.moveTo(x,107);ctx.lineTo(x,538);ctx.strokeStyle='#fff7';ctx.stroke();ctx.restore();
     ctx.globalAlpha=cooldown>0?.4:1;drawSprite(ctx,assets['fruit-sprites'],next,x,83,RADII[next]*2.65);ctx.globalAlpha=1;
-    ctx.fillStyle='#654f39';ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText('여기를 눌러 떨어뜨리기',200,29);
+    ctx.fillStyle='#654f39';ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText('좌우로 움직인 뒤 손을 떼면 떨어져요',200,29);
   }
   for(const b of world.bodies){drawSprite(ctx,assets['fruit-sprites'],b.level,b.x,b.y,b.r*2.65*b.scale,3,3,b.angle);}
   for(const p of particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=180*dt;ctx.globalAlpha=Math.max(0,p.life/.7);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;particles=particles.filter(p=>p.life>0);
