@@ -1,0 +1,2 @@
+import {launch} from "./club.mjs";
+launch({"id":"cat-seesaw","title":"냥이 시소","englishTitle":"Loaf Balance","mode":"balance","accent":11191983,"back":15397094,"palette":"#b9cebd","action":"냥이 놓기 ↓","tip":"좌우에 골고루 놓아요 · 기울면 냥이들이 발로 버텨요!","description":"흔들리는 쿠션 시소에 통통 냥이를 한 마리씩 올려요. 위치와 높이에 따라 균형이 달라져요. 얼마나 많은 친구를 태울 수 있을까요? 마지막엔 다 함께 신나는 다이빙!","controls":"탭 / 클릭 / 스페이스 = 움직이는 냥이 놓기","tags":["고양이","균형","3D 물리"],"emoji":"🐾","version":"1.0.0","publishedAt":"2026-10-12T00:10:01.000Z","playHint":"냥이 시소 · 통통한 3D 냥이 클럽","hint":"좌우에 골고루 놓아요 · 기울면 냥이들이 발로 버텨요!"});

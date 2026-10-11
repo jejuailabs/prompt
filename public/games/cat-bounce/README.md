@@ -18,4 +18,4 @@ parentOrigin과 부모 source/origin/gameId를 검사합니다. game-ready/start
 
 ## 파일과 출처
 
-Three.js 0.172.0 MIT 엔진·라이선스, 캐릭터 코드·7종 PNG·실제 썸네일을 포함합니다. 외부 음원 없이 Web Audio를 합성합니다. 샘플 1.0.0. 재패키징: node scripts/package-cat-games.cjs
+Three.js 0.172.0 MIT 엔진·라이선스, 캐릭터 코드·7종 PNG·실제 썸네일을 포함합니다. 외부 음원 없이 Web Audio를 합성합니다. 샘플 1.1.0. 재패키징: node scripts/package-cat-games.cjs

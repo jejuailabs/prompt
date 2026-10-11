@@ -28,7 +28,7 @@ export class PackWorld{
  reset(){this.boardId=0;this.level=0;this.score=0;this.phase='placing';this.transition=0;this.event=null;this.makeBoard();}
  makeBoard(){this.boardId=(this.boardId||0)+1;this.width=6;this.height=4;this.remaining=Math.max(35,75-this.level*2);const regions=[{col:0,row:0,w:6,h:4}],desired=Math.min(8,4+Math.floor(this.level/2));
   while(regions.length<desired){const candidates=regions.map((r,i)=>({r,i})).filter(({r})=>r.w>1||r.h>1).sort((a,b)=>b.r.w*b.r.h-a.r.w*a.r.h);const chosen=candidates[0];if(!chosen)break;const r=chosen.r;let vertical=r.w>1&&(r.h===1||r.w>=r.h);const max=vertical?r.w:r.h,cut=1+Math.floor(this.rng()*(max-1));regions.splice(chosen.i,1,...(vertical?[{...r,w:cut},{...r,col:r.col+cut,w:r.w-cut}]:[{...r,h:cut},{...r,row:r.row+cut,h:r.h-cut}]));}
-  this.solution=regions.map((r,id)=>({...r,id,rotation:0}));this.pieces=regions.map((r,id)=>({id,w:r.w,h:r.h,col:null,row:null,rotation:0,placed:false}));this.selected=0;this.preview={col:0,row:0};this.moves=0;
+  this.solution=regions.map((r,id)=>({...r,id,rotation:0}));this.pieces=regions.map((r,id)=>({id,w:r.w,h:r.h,col:null,row:null,rotation:0,placed:false}));if(this.level>0)for(const p of this.pieces)if(p.w!==p.h&&this.rng()>.5)p.rotation=1;this.selected=0;this.preview={col:0,row:0};this.moves=0;
  }
  dimensions(piece,rotation=piece.rotation){return rotation%2?{w:piece.h,h:piece.w}:{w:piece.w,h:piece.h};}
  select(id){if(this.phase!=='placing'||!this.pieces.some(p=>p.id===id))return false;this.selected=id;this.rotationPreview=null;return true;}

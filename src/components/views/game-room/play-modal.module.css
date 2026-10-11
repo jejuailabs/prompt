@@ -3,3 +3,6 @@
 @media(max-height:579px){.shell{width:100vw!important;height:100dvh!important;max-width:none!important;border-radius:0!important}}
 
 .shell{max-height:100dvh!important;overflow:hidden!important;background:#101010!important}@media(max-width:639px){.shell{border-radius:0!important}}
+
+/* Reading games keep native vertical scrolling and more mobile play space. */
+.shell[data-game-layout="scroll"] .frame{touch-action:auto}.shell[data-game-layout="scroll"] .topAd{display:none}.shell[data-game-layout="scroll"] .bottomAd{min-height:48px;padding-top:4px;padding-bottom:4px;border-top-width:4px}.shell[data-game-layout="scroll"] .adBox{height:36px}@media(max-width:639px){.shell[data-game-layout="scroll"] .header{min-height:46px;padding-top:4px;padding-bottom:4px}}

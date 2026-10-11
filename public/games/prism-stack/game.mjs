@@ -3,9 +3,9 @@ import {THREE,rendererFor,lights,studioEnvironment,resize,disposeObject,finalDis
 import {cutStack} from './rules.mjs';
 import {CAT_THICKNESS,createCat,settleCat,animateCat,celebrateCat,catSummary,disposeCats} from './cats.mjs';
 import {createFinale,stepFinale,finaleSummary} from './finale.mjs';
-import {BREEDS,breedForFloor,nextBreed} from './breeds.mjs';
+import {BREEDS,nextBreed,createAppearancePicker,availableAppearances} from './breeds.mjs';
 import {mountSpeedControl,towerBaseSpeed} from './speed.mjs';
-const rt=new GameRuntime({id:'prism-stack',title:'Prism Stack',category:'THE ART OF TIMING',theme:'',scoreLabel:'FLOORS',metricLabel:'PERFECT STREAK',eyebrow:'ONE MORE LOAF. ONE MORE PURR.',subtitle:'통통 냥이, 포개서 골골골.',description:'두툼하고 포근한 식빵 고양이를 차곡차곡 포개요.\n정중앙이면 기분 좋은 골골골! 한 판이 끝나면\n다 같이 야호! 높이 쌓을수록 더 긴 다이빙이 기다려요.',hint:'탭 · 클릭 · 스페이스로 고양이 놓기<br>가로와 깊이, 두 방향의 타이밍',version:'1.3.0'});
+const rt=new GameRuntime({id:'prism-stack',title:'Prism Stack',category:'THE ART OF TIMING',theme:'',scoreLabel:'FLOORS',metricLabel:'PERFECT STREAK',eyebrow:'ONE MORE LOAF. ONE MORE PURR.',subtitle:'통통 냥이, 포개서 골골골.',description:'두툼하고 포근한 식빵 고양이를 차곡차곡 포개요.\n정중앙이면 기분 좋은 골골골! 한 판이 끝나면\n다 같이 야호! 높이 쌓을수록 더 긴 다이빙이 기다려요.',hint:'탭 · 클릭 · 스페이스로 고양이 놓기<br>가로와 깊이, 두 방향의 타이밍',version:'1.3.1'});
 try{
  const renderer=rendererFor(rt,{exposure:.83}),scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-6,6,8,-8,.1,200);
  const env=studioEnvironment(renderer);scene.environment=env.texture;const sun=lights(scene,{intensity:1.55});
@@ -15,10 +15,10 @@ try{
  const line=new THREE.Mesh(new THREE.TorusGeometry(2.85,.016,8,100),new THREE.MeshBasicMaterial({color:0xc5b6d3}));line.rotation.x=Math.PI/2;line.position.y=-.02;stage.add(line);
  const ground=new THREE.Mesh(new THREE.CircleGeometry(9.5,72),new THREE.MeshStandardMaterial({color:0xf1ebf4,roughness:1,transparent:true,opacity:.76}));ground.rotation.x=-Math.PI/2;ground.position.y=-.59;ground.receiveShadow=true;ground.visible=false;scene.add(ground);
  const shadow=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({opacity:.16}));shadow.rotation.x=-Math.PI/2;shadow.position.y=-.58;scene.add(shadow);
- const rng=random(rt.seed),glints=[];for(let i=0;i<25;i++){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.018+rng()*.025),new THREE.MeshBasicMaterial({color:i%2?0xffffff:0xbdb0d2,transparent:true,opacity:.5}));s.position.set((rng()-.5)*16,rng()*14-1,(rng()-.5)*12);scene.add(s);glints.push(s);}
+ const appearancePicker=createAppearancePicker(random(rt.seed^0x7ca7)),rng=random(rt.seed),glints=[];for(let i=0;i<25;i++){const s=new THREE.Mesh(new THREE.OctahedronGeometry(.018+rng()*.025),new THREE.MeshBasicMaterial({color:i%2?0xffffff:0xbdb0d2,transparent:true,opacity:.5}));s.position.set((rng()-.5)*16,rng()*14-1,(rng()-.5)*12);scene.add(s);glints.push(s);}
  let blocks=[],moving=null,axis='x',height=0,streak=0,maxStreak=0,score=0,falling=[],time=0,targetY=1.1,viewY=1.1,finale=null,divers=[],baseSpan=12.4,viewSpan=12.4;
  const thickness=CAT_THICKNESS,baseY=thickness/2+.12;
- function block(data,n,y,fragment=false){const group=createCat(data,n,y,{fragment});world.add(group);return group;}
+ function block(data,n,y,fragment=false,appearance={}){const group=createCat(data,n,y,{fragment,...appearance});world.add(group);return group;}
  rt.controls.innerHTML='<button class="wide" data-drop aria-label="고양이 놓기">고양이 놓기 ↓</button>';
  const dropButton=document.querySelector('[data-drop]');
  const speedControl=mountSpeedControl(rt);
@@ -27,8 +27,8 @@ try{
  const bubbles=['야호!','꺄아 ♡','한 번 더!','우와~'].map((text,index)=>{const el=document.createElement('span');el.className='cat-cheer cheer-'+index;el.textContent=text;el.hidden=true;cheers.append(el);return el;});
  const projection=new THREE.Vector3();
  function clear(){for(const child of[...world.children])disposeObject(child);blocks=[];moving=null;falling=[];finale=null;divers=[];ground.visible=false;stage.visible=true;rt.root.classList.remove('cat-diving');for(const bubble of bubbles)bubble.hidden=true;dropButton.disabled=false;dropButton.textContent='고양이 놓기 ↓';}
- function spawn(){const breed=breedForFloor(height+1),upcoming=nextBreed(height+1);breedLabel.textContent=breed.name+(upcoming?' · '+upcoming.from+'층에 '+upcoming.name:' · 모든 친구 등장!');if(BREEDS.some(b=>b.from===height+1)&&height>0)rt.toast('새 친구! '+breed.name);axis=height%2?'z':'x';const top=blocks.at(-1),data={x:top.x,z:top.z,width:top.width,depth:top.depth};const start=(height%4<2?-1:1)*5.6;data[axis]+=start;moving={...data,mesh:block(data,height+1,baseY+thickness*(height+1)),origin:top[axis],direction:start<0?1:-1};rt.status.textContent=axis==='x'?'가로로 미끄러지는 냥이':'깊이로 미끄러지는 냥이';}
- function reset(){clear();height=0;streak=0;maxStreak=0;score=0;time=0;targetY=viewY=1.1;viewSpan=baseSpan;blocks=[{x:0,z:0,width:4.2,depth:4.2,mesh:block({x:0,z:0,width:4.2,depth:4.2},0,baseY)}];settleCat(blocks[0].mesh,true);rt.metric.textContent='0';spawn();rt.setScore(0,0);frame(0,false);}
+ function spawn(){const appearance=appearancePicker.pick(height+1),breed=BREEDS[appearance.breedIndex],upcoming=nextBreed(height+1);breedLabel.textContent=(breed.index===0?appearance.coatName+' · 기본 단모':breed.name)+(upcoming?' · '+upcoming.from+'층에 '+upcoming.name:' · 모든 친구 등장!');if(BREEDS.some(b=>b.from===height+1)&&height>0)rt.toast('새 친구! '+breed.name);axis=height%2?'z':'x';const top=blocks.at(-1),data={x:top.x,z:top.z,width:top.width,depth:top.depth};const start=(height%4<2?-1:1)*5.6;data[axis]+=start;moving={...data,mesh:block(data,height+1,baseY+thickness*(height+1),false,appearance),origin:top[axis],direction:start<0?1:-1};rt.status.textContent=axis==='x'?'가로로 미끄러지는 냥이':'깊이로 미끄러지는 냥이';}
+ function reset(){clear();appearancePicker.reset();height=0;streak=0;maxStreak=0;score=0;time=0;targetY=viewY=1.1;viewSpan=baseSpan;blocks=[{x:0,z:0,width:4.2,depth:4.2,mesh:block({x:0,z:0,width:4.2,depth:4.2},0,baseY)}];settleCat(blocks[0].mesh,true);rt.metric.textContent='0';spawn();rt.setScore(0,0);frame(0,false);}
  function startFinale(){
   divers=[...blocks.map(b=>b.mesh),moving.mesh];moving=null;
   for(let i=0;i<divers.length;i++)celebrateCat(divers[i],i);
@@ -39,9 +39,9 @@ try{
  function finishFinale(){rt.root.classList.remove('cat-diving');for(const bubble of bubbles)bubble.hidden=true;rt.finish('야호! 다 같이 착지!',height+'층 · 최고 연속 정중앙 '+maxStreak+'회');}
  function drop(){if(rt.state!=='running'||finale||!moving)return;const result=cutStack(blocks.at(-1),moving,axis);
   if(!result.hit){startFinale();return;}
-  const y=moving.mesh.position.y,placed=moving.mesh;height++;streak=result.perfect?streak+1:0;maxStreak=Math.max(maxStreak,streak);score+=100+(result.perfect?80+Math.min(streak,10)*15:0);
-  let mesh;if(result.perfect){mesh=placed;mesh.position.set(result.next.x,y,result.next.z);}else{disposeObject(placed);mesh=block(result.next,height,y);}settleCat(mesh,result.perfect);blocks.push({...result.next,mesh});
-  if(result.cut){const piece=block(result.cut,height,y,true);falling.push({mesh:piece,vy:0,vx:axis==='x'?Math.sign(result.delta)*.65:0,vz:axis==='z'?Math.sign(result.delta)*.65:0,spin:Math.sign(result.delta)*.65,axis,life:2});}
+  const y=moving.mesh.position.y,placed=moving.mesh,appearance=placed.userData.appearance;height++;streak=result.perfect?streak+1:0;maxStreak=Math.max(maxStreak,streak);score+=100+(result.perfect?80+Math.min(streak,10)*15:0);
+  let mesh;if(result.perfect){mesh=placed;mesh.position.set(result.next.x,y,result.next.z);}else{disposeObject(placed);mesh=block(result.next,height,y,false,appearance);}settleCat(mesh,result.perfect);blocks.push({...result.next,mesh});
+  if(result.cut){const piece=block(result.cut,height,y,true,appearance);falling.push({mesh:piece,vy:0,vx:axis==='x'?Math.sign(result.delta)*.65:0,vz:axis==='z'?Math.sign(result.delta)*.65:0,spin:Math.sign(result.delta)*.65,axis,life:2});}
   if(result.perfect){rt.toast(streak>=3?'골골골 · PERFECT × '+streak:'골골골 · PERFECT!');rt.tone(420+Math.min(streak,12)*55,.13,'sine');}else rt.tone(310,.08,'triangle');
   rt.setScore(score,height);rt.metric.textContent=String(streak);targetY=Math.max(1.1,baseY+height*thickness-1);spawn();
  }
@@ -78,6 +78,6 @@ try{
   }}
   if(!finale)while(blocks.length>85){const stale=blocks.shift();disposeObject(stale.mesh);}
  }
- reset();disposeObject(moving.mesh);moving=null;for(let i=1;i<=4;i++){const data={x:0,z:0,width:4.2-i*.18,depth:4.2-i*.16};const mesh=block(data,i,baseY+i*thickness);settleCat(mesh,true);blocks.push({...data,mesh});}targetY=viewY=2;rt.status.textContent='두툼한 식빵 냥이, 한 마리 더!';
- rt.ready({reset,frame,render:()=>renderer.render(scene,camera),resize:sizing.update,snapshot:()=>({height,axis,streak,maxStreak,cooldown:0,character:'loaf-cat',thickness,viewY,speedMultiplier:speedControl.multiplier,baseSpeed:towerBaseSpeed(height),effectiveSpeed:speedControl.effective(towerBaseSpeed(height)),nextBreed:breedForFloor(height+1).id,topCat:catSummary(blocks.at(-1)?.mesh),movingCat:catSummary(moving?.mesh),finale:finaleSummary(finale),divers:divers.map(mesh=>catSummary(mesh)),fragments:falling.map(p=>({hasFace:!!p.mesh.userData.cat,cut:p.mesh.userData.fragment})),top:blocks.at(-1)?{x:blocks.at(-1).x,z:blocks.at(-1).z,width:blocks.at(-1).width,depth:blocks.at(-1).depth}:null,moving:moving?{x:moving.x,z:moving.z,width:moving.width,depth:moving.depth}:null}),dispose:()=>{speedControl.dispose();breedLabel.remove();sizing.disconnect();cheers.remove();env.dispose();baseMat.dispose();finalDispose(scene,renderer);disposeCats();}});
+ reset();disposeObject(moving.mesh);moving=null;for(let i=1;i<=4;i++){const data={x:0,z:0,width:4.2-i*.18,depth:4.2-i*.16};const mesh=block(data,i,baseY+i*thickness,false,{breedIndex:0,coatIndex:i%4});settleCat(mesh,true);blocks.push({...data,mesh});}targetY=viewY=2;rt.status.textContent='두툼한 식빵 냥이, 한 마리 더!';
+ rt.ready({reset,frame,render:()=>renderer.render(scene,camera),resize:sizing.update,snapshot:()=>({height,axis,streak,maxStreak,cooldown:0,character:'loaf-cat',thickness,viewY,speedMultiplier:speedControl.multiplier,baseSpeed:towerBaseSpeed(height),effectiveSpeed:speedControl.effective(towerBaseSpeed(height)),nextBreed:catSummary(moving?.mesh)?.breedId??null,availableBreeds:BREEDS.filter(b=>b.from<=height+1).map(b=>b.id),availableCoats:availableAppearances(height+1).map(a=>a.coatId),stackCats:blocks.map(b=>catSummary(b.mesh)),topCat:catSummary(blocks.at(-1)?.mesh),movingCat:catSummary(moving?.mesh),finale:finaleSummary(finale),divers:divers.map(mesh=>catSummary(mesh)),fragments:falling.map(p=>({appearance:p.mesh.userData.appearance.key,hasFace:!!p.mesh.userData.cat,cut:p.mesh.userData.fragment})),top:blocks.at(-1)?{x:blocks.at(-1).x,z:blocks.at(-1).z,width:blocks.at(-1).width,depth:blocks.at(-1).depth}:null,moving:moving?{x:moving.x,z:moving.z,width:moving.width,depth:moving.depth}:null}),dispose:()=>{speedControl.dispose();breedLabel.remove();sizing.disconnect();cheers.remove();env.dispose();baseMat.dispose();finalDispose(scene,renderer);disposeCats();}});
 }catch(error){rt.fail(error);}

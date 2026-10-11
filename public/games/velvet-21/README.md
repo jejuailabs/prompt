@@ -1,6 +1,6 @@
 # Velvet Twenty One
 
-에메랄드 펠트와 황동 장식의 프라이빗 테이블. 가상 칩 1,000으로 3,000 달성 또는 딜러 파산에 도전하는 본격 블랙잭.
+한 장씩 나누는 패와 딜러의 단계별 공개·추가 카드. 마지막 핸드의 승패와 칩 증감을 확인하고 경기 결과로 마무리하는 모바일 블랙잭.
 
 ## 독립 실행
 폴더 전체를 정적 서버에 복사하고 index.html을 엽니다. 상위 경로와 폴더 이름 변경 가능. Next.js·계정·API·CDN 없이 실행됩니다. Web Audio 합성 사운드, 상대 경로 이미지·모듈, 로컬 기록이 포함됩니다. HTTP(S), ES modules, Pointer Events, Web Audio를 지원하는 최신 브라우저가 필요합니다.
@@ -16,4 +16,4 @@ iframe URL의 parentOrigin에 허용 부모 origin을 지정합니다. source/or
 Pretendard·Fredoka·Cinzel (SIL OFL 1.1), fonts/에 원본 서체·전체 라이선스·출처 해시 포함. 외부 폰트 요청 없음.
 
 ## 버전과 재패키징
-1.0.1, runtime v1. node scripts/package-puzzle-games.cjs. exports/games의 ZIP에 실행 파일·이미지·썸네일·문서가 포함됩니다.
+1.1.0, runtime v1. node scripts/package-puzzle-games.cjs. exports/games의 ZIP에 실행 파일·이미지·썸네일·문서가 포함됩니다.

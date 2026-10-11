@@ -33,6 +33,8 @@ $('[data-content]').innerHTML=`
   </section>
  </div>`;
 
+const inputDock=document.createElement('aside');inputDock.className='input-dock';inputDock.setAttribute('aria-label','숫자·문자 입력기');inputDock.append($('.entry-area'));$('.arena').append(inputDock);const dockObserver=new ResizeObserver(()=>rt.root.style.setProperty('--input-dock-height',inputDock.getBoundingClientRect().height+'px'));dockObserver.observe(inputDock);
+
 let opts,puzzle,entry,attempts=0,solved=0,stageTime=0,notes=new Map(),history=[],noteMode=false,next=false,dailyRanked=true,drag=null,rng,day;
 const ordinal=n=>['첫 번째','두 번째','세 번째','네 번째','다섯 번째','여섯 번째','일곱 번째','여덟 번째','아홉 번째','마지막'][n]||String(n+1)+'번째';
 function reset(){
@@ -81,7 +83,7 @@ function renderHistory(){
  const el=$('[data-history]');
  if(!history.length){el.innerHTML='<div class="empty-record"><span>⚾</span><b>첫 추리를 기다리고 있어요.</b><p>서로 다른 기호로 시작해 정보를 모아보세요.</p></div>';return;}
  el.innerHTML=history.map((h,i)=>`<div class="attempt ${h.strikes===puzzle.secret.length?'home-run':''}"><small>${String(i+1).padStart(2,'0')}</small><div class="record-tiles">${h.guess.map(c=>'<b>'+c+'</b>').join('')}</div><div class="result"><b class="strikes">${h.strikes}<small>S</small></b><b class="balls">${h.balls}<small>B</small></b></div><button data-copy="${i}" aria-label="${i+1}번째 조합 불러오기" title="조합 불러오기">↺</button></div>`).join('');
- el.scrollTop=el.scrollHeight;
+ el.lastElementChild?.scrollIntoView({block:'nearest'});
 }
 function cycleNote(c){const n=((notes.get(c)||0)+1)%3;n?notes.set(c,n):notes.delete(c);renderEntry();}
 function insert(c){
@@ -143,7 +145,7 @@ rt.on(document,'keydown',e=>{
  else if(e.key==='Delete'){e.preventDefault();clearEntry();}
  else if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();entry.move(e.key==='ArrowLeft'?-1:1);renderEntry();}
 });
-rt.ready({
+rt.ready({dispose:()=>dockObserver.disconnect(),
  reset,tick,clearInput:()=>{drag=null;},
  state:state=>{if(entry){$('[data-options]').hidden=state==='running';renderEntry();}},
  snapshot:()=>({solved,attempts,guess:[...(entry?.values||[])],cursor:entry?.cursor,pool:puzzle?.pool,length:puzzle?.secret.length,next,notes:[...notes],noteMode,history:structuredClone(history),options:opts,...(rt.qa?{secret:puzzle?.secret}: {})})

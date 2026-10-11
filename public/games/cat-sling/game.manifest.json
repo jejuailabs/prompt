@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "id": "cat-sling",
+  "version": "1.0.0",
+  "title": "냥이 슬링샷",
+  "entry": "index.html",
+  "thumbnail": "cover.png",
+  "description": "식빵 냥이를 당겼다 놓아 푹신한 쿠션 둥지에 보내요! 정중앙 착지와 벽 반사로 점수를 모아요. 세 둥지를 채우면 새 정원으로, 하트 세 개가 끝나면 한 판 완료.",
+  "controls": "당겨서 조준·놓아서 발사 / 방향키·스페이스 지원",
+  "files": [
+    "README.md",
+    "SOURCES.md",
+    "assets/breeds/american.png",
+    "assets/breeds/british.png",
+    "assets/breeds/domestic.png",
+    "assets/breeds/maine-coon.png",
+    "assets/breeds/persian.png",
+    "assets/breeds/ragdoll.png",
+    "assets/breeds/siamese.png",
+    "breeds.mjs",
+    "cats.css",
+    "cats.mjs",
+    "club.css",
+    "club.mjs",
+    "cover.png",
+    "fonts/Cinzel-OFL.txt",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka-OFL.txt",
+    "fonts/Fredoka.ttf",
+    "fonts/Pretendard-LICENSE.txt",
+    "fonts/PretendardVariable.woff2",
+    "fonts/README.md",
+    "fonts/game-fonts.css",
+    "fonts/sources.json",
+    "game.css",
+    "game.manifest.json",
+    "game.mjs",
+    "index.html",
+    "rules.mjs",
+    "runtime.mjs",
+    "scene.mjs",
+    "speed.mjs",
+    "vendor/RoundedBoxGeometry.mjs",
+    "vendor/THREE-LICENSE.txt",
+    "vendor/three.core.min.js",
+    "vendor/three.module.min.js"
+  ],
+  "assets": [
+    "assets/breeds/american.png",
+    "assets/breeds/british.png",
+    "assets/breeds/domestic.png",
+    "assets/breeds/maine-coon.png",
+    "assets/breeds/persian.png",
+    "assets/breeds/ragdoll.png",
+    "assets/breeds/siamese.png",
+    "cover.png",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka.ttf",
+    "fonts/PretendardVariable.woff2"
+  ],
+  "requirements": {
+    "webgl": 2,
+    "modules": true,
+    "server": false,
+    "externalNetwork": false
+  },
+  "dependencies": [
+    {
+      "name": "three",
+      "version": "0.172.0",
+      "license": "MIT",
+      "files": [
+        "vendor/three.module.min.js",
+        "vendor/three.core.min.js",
+        "vendor/THREE-LICENSE.txt"
+      ]
+    },
+    {
+      "name": "Pretendard",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/PretendardVariable.woff2",
+        "fonts/Pretendard-LICENSE.txt"
+      ]
+    },
+    {
+      "name": "Fredoka",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Fredoka.ttf",
+        "fonts/Fredoka-OFL.txt"
+      ]
+    },
+    {
+      "name": "Cinzel",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Cinzel.ttf",
+        "fonts/Cinzel-OFL.txt"
+      ]
+    }
+  ],
+  "contract": {
+    "version": 1,
+    "events": [
+      "game-ready",
+      "game-start",
+      "game-paused",
+      "game-resumed",
+      "game-score",
+      "game-finished"
+    ],
+    "commands": [
+      "start",
+      "pause",
+      "resume",
+      "restart",
+      "resize",
+      "dispose"
+    ],
+    "scoreFields": [
+      "score",
+      "roundId",
+      "durationMs"
+    ]
+  },
+  "presentation": {
+    "id": "cat-sling",
+    "title": "냥이 슬링샷",
+    "englishTitle": "Cushion Catapult",
+    "mode": "sling",
+    "accent": 14267849,
+    "back": 15787502,
+    "palette": "#d9bccd",
+    "action": "쿠션으로 폴짝! ↗",
+    "tip": "화면을 당겼다 놓아 조준해요 · 점선이 착지 길을 알려줘요",
+    "description": "식빵 냥이를 당겼다 놓아 푹신한 쿠션 둥지에 보내요! 정중앙 착지와 벽 반사로 점수를 모아요. 세 둥지를 채우면 새 정원으로, 하트 세 개가 끝나면 한 판 완료.",
+    "controls": "당겨서 조준·놓아서 발사 / 방향키·스페이스 지원",
+    "tags": [
+      "고양이",
+      "슬링샷",
+      "3D 착지"
+    ],
+    "emoji": "🐈",
+    "version": "1.0.0",
+    "publishedAt": "2026-10-12T00:10:02.000Z",
+    "playHint": "냥이 슬링샷 · 통통한 3D 냥이 클럽",
+    "hint": "화면을 당겼다 놓아 조준해요 · 점선이 착지 길을 알려줘요"
+  }
+}

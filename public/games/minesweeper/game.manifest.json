@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "minesweeper",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "title": "메종 마인 · 지뢰찾기",
   "entry": "index.html",
   "thumbnail": "cover.png",
@@ -23,6 +23,7 @@
     "game.manifest.json",
     "game.mjs",
     "index.html",
+    "layout.css",
     "rules.mjs",
     "runtime.mjs"
   ],
@@ -91,13 +92,13 @@
     ]
   },
   "presentation": {
-    "version": "1.0.1",
+    "version": "1.1.0",
     "publishedAt": "2026-10-11T09:20:00.000Z",
     "engine": "dom",
     "id": "minesweeper",
     "title": "메종 마인 · 지뢰찾기",
     "englishTitle": "Maison Mine",
-    "description": "고전 지뢰찾기를 세련된 테이블에서. 초급·중급·고급과 사용자 지정, 좌우 동시·가운데·1.5클릭까지 지원하며 성공 시간으로 경쟁해요.",
+    "description": "큰 지뢰 칸과 아래로 열리는 판. 초급·중급·고급·사용자 지정, 터치 깃발과 고전 마우스 조작, 난이도별 시간 경쟁.",
     "controls": "왼쪽 열기, 오른쪽 깃발·물음표, 좌우 동시/가운데/Shift+왼쪽 주변 열기, 터치 길게 누르기 또는 깃발 모드",
     "tags": [
       "지뢰찾기",

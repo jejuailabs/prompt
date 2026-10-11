@@ -1,0 +1,2 @@
+import {launch} from "./club.mjs";
+launch({"id":"cat-merge","title":"냥이 합치기","englishTitle":"Purrfect Merge","mode":"merge","accent":13080695,"back":15985119,"palette":"#e6c5a8","action":"냥이 내려놓기 ↓","tip":"목걸이 숫자가 같으면 합체해요 · 조준 후 손을 떼면 낙하","description":"통통한 냥이들이 서로 밀리고 구르며 골골! 같은 품종을 만나게 해 커다란 친구로 합체해요. 연쇄 합체를 만들고 상자가 넘치기 전에 최고 기록에 도전해요.","controls":"드래그 후 손 떼기 / 좌우 방향키·스페이스 = 조준·낙하","tags":["고양이","합치기","3D 물리"],"emoji":"🐱","version":"1.0.0","publishedAt":"2026-10-12T00:10:00.000Z","playHint":"냥이 합치기 · 통통한 3D 냥이 클럽","hint":"목걸이 숫자가 같으면 합체해요 · 조준 후 손을 떼면 낙하"});

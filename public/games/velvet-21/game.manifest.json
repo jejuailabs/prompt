@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "velvet-21",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "title": "벨벳 블랙잭",
   "entry": "index.html",
   "thumbnail": "cover.png",
@@ -94,13 +94,13 @@
     ]
   },
   "presentation": {
-    "version": "1.0.1",
+    "version": "1.1.0",
     "publishedAt": "2026-10-11T09:20:00.000Z",
     "engine": "dom",
     "id": "velvet-21",
     "title": "벨벳 블랙잭",
     "englishTitle": "Velvet Twenty One",
-    "description": "에메랄드 펠트와 황동 장식의 프라이빗 테이블. 가상 칩 1,000으로 3,000 달성 또는 딜러 파산에 도전하는 본격 블랙잭.",
+    "description": "한 장씩 나누는 패와 딜러의 단계별 공개·추가 카드. 마지막 핸드의 승패와 칩 증감을 확인하고 경기 결과로 마무리하는 모바일 블랙잭.",
     "controls": "칩과 행동 버튼 클릭/탭, H 히트, S 스탠드, D 더블, P 스플릿",
     "tags": [
       "블랙잭",

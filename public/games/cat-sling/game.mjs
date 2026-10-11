@@ -1,0 +1,2 @@
+import {launch} from "./club.mjs";
+launch({"id":"cat-sling","title":"냥이 슬링샷","englishTitle":"Cushion Catapult","mode":"sling","accent":14267849,"back":15787502,"palette":"#d9bccd","action":"쿠션으로 폴짝! ↗","tip":"화면을 당겼다 놓아 조준해요 · 점선이 착지 길을 알려줘요","description":"식빵 냥이를 당겼다 놓아 푹신한 쿠션 둥지에 보내요! 정중앙 착지와 벽 반사로 점수를 모아요. 세 둥지를 채우면 새 정원으로, 하트 세 개가 끝나면 한 판 완료.","controls":"당겨서 조준·놓아서 발사 / 방향키·스페이스 지원","tags":["고양이","슬링샷","3D 착지"],"emoji":"🐈","version":"1.0.0","publishedAt":"2026-10-12T00:10:02.000Z","playHint":"냥이 슬링샷 · 통통한 3D 냥이 클럽","hint":"화면을 당겼다 놓아 조준해요 · 점선이 착지 길을 알려줘요"});

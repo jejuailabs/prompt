@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "code-ball",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": "코드볼 · 숫자영문 야구",
   "entry": "index.html",
   "thumbnail": "cover.png",
@@ -26,6 +26,7 @@
     "game.mjs",
     "index.html",
     "input.mjs",
+    "layout.css",
     "rules.mjs",
     "runtime.mjs"
   ],
@@ -95,13 +96,13 @@
     ]
   },
   "presentation": {
-    "version": "1.1.0",
+    "version": "1.2.0",
     "publishedAt": "2026-10-11T09:20:00.000Z",
     "engine": "dom",
     "id": "code-ball",
     "title": "코드볼 · 숫자영문 야구",
     "englishTitle": "Code Ball",
-    "description": "야구장 고양이 코치와 숫자·영문자 3~6자리 코드를 풀어요. 순차 입력·자동 비우기·추리 기록·후보 메모로 연속 도전과 오늘의 경기!",
+    "description": "숫자·영문자 야구. 별도 입력기로 기호를 누르고 넓게 누적되는 추리 기록을 비교하며 코드를 풀어요.",
     "controls": "기호 순서대로 클릭/탭/키보드, Enter 판독, Backspace 지우기, Delete 전체 지우기, 우클릭·메모 후보 표시",
     "tags": [
       "숫자·영문자 야구",

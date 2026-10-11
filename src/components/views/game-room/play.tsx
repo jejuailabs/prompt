@@ -192,6 +192,7 @@ export default function GamePlayView() {
       <GameRoomView />
       <Dialog open onOpenChange={open=>{if(!open)closeGame();}}>
         <DialogContent ref={modalRef} showCloseButton={false} aria-describedby={undefined}
+          data-game-layout={['velvet-21','minesweeper','code-ball'].includes(slug||'')?'scroll':'stage'}
           className={styles.shell+' flex h-[100dvh] max-h-[100dvh] w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none border-white/15 bg-[#101010] p-0 sm:h-[calc(100dvh-48px)] sm:w-[calc(100vw-48px)] sm:max-w-[1200px] sm:rounded-2xl'}
           onOpenAutoFocus={event=>{event.preventDefault();closeRef.current?.focus();}}
           onInteractOutside={event=>event.preventDefault()}>

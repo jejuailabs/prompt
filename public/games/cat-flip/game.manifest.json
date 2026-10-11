@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "cat-flip",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "냥이 뒤집기",
   "englishTitle": "Loaf Flip",
   "entry": "index.html",
@@ -85,7 +85,7 @@
     ],
     "emoji": "🐱",
     "playHint": "냥이 뒤집기 · 일곱 냥이 샘플",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "publishedAt": "2026-10-11T09:13:07.108Z",
     "styles": [
       "cats.css"

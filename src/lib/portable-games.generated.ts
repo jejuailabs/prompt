@@ -5,7 +5,7 @@ export const PORTABLE_GAMES = [
     "title": "프리즘 타워",
     "englishTitle": "Prism Stack",
     "publishedAt": "2026-10-11T01:32:10.000Z",
-    "description": "7종 식빵 고양이를 높이에 따라 만나며 쌓는 3D 타이밍 게임. 기본 속도는 층수에 따라 올라가고 사용자 배율은 1–2배만 허용합니다. 한 판이 끝나면 냥이들이 다 함께 즐거운 다이빙!",
+    "description": "네 색상의 기본 고양이와 단계별로 하나씩 해금되는 6종 친구를 골고루 섞어 쌓는 3D 타이밍 게임. 기본 속도는 층수에 따라 올라가고 사용자 배율은 1–2배만 허용합니다. 한 판이 끝나면 냥이들이 다 함께 즐거운 다이빙!",
     "contentUrl": "/games/prism-stack/index.html",
     "fileUrl": "/games/prism-stack/cover.png",
     "artUrl": "/games/prism-stack/cover.png",
@@ -19,7 +19,7 @@ export const PORTABLE_GAMES = [
     "playHint": "통통 냥이 탑, 다 같이 야호!",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.3.0"
+    "moduleVersion": "1.3.1"
   },
   {
     "slug": "cat-bounce",
@@ -41,7 +41,7 @@ export const PORTABLE_GAMES = [
     "playHint": "냥이 충전 점프 · 일곱 냥이 샘플",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.0.0"
+    "moduleVersion": "1.1.0"
   },
   {
     "slug": "cat-flip",
@@ -63,7 +63,7 @@ export const PORTABLE_GAMES = [
     "playHint": "냥이 뒤집기 · 일곱 냥이 샘플",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.0.0"
+    "moduleVersion": "1.1.0"
   },
   {
     "slug": "cat-pack",
@@ -85,7 +85,7 @@ export const PORTABLE_GAMES = [
     "playHint": "냥이 상자 포장 · 일곱 냥이 샘플",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.0.0"
+    "moduleVersion": "1.1.0"
   },
   {
     "slug": "neon-slope",
@@ -128,5 +128,71 @@ export const PORTABLE_GAMES = [
     "portable": true,
     "rewardedContinue": false,
     "moduleVersion": "1.0.1"
+  },
+  {
+    "slug": "cat-merge",
+    "title": "냥이 합치기",
+    "englishTitle": "Purrfect Merge",
+    "publishedAt": "2026-10-12T00:10:00.000Z",
+    "description": "통통한 냥이들이 서로 밀리고 구르며 골골! 같은 품종을 만나게 해 커다란 친구로 합체해요. 연쇄 합체를 만들고 상자가 넘치기 전에 최고 기록에 도전해요.",
+    "contentUrl": "/games/cat-merge/index.html",
+    "fileUrl": "/games/cat-merge/cover.png",
+    "artUrl": "/games/cat-merge/cover.png",
+    "tags": [
+      "고양이",
+      "합치기",
+      "3D 물리"
+    ],
+    "controls": "드래그 후 손 떼기 / 좌우 방향키·스페이스 = 조준·낙하",
+    "palette": "#e6c5a8",
+    "emoji": "🐱",
+    "playHint": "냥이 합치기 · 통통한 3D 냥이 클럽",
+    "portable": true,
+    "rewardedContinue": false,
+    "moduleVersion": "1.0.0"
+  },
+  {
+    "slug": "cat-seesaw",
+    "title": "냥이 시소",
+    "englishTitle": "Loaf Balance",
+    "publishedAt": "2026-10-12T00:10:01.000Z",
+    "description": "흔들리는 쿠션 시소에 통통 냥이를 한 마리씩 올려요. 위치와 높이에 따라 균형이 달라져요. 얼마나 많은 친구를 태울 수 있을까요? 마지막엔 다 함께 신나는 다이빙!",
+    "contentUrl": "/games/cat-seesaw/index.html",
+    "fileUrl": "/games/cat-seesaw/cover.png",
+    "artUrl": "/games/cat-seesaw/cover.png",
+    "tags": [
+      "고양이",
+      "균형",
+      "3D 물리"
+    ],
+    "controls": "탭 / 클릭 / 스페이스 = 움직이는 냥이 놓기",
+    "palette": "#b9cebd",
+    "emoji": "🐾",
+    "playHint": "냥이 시소 · 통통한 3D 냥이 클럽",
+    "portable": true,
+    "rewardedContinue": false,
+    "moduleVersion": "1.0.0"
+  },
+  {
+    "slug": "cat-sling",
+    "title": "냥이 슬링샷",
+    "englishTitle": "Cushion Catapult",
+    "publishedAt": "2026-10-12T00:10:02.000Z",
+    "description": "식빵 냥이를 당겼다 놓아 푹신한 쿠션 둥지에 보내요! 정중앙 착지와 벽 반사로 점수를 모아요. 세 둥지를 채우면 새 정원으로, 하트 세 개가 끝나면 한 판 완료.",
+    "contentUrl": "/games/cat-sling/index.html",
+    "fileUrl": "/games/cat-sling/cover.png",
+    "artUrl": "/games/cat-sling/cover.png",
+    "tags": [
+      "고양이",
+      "슬링샷",
+      "3D 착지"
+    ],
+    "controls": "당겨서 조준·놓아서 발사 / 방향키·스페이스 지원",
+    "palette": "#d9bccd",
+    "emoji": "🐈",
+    "playHint": "냥이 슬링샷 · 통통한 3D 냥이 클럽",
+    "portable": true,
+    "rewardedContinue": false,
+    "moduleVersion": "1.0.0"
   }
 ] as const;

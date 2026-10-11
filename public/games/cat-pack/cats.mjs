@@ -1,13 +1,12 @@
 import {THREE} from './scene.mjs';
-import {BREEDS,breedAtIndex,breedForFloor} from './breeds.mjs';
+import {breedAtIndex,breedForFloor,catAppearance} from './breeds.mjs';
 export const CAT_THICKNESS=1.02;
 export const CAT_MOODS=['cheer','laugh','wink','wow'];
-const colors=BREEDS.map(b=>b.color);
 const cream=new THREE.Color(0xfff5df),ink=new THREE.Color(0x59455d),pink=new THREE.Color(0xe598a6);
 const decorTemplates=new Map(),bodyMaterials=new Map();let master=null;
 const detailsMaterial=new THREE.MeshPhysicalMaterial({vertexColors:true,color:0xffffff,roughness:.47,clearcoat:.32,metalness:0});detailsMaterial.userData.shared=true;
 export function catColor(n){return new THREE.Color(breedForFloor(n).color);}
-function bodyMaterial(n){const key=breedAtIndex(n).index;if(!bodyMaterials.has(key)){const m=new THREE.MeshPhysicalMaterial({color:new THREE.Color(colors[key]),roughness:.39,clearcoat:.58,clearcoatRoughness:.32,metalness:0,envMapIntensity:.42});m.userData.shared=true;bodyMaterials.set(key,m);}return bodyMaterials.get(key);}
+function bodyMaterial(n,coat=0){const appearance=catAppearance(n,coat),key=appearance.key;if(!bodyMaterials.has(key)){const m=new THREE.MeshPhysicalMaterial({color:new THREE.Color(appearance.color),roughness:.39,clearcoat:.58,clearcoatRoughness:.32,metalness:0,envMapIntensity:.42});m.userData.shared=true;bodyMaterials.set(key,m);}return bodyMaterials.get(key);}
 function mergeParts(parts){const positions=[],normals=[],colors=[];for(const {geometry,matrix,color} of parts){const g=geometry.index?geometry.toNonIndexed():geometry;g.applyMatrix4(matrix);const p=g.attributes.position.array,n=g.attributes.normal.array;for(let i=0;i<p.length;i+=3){positions.push(p[i],p[i+1],p[i+2]);normals.push(n[i],n[i+1],n[i+2]);colors.push(color.r,color.g,color.b);}g.dispose();if(g!==geometry)geometry.dispose();}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.computeBoundingSphere();return g;}
 function add(parts,g,color,x=0,y=0,z=0,sx=1,sy=1,sz=1,rx=0,ry=0,rz=0){const matrix=new THREE.Matrix4().compose(new THREE.Vector3(x,y,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(rx,ry,rz)),new THREE.Vector3(sx,sy,sz));parts.push({geometry:g,matrix,color:color.isColor?color:new THREE.Color(color)});}
 const oval=(parts,color,x,y,z,sx,sy,sz)=>add(parts,new THREE.SphereGeometry(1,12,8),color,x,y,z,sx,sy,sz);
@@ -29,12 +28,16 @@ function faceGeometry(mood='normal',breedIndex=0){
  }
  return {eyes:mergeParts(eyes),mouth:mergeParts(mouth)};
 }
-function buildTemplate(w,d,n){const breed=breedAtIndex(n),half=CAT_THICKNESS/2,c=new THREE.Color(breed.color),stripe=c.clone().multiplyScalar(.55),details=[],ears=[],paws=[];
+function buildTemplate(w,d,n,coat=0){const breed=catAppearance(n,coat),half=CAT_THICKNESS/2,c=new THREE.Color(breed.color),stripe=c.clone().multiplyScalar(.55),details=[],ears=[],paws=[];
  const front=d/2+.012;
  const pointed=breed.pattern==='point'||breed.pattern==='bicolor';
  if(pointed){
   oval(details,breed.point,0,.08,front+.018,w*.285,.35,.046);
   for(const side of[-1,1])oval(details,breed.point,side*w*.24,half+.01,d*.25,w*.13,.02,d*.18);
+ }
+ if(breed.pattern==='tuxedo'){
+  oval(details,cream,0,-.08,front+.04,w*.32,.38,.07);
+  oval(details,cream,0,half+.008,d*.20,w*.12,.018,d*.23);
  }
  if(breed.pattern==='bicolor'){
   const v=new THREE.Shape();v.moveTo(-.47,-.32);v.lineTo(0,.40);v.lineTo(.47,-.32);v.closePath();add(details,new THREE.ShapeGeometry(v),cream,0,0,front+.07);
@@ -72,21 +75,21 @@ function buildTemplate(w,d,n){const breed=breedAtIndex(n),half=CAT_THICKNESS/2,c
  return {body:loafGeometry(w,d),details:mergeParts(details),ears:mergeParts(ears),paws,faces:Object.fromEntries(['normal',...CAT_MOODS].map(mood=>[mood,faceGeometry(mood,n)])),faceZ:front+.085};
 }
 function ensureMaster(){return master??=buildTemplate(4.2,4.2,0);}
-function template(n){const key=breedAtIndex(n).index;if(!decorTemplates.has(key))decorTemplates.set(key,key===0?ensureMaster():buildTemplate(4.2,4.2,key));return decorTemplates.get(key);}
-export function createCat(data,n,y,{fragment=false,breedIndex=breedForFloor(n).index}={}){const group=new THREE.Group(),w=data.width,d=data.depth,m=ensureMaster(),sx=w/4.2,sz=d/4.2;
- const body=new THREE.Mesh(m.body.clone(),bodyMaterial(breedIndex));body.scale.set(sx,1,sz);body.castShadow=body.receiveShadow=true;group.add(body);
+function template(n,coat=0){const appearance=catAppearance(n,coat),key=appearance.key;if(!decorTemplates.has(key))decorTemplates.set(key,appearance.breedIndex===0&&appearance.coatIndex===0?ensureMaster():buildTemplate(4.2,4.2,appearance.breedIndex,appearance.coatIndex));return decorTemplates.get(key);}
+export function createCat(data,n,y,{fragment=false,breedIndex=breedForFloor(n).index,coatIndex=n%4}={}){const group=new THREE.Group(),w=data.width,d=data.depth,m=ensureMaster(),sx=w/4.2,sz=d/4.2;
+ const body=new THREE.Mesh(m.body.clone(),bodyMaterial(breedIndex,coatIndex));body.scale.set(sx,1,sz);body.castShadow=body.receiveShadow=true;group.add(body);
  if(!fragment){
-  const t=template(breedIndex),details=new THREE.Mesh(t.details.clone(),detailsMaterial),eyes=new THREE.Mesh(t.faces.normal.eyes.clone(),detailsMaterial),mouth=new THREE.Mesh(t.faces.normal.mouth.clone(),detailsMaterial),ears=new THREE.Mesh(t.ears.clone(),detailsMaterial);
+  const t=template(breedIndex,coatIndex),details=new THREE.Mesh(t.details.clone(),detailsMaterial),eyes=new THREE.Mesh(t.faces.normal.eyes.clone(),detailsMaterial),mouth=new THREE.Mesh(t.faces.normal.mouth.clone(),detailsMaterial),ears=new THREE.Mesh(t.ears.clone(),detailsMaterial);
   for(const mesh of[details,eyes,mouth])mesh.scale.set(sx,1,sz);
   const earScale=Math.min(.38,Math.max(.04,Math.min(w,d)*.11))/.38;ears.scale.set(sx,earScale,sz);
   details.castShadow=ears.castShadow=true;details.receiveShadow=ears.receiveShadow=true;eyes.position.set(0,.09,m.faceZ*sz);mouth.position.copy(eyes.position);ears.position.y=CAT_THICKNESS/2;
   const paws=t.paws.map((geometry,i)=>{const paw=new THREE.Mesh(geometry.clone(),detailsMaterial);paw.scale.set(sx,1,sz);paw.position.set((i?1:-1)*w*.34,-.31,m.faceZ*sz);paw.castShadow=true;return paw;});
-  group.add(details,eyes,mouth,ears,...paws);group.userData.cat={eyes,mouth,ears,paws,earScale,resting:false,pop:0,phase:n*.43,breed:breedIndex,mood:'normal',celebrating:false,cheerAge:0,faceIndex:0};
+  group.add(details,eyes,mouth,ears,...paws);group.userData.cat={eyes,mouth,ears,paws,earScale,resting:false,pop:0,phase:n*.43,breed:breedIndex,coat:catAppearance(breedIndex,coatIndex).coatIndex,mood:'normal',celebrating:false,cheerAge:0,faceIndex:0};
  }
- group.position.set(data.x,y,data.z);group.userData.fragment=fragment;return group;
+ group.position.set(data.x,y,data.z);group.userData.fragment=fragment;group.userData.appearance=catAppearance(breedIndex,coatIndex);return group;
 }
 export function settleCat(group,perfect){const cat=group.userData.cat;if(!cat)return;cat.resting=true;cat.ears.scale.y=cat.earScale*.13;setCatMood(group,perfect?['cheer','wink','laugh'][cat.breed%3]:'normal');cat.eyes.scale.y=perfect?1:.8;cat.pop=.16;}
-export function setCatMood(group,mood){const cat=group?.userData.cat;if(!cat||cat.mood===mood)return;if(!['normal',...CAT_MOODS].includes(mood))throw new Error('Unknown cat mood');const face=template(cat.breed).faces[mood];cat.eyes.geometry.dispose();cat.mouth.geometry.dispose();cat.eyes.geometry=face.eyes.clone();cat.mouth.geometry=face.mouth.clone();cat.eyes.scale.y=1;cat.mood=mood;}
+export function setCatMood(group,mood){const cat=group?.userData.cat;if(!cat||cat.mood===mood)return;if(!['normal',...CAT_MOODS].includes(mood))throw new Error('Unknown cat mood');const face=template(cat.breed,cat.coat).faces[mood];cat.eyes.geometry.dispose();cat.mouth.geometry.dispose();cat.eyes.geometry=face.eyes.clone();cat.mouth.geometry=face.mouth.clone();cat.eyes.scale.y=1;cat.mood=mood;}
 export function celebrateCat(group,index=0){const cat=group?.userData.cat;if(!cat)return;cat.resting=false;cat.celebrating=true;cat.cheerAge=0;cat.faceIndex=index%CAT_MOODS.length;cat.pop=0;group.scale.y=1;cat.ears.scale.y=cat.earScale;setCatMood(group,CAT_MOODS[cat.faceIndex]);}
 export function animateCat(group,dt,time){const cat=group?.userData.cat;if(!cat)return;
  if(cat.celebrating){
@@ -96,5 +99,5 @@ export function animateCat(group,dt,time){const cat=group?.userData.cat;if(!cat)
  }else if(!cat.resting){const blink=(time+cat.phase)%3.6;cat.eyes.scale.y=blink>3.4?.15:1;cat.ears.rotation.z=Math.sin(time*2.1+cat.phase)*.025;}
  if(cat.pop>0){cat.pop=Math.max(0,cat.pop-dt);const bounce=Math.sin(cat.pop/.16*Math.PI);group.scale.y=1-bounce*.08;}
 }
-export function catSummary(group){const c=group?.userData.cat;return c?{breed:c.breed,breedId:breedAtIndex(c.breed).id,breedName:breedAtIndex(c.breed).name,resting:c.resting,earHeightScale:c.resting?.13:1,eyeScale:c.eyes.scale.y,mood:c.mood,celebrating:c.celebrating}:null;}
+export function catSummary(group){const c=group?.userData.cat;return c?{coatId:group.userData.appearance.coatId,coatName:group.userData.appearance.coatName,color:group.userData.appearance.color,breed:c.breed,breedId:breedAtIndex(c.breed).id,breedName:breedAtIndex(c.breed).name,resting:c.resting,earHeightScale:c.resting?.13:1,eyeScale:c.eyes.scale.y,mood:c.mood,celebrating:c.celebrating}:null;}
 export function disposeCats(){const models=new Set(decorTemplates.values());if(master)models.add(master);for(const model of models){for(const field of['body','details','ears'])model[field].dispose();for(const g of model.paws)g.dispose();for(const face of Object.values(model.faces)){face.eyes.dispose();face.mouth.dispose();}}decorTemplates.clear();master=null;for(const m of bodyMaterials.values())m.dispose();bodyMaterials.clear();detailsMaterial.dispose();}

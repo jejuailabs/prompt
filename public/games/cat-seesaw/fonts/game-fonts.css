@@ -1,0 +1,11 @@
+/* Local, licensed fonts. Paths resolve inside each portable game package. */
+@font-face{font-family:Pretendard;src:url('./PretendardVariable.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:Fredoka;src:url('./Fredoka.ttf') format('truetype');font-weight:300 700;font-stretch:75% 125%;font-style:normal;font-display:swap}
+@font-face{font-family:Cinzel;src:url('./Cinzel.ttf') format('truetype');font-weight:400 900;font-style:normal;font-display:swap}
+:root{--game-ui:Pretendard,system-ui,sans-serif;--game-display:Fredoka,Pretendard,sans-serif;--game-classic:Cinzel,Pretendard,serif;--sans:var(--game-ui);--serif:var(--game-display)}
+body,button,input,select,textarea{font-family:var(--game-ui)!important}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+h1,h2,.mobile-title,.game-title,.brand-name,.catch-card h3{font-family:var(--game-display)!important;font-weight:600}
+.score,.score-value,.score-label b,.best-value,.metric strong,.bank-line strong,.record-tiles,.slot,.key,.timer-pill{font-family:var(--game-ui)!important;font-variant-numeric:tabular-nums}
+.velvet-21 h1,.velvet-21 h2,.velvet-21 .table-logo b,.velvet-21 .card span,.velvet-21 .court>b{font-family:var(--game-classic)!important}
+body[data-game-font="classic"] h1,body[data-game-font="classic"] h2{font-family:var(--game-classic)!important}

@@ -1,6 +1,6 @@
 # Code Ball
 
-야구장 고양이 코치와 숫자·영문자 3~6자리 코드를 풀어요. 순차 입력·자동 비우기·추리 기록·후보 메모로 연속 도전과 오늘의 경기!
+숫자·영문자 야구. 별도 입력기로 기호를 누르고 넓게 누적되는 추리 기록을 비교하며 코드를 풀어요.
 
 ## 독립 실행
 폴더 전체를 정적 서버에 복사하고 index.html을 엽니다. 상위 경로와 폴더 이름 변경 가능. Next.js·계정·API·CDN 없이 실행됩니다. Web Audio 합성 사운드, 상대 경로 이미지·모듈, 로컬 기록이 포함됩니다. HTTP(S), ES modules, Pointer Events, Web Audio를 지원하는 최신 브라우저가 필요합니다.
@@ -16,4 +16,4 @@ iframe URL의 parentOrigin에 허용 부모 origin을 지정합니다. source/or
 Pretendard·Fredoka·Cinzel (SIL OFL 1.1), fonts/에 원본 서체·전체 라이선스·출처 해시 포함. 외부 폰트 요청 없음.
 
 ## 버전과 재패키징
-1.1.0, runtime v1. node scripts/package-puzzle-games.cjs. exports/games의 ZIP에 실행 파일·이미지·썸네일·문서가 포함됩니다.
+1.2.0, runtime v1. node scripts/package-puzzle-games.cjs. exports/games의 ZIP에 실행 파일·이미지·썸네일·문서가 포함됩니다.

@@ -10,3 +10,38 @@ export const BREEDS=Object.freeze([
 export function breedAtIndex(value){const n=Number(value);return BREEDS[Math.max(0,Math.min(6,Number.isFinite(n)?Math.floor(n):0))];}
 export function breedForFloor(value){const n=Math.max(0,Number(value)||0);return [...BREEDS].reverse().find(b=>n>=b.from)||BREEDS[0];}
 export function nextBreed(value){const n=Number(value)||0;return BREEDS.find(b=>b.from>n)||null;}
+
+export const BASIC_COATS=Object.freeze([
+ Object.freeze({index:0,id:'cheese',name:'치즈',color:0xe8b76c,pattern:'tabby'}),
+ Object.freeze({index:1,id:'cream',name:'크림',color:0xf3e2bd,pattern:'solid'}),
+ Object.freeze({index:2,id:'gray',name:'회색',color:0x9ca8ba,pattern:'silver-tabby'}),
+ Object.freeze({index:3,id:'tuxedo',name:'턱시도',color:0x555f76,pattern:'tuxedo'})
+]);
+export function catAppearance(breedIndex=0,coatIndex=0){
+ const breed=breedAtIndex(breedIndex),coat=breed.index===0?BASIC_COATS[((Math.floor(Number(coatIndex)||0)%4)+4)%4]:null;
+ return {...breed,...(coat?{color:coat.color,pattern:coat.pattern}:{}),breedIndex:breed.index,coatIndex:coat?.index??0,coatId:coat?.id??breed.id,coatName:coat?.name??breed.name,key:breed.id+':'+(coat?.id??'default')};
+}
+export function availableAppearances(floor){
+ return [...BASIC_COATS.map(c=>catAppearance(0,c.index)),...BREEDS.filter(b=>b.index>0&&b.from<=Math.max(1,Number(floor)||1)).map(b=>catAppearance(b.index))];
+}
+// A shuffled bag guarantees variety while keeping every unlocked friend in the pool.
+export function createAppearancePicker(random=Math.random){
+ let bag=[],poolKey='',last='';
+ const shuffle=values=>{const copy=[...values];for(let i=copy.length-1;i>0;i--){const j=Math.min(i,Math.max(0,Math.floor(random()*(i+1))));[copy[i],copy[j]]=[copy[j],copy[i]];}return copy;};
+ return {
+  reset(){bag=[];poolKey='';last='';},
+  pick(floor){
+   const pool=availableAppearances(floor),key=pool.map(a=>a.key).join(',');
+   if(poolKey!==key){bag=[];poolKey=key;}
+   const debut=BREEDS.find(b=>b.index>0&&b.from===floor);
+   if(debut){const appearance=catAppearance(debut.index);last=appearance.key;return appearance;}
+   if(!bag.length)bag=shuffle(pool);
+   if(bag.at(-1)?.key===last){
+    const other=bag.findIndex(a=>a.key!==last);
+    if(other>=0)[bag[other],bag[bag.length-1]]=[bag.at(-1),bag[other]];
+    else bag=shuffle(pool.filter(a=>a.key!==last));
+   }
+   const appearance=bag.pop();last=appearance.key;return appearance;
+  }
+ };
+}

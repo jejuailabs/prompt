@@ -4,7 +4,7 @@ import{createCat,animateCat,disposeCats}from'./cats.mjs';
 import{BREEDS}from'./breeds.mjs';
 const rt={root:document.querySelector('main')},renderer=rendererFor(rt,{exposure:.85}),scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-4,4,3.7,-3.7,.1,100),env=studioEnvironment(renderer);
 scene.environment=env.texture;lights(scene,{intensity:1.5});const breed=Math.max(0,Math.min(6,Math.floor(Number(new URLSearchParams(location.search).get('breed'))||0)));
-const cat=createCat({x:0,z:0,width:4.2,depth:3.7},breed,0,{breedIndex:breed});scene.add(cat);
+const cat=createCat({x:0,z:0,width:4.2,depth:3.7},breed,0,{breedIndex:breed,coatIndex:0});scene.add(cat);
 const base=new THREE.Mesh(new THREE.CylinderGeometry(3,3.05,.25,64),new THREE.MeshStandardMaterial({color:0xfff8eb,roughness:.7}));base.position.y=-.7;base.receiveShadow=true;scene.add(base);
 camera.position.set(6.5,5.5,9);camera.lookAt(0,.2,0);resize(renderer,camera,rt,7.8);renderer.render(scene,camera);window.portraitReady=true;window.portraitName=BREEDS[breed].name;window.disposePortrait=()=>{env.dispose();finalDispose(scene,renderer);disposeCats();};
 </script></body></html>

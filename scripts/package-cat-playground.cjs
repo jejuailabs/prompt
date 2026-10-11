@@ -1,0 +1,22 @@
+
+const fs=require('fs'),path=require('path'),{zipSync}=require('fflate'),fonts=require('./game-fonts/package.cjs');
+const configs=JSON.parse(fs.readFileSync('scripts/cat-playground-kit/games.json','utf8')),base='public/games/prism-stack';
+fs.mkdirSync('exports/games',{recursive:true});
+for(const g of configs){
+ const dir='public/games/'+g.id;fs.mkdirSync(dir,{recursive:true});fonts.install(dir);
+ for(const name of['runtime.mjs','scene.mjs','game.css'])fs.copyFileSync('scripts/game-module-kit/'+name,dir+'/'+name);
+ for(const name of['cats.mjs','breeds.mjs','speed.mjs','cats.css'])fs.copyFileSync('scripts/cat-module-kit/'+name,dir+'/'+name);
+ for(const name of['rules.mjs','club.css'])fs.copyFileSync('scripts/cat-playground-kit/'+name,dir+'/'+name);
+ fs.copyFileSync('scripts/cat-playground-kit/game.mjs',dir+'/club.mjs');fs.cpSync(base+'/vendor',dir+'/vendor',{recursive:true});fs.cpSync(base+'/assets/breeds',dir+'/assets/breeds',{recursive:true});
+ if(!fs.existsSync(dir+'/cover.png'))fs.copyFileSync(base+'/cover.png',dir+'/cover.png');
+ fs.writeFileSync(dir+'/game.mjs','import {launch} from "./club.mjs";\nlaunch('+JSON.stringify(g)+');\n');
+ fs.writeFileSync(dir+'/index.html','<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>'+g.title+' · PLAYLAB</title><meta name="description" content="'+g.description+'"><link rel="stylesheet" href="./game.css"><link rel="stylesheet" href="./cats.css"><link rel="stylesheet" href="./club.css"></head><body><script type="module" src="./game.mjs"></script></body></html>');
+ fs.writeFileSync(dir+'/README.md','# '+g.title+' / '+g.englishTitle+'\n\n'+g.description+'\n\n'+g.controls+'\n\n정적 HTTP(S) 서버에 폴더 전체를 배치하고 index.html을 엽니다. 상대 경로이며 로그인·CDN·API 없이 실행합니다. 엔진·캐릭터·7종 PNG·서체·라이선스·실제 썸네일을 포함합니다. 진행 속도는 단계에 따라 증가하고 사용자 배율은 1–2배만 허용합니다. 게임별 최고 점수·한 판 종료·일시정지·재시작을 지원합니다. parentOrigin/source/origin/gameId를 검증하는 호스트 계약 v1입니다. start/pause/resume/restart/resize/dispose, game-ready/start/score/finished 및 roundId/durationMs를 사용합니다. qa=1/preview=1은 온라인 제출을 하지 않습니다. 종료 시 입력·오디오·GPU·관찰자를 해제합니다. 재패키징: node scripts/package-cat-playground.cjs\n');
+ fs.writeFileSync(dir+'/SOURCES.md','# 출처\n\n캐릭터·규칙·3D 장면·Web Audio 소리는 자체 제작 코드입니다. 합체 장르 참고: https://www.kkirukstudio.com/cats-pop/ . 원본 아트나 코드를 복제하지 않았습니다. Three.js 0.172.0 MIT: vendor/THREE-LICENSE.txt. 서체와 SIL OFL 라이선스는 fonts/에 포함합니다. cover.png는 실제 게임 화면입니다.\n');
+ const files=[];function walk(d){for(const name of fs.readdirSync(d)){const f=path.join(d,name);fs.statSync(f).isDirectory()?walk(f):files.push(path.relative(dir,f).split(path.sep).join('/'));}}walk(dir);if(!files.includes('game.manifest.json'))files.push('game.manifest.json');
+ const manifest={schemaVersion:1,id:g.id,version:g.version,title:g.title,entry:'index.html',thumbnail:'cover.png',description:g.description,controls:g.controls,files:files.sort(),assets:files.filter(f=>/\.(png|webp|woff2|ttf)$/.test(f)),requirements:{webgl:2,modules:true,server:false,externalNetwork:false},dependencies:[{name:'three',version:'0.172.0',license:'MIT',files:['vendor/three.module.min.js','vendor/three.core.min.js','vendor/THREE-LICENSE.txt']},...fonts.dependencies()],contract:{version:1,events:['game-ready','game-start','game-paused','game-resumed','game-score','game-finished'],commands:['start','pause','resume','restart','resize','dispose'],scoreFields:['score','roundId','durationMs']},presentation:g};
+ fs.writeFileSync(dir+'/game.manifest.json',JSON.stringify(manifest,null,2)+'\n');const bundle={};for(const f of files)bundle[g.id+'/'+f]=new Uint8Array(fs.readFileSync(dir+'/'+f));fs.writeFileSync('exports/games/'+g.id+'-'+g.version+'.zip',zipSync(bundle,{level:6}));
+}
+const file='src/lib/portable-games.generated.ts',source=fs.readFileSync(file,'utf8'),a=source.indexOf('['),b=source.lastIndexOf(']'),rows=JSON.parse(source.slice(a,b+1));
+for(const g of configs){const row={slug:g.id,title:g.title,englishTitle:g.englishTitle,publishedAt:g.publishedAt,description:g.description,contentUrl:'/games/'+g.id+'/index.html',fileUrl:'/games/'+g.id+'/cover.png',artUrl:'/games/'+g.id+'/cover.png',tags:g.tags,controls:g.controls,palette:g.palette,emoji:g.emoji,playHint:g.playHint,portable:true,rewardedContinue:false,moduleVersion:g.version};const index=rows.findIndex(r=>r.slug===g.id);if(index<0)rows.push(row);else rows[index]=row;}
+fs.writeFileSync(file,source.slice(0,a)+JSON.stringify(rows,null,2)+source.slice(b+1));console.log('Packaged and registered three full 3D cat games.');
