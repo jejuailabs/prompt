@@ -39,6 +39,7 @@
     white-space: nowrap;
   }
 </style>
+<link rel="stylesheet" href="./fonts/game-fonts.css">
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -571,7 +572,7 @@ function drawHUD() {
   ctx.shadowColor = '#ec4899';
   ctx.shadowBlur = 10;
   ctx.fillStyle = '#ec4899';
-  ctx.font = 'bold 28px "Segoe UI", sans-serif';
+  ctx.font = 'bold 28px Pretendard';
   ctx.textAlign = 'left';
   ctx.fillText('⭐ ' + score.toLocaleString(), 14, 38);
   ctx.restore();
@@ -582,7 +583,7 @@ function drawHUD() {
   ctx.shadowColor = timerColor;
   ctx.shadowBlur = timeLeft <= 10 ? 15 : 6;
   ctx.fillStyle = timerColor;
-  ctx.font = 'bold 28px "Segoe UI", sans-serif';
+  ctx.font = 'bold 28px Pretendard';
   ctx.textAlign = 'right';
   ctx.fillText('⏱ ' + timeLeft + 's', W - 14, 38);
   ctx.restore();
@@ -593,7 +594,7 @@ function drawHUD() {
     ctx.shadowColor = '#fbbf24';
     ctx.shadowBlur = 12;
     ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 18px "Segoe UI", sans-serif';
+    ctx.font = 'bold 18px Pretendard';
     ctx.textAlign = 'center';
     ctx.fillText('🔥 ' + combo + 'x 콤보!', W / 2, 38);
     ctx.restore();
@@ -715,7 +716,7 @@ function drawFloatingTexts(dt) {
     ctx.shadowColor = '#fbbf24';
     ctx.shadowBlur = 12;
     ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 18px "Segoe UI", sans-serif';
+    ctx.font = 'bold 18px Pretendard';
     ctx.textAlign = 'center';
     ctx.fillText(ft.text, ft.x, ft.y);
     ctx.restore();
@@ -733,20 +734,20 @@ function drawStartScreen() {
   ctx.shadowColor = '#ec4899';
   ctx.shadowBlur = 30;
   ctx.fillStyle = '#ec4899';
-  ctx.font = 'bold 40px "Segoe UI", sans-serif';
+  ctx.font = 'bold 40px Pretendard';
   ctx.textAlign = 'center';
   ctx.fillText('매치 크러시', cx, cy - 100);
   ctx.restore();
 
   // Subtitle
   ctx.fillStyle = '#a78bfa';
-  ctx.font = '16px "Segoe UI", sans-serif';
+  ctx.font = '16px Pretendard';
   ctx.textAlign = 'center';
   ctx.fillText('🐱🐶🐰🦊🐸🐵', cx, cy - 60);
 
   // Instructions
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '14px "Segoe UI", sans-serif';
+  ctx.font = '14px Pretendard';
   const lines = [
     '인접한 타일을 드래그하여 교환하세요',
     '같은 캐릭터 3개 이상 일렬로 맞추면 점수!',
@@ -770,7 +771,7 @@ function drawStartScreen() {
   ctx.restore();
 
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 18px "Segoe UI", sans-serif';
+  ctx.font = 'bold 18px Pretendard';
   ctx.fillText('게임 시작', cx, by + 30);
 
   // Click anywhere or button
@@ -792,7 +793,7 @@ function drawGameOver() {
   ctx.shadowColor = '#ec4899';
   ctx.shadowBlur = 25;
   ctx.fillStyle = '#ec4899';
-  ctx.font = 'bold 34px "Segoe UI", sans-serif';
+  ctx.font = 'bold 34px Pretendard';
   ctx.textAlign = 'center';
   ctx.fillText('게임 종료!', cx, cy - 70);
   ctx.restore();
@@ -801,12 +802,12 @@ function drawGameOver() {
   ctx.shadowColor = '#fbbf24';
   ctx.shadowBlur = 15;
   ctx.fillStyle = '#fbbf24';
-  ctx.font = 'bold 48px "Segoe UI", sans-serif';
+  ctx.font = 'bold 48px Pretendard';
   ctx.fillText('⭐ ' + score.toLocaleString(), cx, cy);
   ctx.restore();
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '16px "Segoe UI", sans-serif';
+  ctx.font = '16px Pretendard';
   ctx.fillText('최종 점수', cx, cy + 35);
 
   // Restart button
@@ -823,7 +824,7 @@ function drawGameOver() {
   ctx.restore();
 
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 18px "Segoe UI", sans-serif';
+  ctx.font = 'bold 18px Pretendard';
   ctx.textAlign = 'center';
   ctx.fillText('다시 시작', cx, by + 30);
 

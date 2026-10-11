@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "id": "hidden-paws",
+  "version": "1.0.1",
+  "title": "숨은 고양이 찾기",
+  "entry": "index.html",
+  "thumbnail": "cover.png",
+  "files": [
+    "README.md",
+    "SOURCES.md",
+    "art-prompts.json",
+    "assets/cat-sprites.webp",
+    "assets/garden.webp",
+    "assets/greenhouse.webp",
+    "assets/kitchen.webp",
+    "assets/library.webp",
+    "base.css",
+    "cover.png",
+    "fonts/Cinzel-OFL.txt",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka-OFL.txt",
+    "fonts/Fredoka.ttf",
+    "fonts/Pretendard-LICENSE.txt",
+    "fonts/PretendardVariable.woff2",
+    "fonts/README.md",
+    "fonts/game-fonts.css",
+    "fonts/sources.json",
+    "game.css",
+    "game.manifest.json",
+    "game.mjs",
+    "index.html",
+    "runtime.mjs",
+    "stages.mjs"
+  ],
+  "assets": [
+    "assets/cat-sprites.webp",
+    "assets/garden.webp",
+    "assets/greenhouse.webp",
+    "assets/kitchen.webp",
+    "assets/library.webp",
+    "cover.png",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka.ttf",
+    "fonts/PretendardVariable.woff2"
+  ],
+  "requirements": {
+    "webgl": false,
+    "modules": true,
+    "server": false,
+    "externalNetwork": false
+  },
+  "dependencies": [
+    {
+      "name": "Pretendard",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/PretendardVariable.woff2",
+        "fonts/Pretendard-LICENSE.txt"
+      ]
+    },
+    {
+      "name": "Fredoka",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Fredoka.ttf",
+        "fonts/Fredoka-OFL.txt"
+      ]
+    },
+    {
+      "name": "Cinzel",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Cinzel.ttf",
+        "fonts/Cinzel-OFL.txt"
+      ]
+    }
+  ],
+  "contract": {
+    "version": 1,
+    "events": [
+      "game-ready",
+      "game-start",
+      "game-mode",
+      "game-paused",
+      "game-resumed",
+      "game-score",
+      "game-finished"
+    ],
+    "commands": [
+      "start",
+      "restart",
+      "pause",
+      "resume",
+      "resize",
+      "dispose"
+    ],
+    "scoreFields": [
+      "score",
+      "roundId",
+      "durationMs",
+      "rankingKey"
+    ]
+  },
+  "presentation": {
+    "version": "1.0.1",
+    "publishedAt": "2026-10-07T01:23:45.000Z",
+    "engine": "dom",
+    "id": "hidden-paws",
+    "title": "숨은 고양이 찾기",
+    "englishTitle": "Hidden Paws",
+    "description": "5마리부터 15마리까지! 햇살 온실을 지나 서재·주방·달빛 정원의 작은 고양이를 찾으며 한 판의 기록을 쌓아요.",
+    "controls": "탭/클릭 찾기, 확대 후 드래그 이동, 힌트 3회/장면, 현재 기록으로 마무리",
+    "tags": [
+      "숨은그림찾기",
+      "15마리 고양이"
+    ],
+    "palette": "#667447",
+    "emoji": "🐈",
+    "playHint": "15마리 친구들과 네 장면 여행",
+    "legacyUrl": "/games/hidden-paws.html",
+    "rankingKey": "journey"
+  }
+}

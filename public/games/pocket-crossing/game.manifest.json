@@ -12,6 +12,15 @@
     "README.md",
     "SOURCES.md",
     "cover.png",
+    "fonts/Cinzel-OFL.txt",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka-OFL.txt",
+    "fonts/Fredoka.ttf",
+    "fonts/Pretendard-LICENSE.txt",
+    "fonts/PretendardVariable.woff2",
+    "fonts/README.md",
+    "fonts/game-fonts.css",
+    "fonts/sources.json",
     "game.css",
     "game.manifest.json",
     "game.mjs",
@@ -24,7 +33,10 @@
     "vendor/three.module.min.js"
   ],
   "assets": [
-    "cover.png"
+    "cover.png",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka.ttf",
+    "fonts/PretendardVariable.woff2"
   ],
   "requirements": {
     "webgl": 2,
@@ -33,6 +45,30 @@
     "externalNetwork": false
   },
   "dependencies": [
+    {
+      "name": "Pretendard",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/PretendardVariable.woff2",
+        "fonts/Pretendard-LICENSE.txt"
+      ]
+    },
+    {
+      "name": "Fredoka",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Fredoka.ttf",
+        "fonts/Fredoka-OFL.txt"
+      ]
+    },
+    {
+      "name": "Cinzel",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Cinzel.ttf",
+        "fonts/Cinzel-OFL.txt"
+      ]
+    },
     {
       "name": "three",
       "version": "0.172.0",

@@ -2,6 +2,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
+import { PUZZLE_GAMES } from '@/lib/puzzle-games.generated';
 import { LITTLE_WORLDS } from '@/lib/little-worlds';
 import { fail, ok } from '@/lib/server/handler';
 
@@ -65,14 +66,15 @@ export async function GET(req: NextRequest) {
     const combined=[...games];for(const row of shipped)if(row.status==='published'&&row.visibility==='public'&&!combined.some(g=>g.id===row.id))combined.push(row);
     const leaders = await topPlayers(combined.map((g) => g.id));
     const listed = combined.map((g) => {
+        const puzzle=PUZZLE_GAMES.find(p=>p.contentUrl===g.contentUrl);
         let metadata: Record<string, unknown> = {};
         try { metadata = JSON.parse(g.metadata); } catch {}
         return {
           id: g.id,
-          title: g.title,
-          description: g.description,
-          fileUrl: thumbnailFor(g.fileUrl, g.contentUrl),
-          topPlayers: leaders.get(g.id) ?? [],
+          title: puzzle?.title??g.title,
+          description: puzzle?.description??g.description,
+          fileUrl: puzzle?.fileUrl??thumbnailFor(g.fileUrl, g.contentUrl),
+          topPlayers: puzzle?[]:leaders.get(g.id) ?? [],
           contentUrl: g.contentUrl,
           ownerId: g.owner.id,
           ownerName: g.owner.username,

@@ -1,0 +1,24 @@
+{
+  "tool": "built-in image_gen",
+  "createdAt": "2026-10-11",
+  "assets": [
+    {
+      "file": "assets/library.webp",
+      "prompt": "Use case: illustration-story. Production background asset for a premium hidden-cat game, portrait 2:3. A cozy sunlit library filled with floor-to-ceiling walnut bookshelves, a rolling ladder, reading armchair, stacks of books, potted plants, desk and small objects. Elevated front view, full room visible from ceiling to floor. Beautiful hand-painted storybook illustration with sophisticated soft 2.5D shading, warm terracotta, sage green, dusty teal, cream, golden afternoon light. Richly detailed but clean readable silhouettes, many varied clear ledges and resting spaces for 15 small kitten sprites to be placed later. No cats, no animals, no people, no text, no typography, no watermark. Full bleed single scene, not a collage, not UI."
+    },
+    {
+      "file": "assets/kitchen.webp",
+      "prompt": "Use case: illustration-story. Portrait 2:3 production game background. A whimsical premium cozy country kitchen and pastry workshop, full room from elevated front view, cream cabinetry, terracotta tiles, mint shelves, copper pans, open pantry, bowls, bread baskets, mugs, curtains, houseplants, flour sacks. Warm pastel sage, apricot and pale blue, soft golden daylight. Exquisite hand-painted storybook illustration with tactile 2.5D shading and clearly readable objects. Rich varied details and 15 small resting spaces to place kitten sprites later. No cats or animals or people. No text, letters, watermark or UI. Single full-bleed scene."
+    },
+    {
+      "file": "assets/garden.webp",
+      "prompt": "Use case: illustration-story. Portrait 2:3 production game background, full-bleed single scene. A cozy moonlit walled cottage garden with greenhouse windows, potting benches, terracotta pots, many leafy plants, lavender, watering cans, stone steps, wooden crates and small warm lanterns. Elevated front view showing the full garden. Premium detailed hand-painted storybook illustration, soft tactile 2.5D shading, dusty indigo, sage and warm golden lights, charming and inviting rather than dark or scary. Many readable horizontal ledges and resting spaces for 15 small kitten sprites later. No animals, no cats, no people, no text, no watermark, no UI. Keep the entire scene visible and reasonably bright."
+    }
+  ],
+  "existing": [
+    "assets/greenhouse.webp and assets/cat-sprites.webp copied from existing Little Worlds ImageGen assets; original prompts in public/games/little-worlds/art-prompts.json"
+  ],
+  "documentedBuiltinModel": "gpt-image-2",
+  "modelDocumentation": "https://learn.chatgpt.com/docs/image-generation",
+  "actualUsageAndCharge": null
+}

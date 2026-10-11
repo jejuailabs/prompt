@@ -1,0 +1,10 @@
+{
+  "club": {
+    "file": "club.webp",
+    "model": "gpt-image-2",
+    "quality": "high",
+    "size": "1536x1024",
+    "generatedAt": "2026-10-11",
+    "prompt": "Production illustration for a polished numeric baseball code-breaking puzzle game. A charming little orange tabby cat coach in an ivory baseball uniform with muted forest-green cap, holding a leather baseball glove, beside a large chalkboard scoreboard and a softly lit miniature baseball diamond at dusk. Premium tactile 3D storybook game art, finely modeled fur, fabric stitching, brass stadium lamps, hand-painted warm cream, deep teal, terracotta and golden highlights. Wide cinematic composition 3:2, cat at left third and baseball field across right, clean uncluttered lower half with softly blurred field to accommodate UI overlay. Cozy, witty and sophisticated, not flat clip art, not generic neon. No text, no numbers, no letters, no logos, no watermark, no UI buttons. Full-bleed background asset."
+  }
+}

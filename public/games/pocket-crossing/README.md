@@ -11,6 +11,7 @@
 - 그래픽: 이 패키지의 코드로 생성한 3D 장면·캐릭터·재질. 썸네일 cover.png는 실제 실행 화면입니다.
 - 소리: Web Audio로 합성하며 외부 음원에 의존하지 않습니다.
 - 저장: portable-game:1:pocket-crossing:best / muted / pending-score. 저장소를 쓸 수 없어도 플레이는 가능합니다.
+- 폰트: Pretendard·Fredoka·Cinzel, SIL OFL 1.1. fonts/의 라이선스·출처·해시를 함께 배포합니다.
 - Third party: Three.js 0.172.0 (MIT), vendor/THREE-LICENSE.txt.
 
 ## 호스트 계약 v1

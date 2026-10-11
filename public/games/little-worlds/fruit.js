@@ -84,11 +84,11 @@ function draw(dt){
     const x=clamp(dropX,29+RADII[next],371-RADII[next]);
     ctx.save();ctx.setLineDash([3,6]);ctx.beginPath();ctx.moveTo(x,107);ctx.lineTo(x,538);ctx.strokeStyle='#fff7';ctx.stroke();ctx.restore();
     ctx.globalAlpha=cooldown>0?.4:1;drawSprite(ctx,assets['fruit-sprites'],next,x,83,RADII[next]*2.65);ctx.globalAlpha=1;
-    ctx.fillStyle='#654f39';ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText('좌우로 움직인 뒤 손을 떼면 떨어져요',200,29);
+    ctx.fillStyle='#654f39';ctx.font='9px Pretendard';ctx.textAlign='center';ctx.fillText('좌우로 움직인 뒤 손을 떼면 떨어져요',200,29);
   }
   for(const b of world.bodies){drawSprite(ctx,assets['fruit-sprites'],b.level,b.x,b.y,b.r*2.65*b.scale,3,3,b.angle);}
   for(const p of particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=180*dt;ctx.globalAlpha=Math.max(0,p.life/.7);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;particles=particles.filter(p=>p.life>0);
-  if(danger>0){ctx.fillStyle='#a34736';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('과일이 넘치기 전에 합쳐주세요',200,584);}
+  if(danger>0){ctx.fillStyle='#a34736';ctx.font='11px Pretendard';ctx.textAlign='center';ctx.fillText('과일이 넘치기 전에 합쳐주세요',200,584);}
 }
 async function start(){
   assets=await loadAssets(['fruit-cafe','fruit-sprites']);reset();

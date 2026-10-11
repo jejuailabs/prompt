@@ -3,7 +3,9 @@ import {THREE,rendererFor,lights,studioEnvironment,resize,disposeObject,finalDis
 import {cutStack} from './rules.mjs';
 import {CAT_THICKNESS,createCat,settleCat,animateCat,celebrateCat,catSummary,disposeCats} from './cats.mjs';
 import {createFinale,stepFinale,finaleSummary} from './finale.mjs';
-const rt=new GameRuntime({id:'prism-stack',title:'Prism Stack',category:'THE ART OF TIMING',theme:'',scoreLabel:'FLOORS',metricLabel:'PERFECT STREAK',eyebrow:'ONE MORE LOAF. ONE MORE PURR.',subtitle:'통통 냥이, 포개서 골골골.',description:'두툼하고 포근한 식빵 고양이를 차곡차곡 포개요.\n정중앙이면 기분 좋은 골골골! 한 판이 끝나면\n다 같이 야호! 높이 쌓을수록 더 긴 다이빙이 기다려요.',hint:'탭 · 클릭 · 스페이스로 고양이 놓기<br>가로와 깊이, 두 방향의 타이밍',version:'1.2.0'});
+import {BREEDS,breedForFloor,nextBreed} from './breeds.mjs';
+import {mountSpeedControl,towerBaseSpeed} from './speed.mjs';
+const rt=new GameRuntime({id:'prism-stack',title:'Prism Stack',category:'THE ART OF TIMING',theme:'',scoreLabel:'FLOORS',metricLabel:'PERFECT STREAK',eyebrow:'ONE MORE LOAF. ONE MORE PURR.',subtitle:'통통 냥이, 포개서 골골골.',description:'두툼하고 포근한 식빵 고양이를 차곡차곡 포개요.\n정중앙이면 기분 좋은 골골골! 한 판이 끝나면\n다 같이 야호! 높이 쌓을수록 더 긴 다이빙이 기다려요.',hint:'탭 · 클릭 · 스페이스로 고양이 놓기<br>가로와 깊이, 두 방향의 타이밍',version:'1.3.0'});
 try{
  const renderer=rendererFor(rt,{exposure:.83}),scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-6,6,8,-8,.1,200);
  const env=studioEnvironment(renderer);scene.environment=env.texture;const sun=lights(scene,{intensity:1.55});
@@ -19,11 +21,13 @@ try{
  function block(data,n,y,fragment=false){const group=createCat(data,n,y,{fragment});world.add(group);return group;}
  rt.controls.innerHTML='<button class="wide" data-drop aria-label="고양이 놓기">고양이 놓기 ↓</button>';
  const dropButton=document.querySelector('[data-drop]');
+ const speedControl=mountSpeedControl(rt);
+ const breedLabel=document.createElement('div');breedLabel.className='breed-label';rt.root.append(breedLabel);
  const cheers=document.createElement('div');cheers.className='cat-cheers';cheers.setAttribute('aria-hidden','true');rt.root.append(cheers);
  const bubbles=['야호!','꺄아 ♡','한 번 더!','우와~'].map((text,index)=>{const el=document.createElement('span');el.className='cat-cheer cheer-'+index;el.textContent=text;el.hidden=true;cheers.append(el);return el;});
  const projection=new THREE.Vector3();
  function clear(){for(const child of[...world.children])disposeObject(child);blocks=[];moving=null;falling=[];finale=null;divers=[];ground.visible=false;stage.visible=true;rt.root.classList.remove('cat-diving');for(const bubble of bubbles)bubble.hidden=true;dropButton.disabled=false;dropButton.textContent='고양이 놓기 ↓';}
- function spawn(){axis=height%2?'z':'x';const top=blocks.at(-1),data={x:top.x,z:top.z,width:top.width,depth:top.depth};const start=(height%4<2?-1:1)*5.6;data[axis]+=start;moving={...data,mesh:block(data,height+1,baseY+thickness*(height+1)),origin:top[axis],direction:start<0?1:-1};rt.status.textContent=axis==='x'?'가로로 미끄러지는 냥이':'깊이로 미끄러지는 냥이';}
+ function spawn(){const breed=breedForFloor(height+1),upcoming=nextBreed(height+1);breedLabel.textContent=breed.name+(upcoming?' · '+upcoming.from+'층에 '+upcoming.name:' · 모든 친구 등장!');if(BREEDS.some(b=>b.from===height+1)&&height>0)rt.toast('새 친구! '+breed.name);axis=height%2?'z':'x';const top=blocks.at(-1),data={x:top.x,z:top.z,width:top.width,depth:top.depth};const start=(height%4<2?-1:1)*5.6;data[axis]+=start;moving={...data,mesh:block(data,height+1,baseY+thickness*(height+1)),origin:top[axis],direction:start<0?1:-1};rt.status.textContent=axis==='x'?'가로로 미끄러지는 냥이':'깊이로 미끄러지는 냥이';}
  function reset(){clear();height=0;streak=0;maxStreak=0;score=0;time=0;targetY=viewY=1.1;viewSpan=baseSpan;blocks=[{x:0,z:0,width:4.2,depth:4.2,mesh:block({x:0,z:0,width:4.2,depth:4.2},0,baseY)}];settleCat(blocks[0].mesh,true);rt.metric.textContent='0';spawn();rt.setScore(0,0);frame(0,false);}
  function startFinale(){
   divers=[...blocks.map(b=>b.mesh),moving.mesh];moving=null;
@@ -45,7 +49,7 @@ try{
  const press=e=>{if(!e.isPrimary||e.button!==0)return;e.preventDefault();drop();};
  rt.on(dropButton,'pointerdown',press);rt.on(renderer.domElement,'pointerdown',press);
  rt.on(dropButton,'click',e=>{if(e.detail===0)drop();});
- rt.on(document,'keydown',e=>{if(e.defaultPrevented)return;const button=e.target.closest?.('button');if(rt.state!=='running'||button&&button!==dropButton)return;if(['Space','ArrowDown'].includes(e.code)||e.code==='Enter'&&button===dropButton){e.preventDefault();if(!e.repeat)drop();}});
+ rt.on(document,'keydown',e=>{if(e.defaultPrevented||e.target.closest?.('input,select,[data-cat-speed]'))return;const button=e.target.closest?.('button');if(rt.state!=='running'||button&&button!==dropButton)return;if(['Space','ArrowDown'].includes(e.code)||e.code==='Enter'&&button===dropButton){e.preventDefault();if(!e.repeat)drop();}});
  rt.on(dropButton,'keyup',e=>{if(['Space','Enter'].includes(e.code))e.preventDefault();});
  function applySize(){resize(renderer,camera,rt,viewSpan);}
  const resizeGame=()=>{baseSpan=Math.max(12.4,8.2/(rt.root.clientWidth/rt.root.clientHeight));if(!finale)viewSpan=baseSpan;applySize();};
@@ -58,7 +62,7 @@ try{
     const highest=Math.max(...finale.actors.map(a=>a.position.y));targetY=Math.max(1.1,highest-1.8);
     if(finale.actors.filter(a=>a.landed).length>landedBefore)rt.tone(380+landedBefore%4*80,.075,'sine',.018);
     if(finale.done)finishFinale();
-   }else if(!finale&&moving){const speed=2.0+Math.min(2.5,height*.07);moving[axis]+=moving.direction*speed*dt;if(Math.abs(moving[axis]-moving.origin)>5.7){moving[axis]=moving.origin+Math.sign(moving[axis]-moving.origin)*5.7;moving.direction*=-1;}moving.mesh.position[axis]=moving[axis];}
+   }else if(!finale&&moving){const speed=speedControl.effective(towerBaseSpeed(height));moving[axis]+=moving.direction*speed*dt;if(Math.abs(moving[axis]-moving.origin)>5.7){moving[axis]=moving.origin+Math.sign(moving[axis]-moving.origin)*5.7;moving.direction*=-1;}moving.mesh.position[axis]=moving[axis];}
   }
   for(const p of falling){p.vy-=9*dt;p.mesh.position.y+=p.vy*dt;p.mesh.position.x+=p.vx*dt;p.mesh.position.z+=p.vz*dt;p.mesh.rotation[p.axis==='x'?'z':'x']+=p.spin*dt;p.life-=dt;}falling=falling.filter(p=>{if(p.life>0)return true;disposeObject(p.mesh);return false;});
   if(!finale){animateCat(moving?.mesh,dt,time);for(const b of blocks.slice(-5))animateCat(b.mesh,dt,time);}
@@ -75,5 +79,5 @@ try{
   if(!finale)while(blocks.length>85){const stale=blocks.shift();disposeObject(stale.mesh);}
  }
  reset();disposeObject(moving.mesh);moving=null;for(let i=1;i<=4;i++){const data={x:0,z:0,width:4.2-i*.18,depth:4.2-i*.16};const mesh=block(data,i,baseY+i*thickness);settleCat(mesh,true);blocks.push({...data,mesh});}targetY=viewY=2;rt.status.textContent='두툼한 식빵 냥이, 한 마리 더!';
- rt.ready({reset,frame,render:()=>renderer.render(scene,camera),resize:sizing.update,snapshot:()=>({height,axis,streak,maxStreak,cooldown:0,character:'loaf-cat',thickness,viewY,topCat:catSummary(blocks.at(-1)?.mesh),movingCat:catSummary(moving?.mesh),finale:finaleSummary(finale),divers:divers.map(mesh=>catSummary(mesh)),fragments:falling.map(p=>({hasFace:!!p.mesh.userData.cat,cut:p.mesh.userData.fragment})),top:blocks.at(-1)?{x:blocks.at(-1).x,z:blocks.at(-1).z,width:blocks.at(-1).width,depth:blocks.at(-1).depth}:null,moving:moving?{x:moving.x,z:moving.z,width:moving.width,depth:moving.depth}:null}),dispose:()=>{sizing.disconnect();cheers.remove();env.dispose();baseMat.dispose();finalDispose(scene,renderer);disposeCats();}});
+ rt.ready({reset,frame,render:()=>renderer.render(scene,camera),resize:sizing.update,snapshot:()=>({height,axis,streak,maxStreak,cooldown:0,character:'loaf-cat',thickness,viewY,speedMultiplier:speedControl.multiplier,baseSpeed:towerBaseSpeed(height),effectiveSpeed:speedControl.effective(towerBaseSpeed(height)),nextBreed:breedForFloor(height+1).id,topCat:catSummary(blocks.at(-1)?.mesh),movingCat:catSummary(moving?.mesh),finale:finaleSummary(finale),divers:divers.map(mesh=>catSummary(mesh)),fragments:falling.map(p=>({hasFace:!!p.mesh.userData.cat,cut:p.mesh.userData.fragment})),top:blocks.at(-1)?{x:blocks.at(-1).x,z:blocks.at(-1).z,width:blocks.at(-1).width,depth:blocks.at(-1).depth}:null,moving:moving?{x:moving.x,z:moving.z,width:moving.width,depth:moving.depth}:null}),dispose:()=>{speedControl.dispose();breedLabel.remove();sizing.disconnect();cheers.remove();env.dispose();baseMat.dispose();finalDispose(scene,renderer);disposeCats();}});
 }catch(error){rt.fail(error);}

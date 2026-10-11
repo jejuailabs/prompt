@@ -1,0 +1,2 @@
+import {startCatSample} from "./sample.mjs";
+startCatSample({"id":"cat-flip","title":"냥이 뒤집기","englishTitle":"Loaf Flip","mode":"flip","description":"꾹 누르고 놓으면 식빵 냥이가 빙글! 네 발로 쿠션에 착지해요. 공중에서 탭하면 회전이 줄어들어요. 높아지는 단계와 7종 친구들로 한 번 더 도전!","hint":"눌렀다 놓기 · 공중 탭으로 회전 줄이기<br>스페이스 충전 / 공중 스페이스","controls":"누르고 놓기 = 점프·회전, 공중 탭 = 회전 줄이기, 스페이스 / Esc 지원","palette":"#e5b9c3","tags":["고양이","회전 착지","3D 샘플"],"emoji":"🐱","playHint":"냥이 뒤집기 · 일곱 냥이 샘플","version":"1.0.0","publishedAt":"2026-10-11T09:13:07.108Z","styles":["cats.css"],"sample":true});

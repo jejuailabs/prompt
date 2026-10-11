@@ -112,7 +112,7 @@ function draw() {
     ctx.fillStyle = '#d7ba89'; ctx.fillRect(-2, -length + 2, 2, Math.max(0, length - 3)); ctx.restore();
   }
   cat(catX - offset, catY, phase === 'walking' && !reducedMotion ? Math.sin(clock * 19) * 2 : 0);
-  ctx.fillStyle = '#47685c'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('오늘의 작은 산책  ·  ' + crossings + '번 건넘', 200, 42);
+  ctx.fillStyle = '#47685c'; ctx.font = '12px Pretendard'; ctx.textAlign = 'center'; ctx.fillText('오늘의 작은 산책  ·  ' + crossings + '번 건넘', 200, 42);
   if (phase === 'growing' || (phase === 'ready' && length > 0)) {
     ctx.fillStyle = '#fff9'; ctx.beginPath(); ctx.roundRect(128, 65, 144, 30, 15); ctx.fill(); ctx.fillStyle = '#82694c'; ctx.fillText(Math.floor(length) + ' px', 200, 85);
   }

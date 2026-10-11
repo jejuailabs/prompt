@@ -1,3 +1,4 @@
+import { PUZZLE_GAMES } from '@/lib/puzzle-games.generated';
 /** Existing arcade games shipped with the site, available even when the list API is offline. */
 export const BUNDLED_ARCADE_GAMES = [
   {
@@ -112,7 +113,7 @@ export const BUNDLED_ARCADE_GAMES = [
   },
 ] as const;
 
-export const LOCAL_ARCADE_GAMES = BUNDLED_ARCADE_GAMES.map((game) => ({
+export const LOCAL_ARCADE_GAMES = BUNDLED_ARCADE_GAMES.filter(game=>!PUZZLE_GAMES.some(p=>p.contentUrl===game.contentUrl)).map((game) => ({
   id: 'builtin-' + game.contentUrl.split('/').pop()!.replace('.html', ''),
   title: game.title, description: game.description,
   contentUrl: game.contentUrl, fileUrl: game.fileUrl,

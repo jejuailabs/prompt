@@ -1,0 +1,2 @@
+import {startCatSample} from "./sample.mjs";
+startCatSample({"id":"cat-bounce","title":"냥이 충전 점프","englishTitle":"Pounce Parade","mode":"jump","description":"꾹 누르면 몸이 납작해지고, 손을 떼면 통통! 쿠션 중앙에 착지해 골골 콤보를 이어가요. 단계가 올라갈수록 더 빠르게 진행되고 다음 품종도 만날 수 있어요.","hint":"꾹 눌렀다가 놓기 · 스페이스<br>쿠션 중앙에 착지하면 PERFECT","controls":"꾹 누르고 놓기 / 스페이스 = 충전 점프, Esc = 일시정지","palette":"#b6c5b0","tags":["고양이","충전 점프","3D 샘플"],"emoji":"🐱","playHint":"냥이 충전 점프 · 일곱 냥이 샘플","version":"1.0.0","publishedAt":"2026-10-11T09:13:07.079Z","styles":["cats.css"],"sample":true});

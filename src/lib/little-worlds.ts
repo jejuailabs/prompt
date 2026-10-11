@@ -1,7 +1,9 @@
+import { PUZZLE_GAMES } from '@/lib/puzzle-games.generated';
 import { PORTABLE_GAMES } from '@/lib/portable-games.generated';
 /** Shipped games stay playable before an administrator registers them in the database. */
 const SHIPPED_GAMES = [
   ...PORTABLE_GAMES,
+  ...PUZZLE_GAMES,
   {
     slug: 'skybloom-pinball', title: '스카이블룸 핀볼', englishTitle: 'Sky Bloom', publishedAt: '2026-10-08T01:42:40.000Z',
     description: '점수가 테이블을 키워요! 1,500점에 공방, 5,000점에 상층 정원을 열고 별 세 개로 축제 멀티볼에 도전하는 성장형 3볼 핀볼.',
@@ -53,14 +55,6 @@ const SHIPPED_GAMES = [
     artUrl: '/games/little-worlds/assets/tidelight-harbor.webp',
     tags: ['타이밍', '낚시'], controls: '버튼/스페이스 = 던지기 · 줄 당기기',
     palette: '#426e67', emoji: '🐟', playHint: '한 판 5번의 작은 만남',
-  },
-  {
-    slug: 'hidden-paws', title: '숨은 고양이 찾기', englishTitle: 'Hidden Paws', publishedAt: '2026-10-07T01:23:45.000Z',
-    description: '햇살 드는 온실에 숨은 다섯 고양이를 찾아보세요. 그림을 확대하고 구석구석 작은 발견을 즐기는 게임.',
-    contentUrl: '/games/hidden-paws.html', fileUrl: '/games/thumbs/hidden-paws.png',
-    artUrl: '/games/little-worlds/assets/hidden-greenhouse.webp',
-    tags: ['숨은그림찾기', '힐링'], controls: '탭/클릭 = 찾기, 확대 후 드래그 = 이동, 힌트 3회',
-    palette: '#667447', emoji: '🐈', playHint: '온실 속 다섯 친구 찾기',
   },
   {
     slug:'jelly-garden',title:'젤리 정원',englishTitle:'Jelly Garden',description:'말랑한 젤리들을 모아 톡! 25번의 선택, 큰 무리와 반짝별·주문 보너스로 최고 점수에 도전하는 퍼즐.',

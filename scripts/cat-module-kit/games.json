@@ -1,0 +1,71 @@
+[
+  {
+    "id": "cat-bounce",
+    "title": "냥이 충전 점프",
+    "englishTitle": "Pounce Parade",
+    "mode": "jump",
+    "description": "꾹 누르면 몸이 납작해지고, 손을 떼면 통통! 쿠션 중앙에 착지해 골골 콤보를 이어가요. 단계가 올라갈수록 더 빠르게 진행되고 다음 품종도 만날 수 있어요.",
+    "hint": "꾹 눌렀다가 놓기 · 스페이스<br>쿠션 중앙에 착지하면 PERFECT",
+    "controls": "꾹 누르고 놓기 / 스페이스 = 충전 점프, Esc = 일시정지",
+    "palette": "#b6c5b0",
+    "tags": [
+      "고양이",
+      "충전 점프",
+      "3D 샘플"
+    ],
+    "emoji": "🐱",
+    "playHint": "냥이 충전 점프 · 일곱 냥이 샘플",
+    "version": "1.0.0",
+    "publishedAt": "2026-10-11T09:13:07.079Z",
+    "styles": [
+      "cats.css"
+    ],
+    "sample": true
+  },
+  {
+    "id": "cat-flip",
+    "title": "냥이 뒤집기",
+    "englishTitle": "Loaf Flip",
+    "mode": "flip",
+    "description": "꾹 누르고 놓으면 식빵 냥이가 빙글! 네 발로 쿠션에 착지해요. 공중에서 탭하면 회전이 줄어들어요. 높아지는 단계와 7종 친구들로 한 번 더 도전!",
+    "hint": "눌렀다 놓기 · 공중 탭으로 회전 줄이기<br>스페이스 충전 / 공중 스페이스",
+    "controls": "누르고 놓기 = 점프·회전, 공중 탭 = 회전 줄이기, 스페이스 / Esc 지원",
+    "palette": "#e5b9c3",
+    "tags": [
+      "고양이",
+      "회전 착지",
+      "3D 샘플"
+    ],
+    "emoji": "🐱",
+    "playHint": "냥이 뒤집기 · 일곱 냥이 샘플",
+    "version": "1.0.0",
+    "publishedAt": "2026-10-11T09:13:07.108Z",
+    "styles": [
+      "cats.css"
+    ],
+    "sample": true
+  },
+  {
+    "id": "cat-pack",
+    "title": "냥이 상자 포장",
+    "englishTitle": "Pocket Purrs",
+    "mode": "pack",
+    "description": "모양이 다른 고양이들을 돌려 상자 안에 딱 맞게 포장해요. 모든 친구를 넣으면 새 상자로! 시간이 끝나기 전에 최대한 많이 완성해보세요.",
+    "hint": "고양이 드래그 · 회전 ↻ · 놓기 ✓<br>번호로 선택 / 방향키 / R / Enter",
+    "controls": "드래그 = 배치, 회전 버튼 / R = 회전, 번호·방향키·Enter = 키보드 배치",
+    "palette": "#c7b1d8",
+    "tags": [
+      "고양이",
+      "공간 퍼즐",
+      "3D 샘플"
+    ],
+    "emoji": "🐱",
+    "playHint": "냥이 상자 포장 · 일곱 냥이 샘플",
+    "version": "1.0.0",
+    "publishedAt": "2026-10-11T09:13:07.108Z",
+    "styles": [
+      "cats.css"
+    ],
+    "sample": true
+  }
+]

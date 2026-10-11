@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "id": "cat-pack",
+  "version": "1.0.0",
+  "title": "냥이 상자 포장",
+  "englishTitle": "Pocket Purrs",
+  "entry": "index.html",
+  "thumbnail": "cover.png",
+  "description": "모양이 다른 고양이들을 돌려 상자 안에 딱 맞게 포장해요. 모든 친구를 넣으면 새 상자로! 시간이 끝나기 전에 최대한 많이 완성해보세요.",
+  "controls": "드래그 = 배치, 회전 버튼 / R = 회전, 번호·방향키·Enter = 키보드 배치",
+  "requirements": {
+    "webgl": 2,
+    "modules": true,
+    "server": false,
+    "externalNetwork": false
+  },
+  "dependencies": [
+    {
+      "name": "three",
+      "version": "0.172.0",
+      "license": "MIT",
+      "files": [
+        "vendor/three.module.min.js",
+        "vendor/three.core.min.js",
+        "vendor/THREE-LICENSE.txt"
+      ]
+    },
+    {
+      "name": "Pretendard",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/PretendardVariable.woff2",
+        "fonts/Pretendard-LICENSE.txt"
+      ]
+    },
+    {
+      "name": "Fredoka",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Fredoka.ttf",
+        "fonts/Fredoka-OFL.txt"
+      ]
+    },
+    {
+      "name": "Cinzel",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Cinzel.ttf",
+        "fonts/Cinzel-OFL.txt"
+      ]
+    }
+  ],
+  "contract": {
+    "version": 1,
+    "events": [
+      "game-ready",
+      "game-start",
+      "game-paused",
+      "game-resumed",
+      "game-score",
+      "game-finished"
+    ],
+    "commands": [
+      "start",
+      "pause",
+      "resume",
+      "restart",
+      "resize",
+      "dispose"
+    ]
+  },
+  "presentation": {
+    "id": "cat-pack",
+    "title": "냥이 상자 포장",
+    "englishTitle": "Pocket Purrs",
+    "mode": "pack",
+    "description": "모양이 다른 고양이들을 돌려 상자 안에 딱 맞게 포장해요. 모든 친구를 넣으면 새 상자로! 시간이 끝나기 전에 최대한 많이 완성해보세요.",
+    "hint": "고양이 드래그 · 회전 ↻ · 놓기 ✓<br>번호로 선택 / 방향키 / R / Enter",
+    "controls": "드래그 = 배치, 회전 버튼 / R = 회전, 번호·방향키·Enter = 키보드 배치",
+    "palette": "#c7b1d8",
+    "tags": [
+      "고양이",
+      "공간 퍼즐",
+      "3D 샘플"
+    ],
+    "emoji": "🐱",
+    "playHint": "냥이 상자 포장 · 일곱 냥이 샘플",
+    "version": "1.0.0",
+    "publishedAt": "2026-10-11T09:13:07.108Z",
+    "styles": [
+      "cats.css"
+    ],
+    "sample": true
+  },
+  "files": [
+    "README.md",
+    "SOURCES.md",
+    "assets/breeds/american.png",
+    "assets/breeds/british.png",
+    "assets/breeds/domestic.png",
+    "assets/breeds/maine-coon.png",
+    "assets/breeds/persian.png",
+    "assets/breeds/ragdoll.png",
+    "assets/breeds/siamese.png",
+    "breeds.mjs",
+    "cats.css",
+    "cats.mjs",
+    "cover.png",
+    "fonts/Cinzel-OFL.txt",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka-OFL.txt",
+    "fonts/Fredoka.ttf",
+    "fonts/Pretendard-LICENSE.txt",
+    "fonts/PretendardVariable.woff2",
+    "fonts/README.md",
+    "fonts/game-fonts.css",
+    "fonts/sources.json",
+    "game.css",
+    "game.manifest.json",
+    "game.mjs",
+    "index.html",
+    "runtime.mjs",
+    "sample-rules.mjs",
+    "sample.mjs",
+    "scene.mjs",
+    "speed.mjs",
+    "vendor/THREE-LICENSE.txt",
+    "vendor/three.core.min.js",
+    "vendor/three.module.min.js"
+  ],
+  "assets": [
+    "assets/breeds/american.png",
+    "assets/breeds/british.png",
+    "assets/breeds/domestic.png",
+    "assets/breeds/maine-coon.png",
+    "assets/breeds/persian.png",
+    "assets/breeds/ragdoll.png",
+    "assets/breeds/siamese.png",
+    "cover.png",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka.ttf",
+    "fonts/PretendardVariable.woff2"
+  ]
+}

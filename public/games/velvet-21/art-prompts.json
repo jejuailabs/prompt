@@ -1,0 +1,13 @@
+{
+  "tool": "built-in image_gen",
+  "createdAt": "2026-10-11",
+  "assets": [
+    {
+      "file": "assets/dealer.webp",
+      "prompt": "Use case: stylized-concept. Transparent-background production character illustration for a luxurious single-player blackjack game. One refined adult casino dealer, front-facing upper torso with both forearms and hands resting forward on an invisible table edge, friendly calm confident expression. Dark neatly styled hair, crisp ivory shirt, black tailored waistcoat, small elegant golden bow tie, subtle brass cufflinks. Premium painterly 3D editorial game illustration, anatomically convincing face and hands, soft cinematic warm light, sophisticated emerald and gold ambiance. Centered symmetrical bust composition, fully visible hands, no cropped head. No table, cards, chips, background, casino scenery, text, watermark or frame. Genuine transparent background."
+    }
+  ],
+  "documentedBuiltinModel": "gpt-image-2",
+  "modelDocumentation": "https://learn.chatgpt.com/docs/image-generation",
+  "actualUsageAndCharge": null
+}

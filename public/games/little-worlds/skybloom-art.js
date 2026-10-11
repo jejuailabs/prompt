@@ -79,7 +79,7 @@ function disk(c, x, y, r, color) { c.fillStyle = color; c.beginPath(); c.arc(x, 
 function ellipse(c, x, y, rx, ry, color, angle = 0) { c.fillStyle = color; c.beginPath(); c.ellipse(x, y, rx, ry, angle, 0, TAU); c.fill(); }
 function box(c, x, y, w, h, r, color) { c.fillStyle = color; c.beginPath(); c.roundRect(x, y, w, h, r); c.fill(); }
 function label(c, value, x, y, size = 10, color = '#a8c5ba', spacing = 0) {
-  c.fillStyle = color; c.textAlign = 'center'; c.font = `600 ${size}px "Segoe UI",sans-serif`;
+  c.fillStyle = color; c.textAlign = 'center'; c.font = `600 ${size}px Pretendard`;
   if ('letterSpacing' in c) c.letterSpacing = spacing + 'px'; c.fillText(value, x, y); if ('letterSpacing' in c) c.letterSpacing = '0px';
 }
 function glow(c, x, y, radius, color) {

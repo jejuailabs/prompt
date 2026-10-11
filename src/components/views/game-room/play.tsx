@@ -20,6 +20,7 @@ import { GameScorePanel } from './game-score-panel';
 import { getLocalLittleWorld, LITTLE_WORLDS } from '@/lib/little-worlds';
 import { getLocalArcadeGame } from '@/lib/bundled-arcade-games';
 import GameRoomView from './index';
+import { PUZZLE_GAMES } from '@/lib/puzzle-games.generated';
 import { PORTABLE_GAMES } from '@/lib/portable-games.generated';
 import { GameAdSpace } from './game-ad-space';
 import { useGameAds } from './use-game-ads';
@@ -76,11 +77,13 @@ export default function GamePlayView() {
     enabled: !!gameId,
   });
 
-  const game: GameDetailDTO | undefined = savedGame ?? localGame;
+  const baseGame: GameDetailDTO | undefined = savedGame ?? localGame;
+  const puzzle = PUZZLE_GAMES.find(item=>item.contentUrl===baseGame?.contentUrl);
+  const game = baseGame&&puzzle?{...baseGame,title:puzzle.title,description:puzzle.description,fileUrl:puzzle.fileUrl}:baseGame;
   const isLocalGame = game?.contentUrl?.startsWith('/') ?? false;
   const trackingEnabled = Boolean(game && !game.previewMode && !isLocalPreview);
   const isLittleWorld = LITTLE_WORLDS.some((item) => item.contentUrl === game?.contentUrl);
-  const isPortableGame = isLittleWorld && Boolean(game?.contentUrl?.endsWith('/index.html'));
+  const isPortableGame = isLittleWorld && Boolean(game?.contentUrl?.endsWith('/index.html')||PUZZLE_GAMES.some(p=>p.contentUrl===game?.contentUrl));
   const slug = LITTLE_WORLDS.find(item=>item.contentUrl===game?.contentUrl)?.slug;
   const supportsRewardedContinuation = isPortableGame&&Boolean(PORTABLE_GAMES.find(item=>item.slug===slug)?.rewardedContinue);
   const adBusy = useGameAds({iframeRef,slug,enabled:supportsRewardedContinuation});

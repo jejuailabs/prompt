@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "id": "velvet-21",
+  "version": "1.0.1",
+  "title": "벨벳 블랙잭",
+  "entry": "index.html",
+  "thumbnail": "cover.png",
+  "files": [
+    "README.md",
+    "SOURCES.md",
+    "art-prompts.json",
+    "assets/dealer.webp",
+    "base.css",
+    "cover.png",
+    "fonts/Cinzel-OFL.txt",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka-OFL.txt",
+    "fonts/Fredoka.ttf",
+    "fonts/Pretendard-LICENSE.txt",
+    "fonts/PretendardVariable.woff2",
+    "fonts/README.md",
+    "fonts/game-fonts.css",
+    "fonts/sources.json",
+    "game.css",
+    "game.manifest.json",
+    "game.mjs",
+    "index.html",
+    "rules.mjs",
+    "runtime.mjs"
+  ],
+  "assets": [
+    "assets/dealer.webp",
+    "cover.png",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka.ttf",
+    "fonts/PretendardVariable.woff2"
+  ],
+  "requirements": {
+    "webgl": false,
+    "modules": true,
+    "server": false,
+    "externalNetwork": false
+  },
+  "dependencies": [
+    {
+      "name": "Pretendard",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/PretendardVariable.woff2",
+        "fonts/Pretendard-LICENSE.txt"
+      ]
+    },
+    {
+      "name": "Fredoka",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Fredoka.ttf",
+        "fonts/Fredoka-OFL.txt"
+      ]
+    },
+    {
+      "name": "Cinzel",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Cinzel.ttf",
+        "fonts/Cinzel-OFL.txt"
+      ]
+    }
+  ],
+  "contract": {
+    "version": 1,
+    "events": [
+      "game-ready",
+      "game-start",
+      "game-mode",
+      "game-paused",
+      "game-resumed",
+      "game-score",
+      "game-finished"
+    ],
+    "commands": [
+      "start",
+      "restart",
+      "pause",
+      "resume",
+      "resize",
+      "dispose"
+    ],
+    "scoreFields": [
+      "score",
+      "roundId",
+      "durationMs",
+      "rankingKey"
+    ]
+  },
+  "presentation": {
+    "version": "1.0.1",
+    "publishedAt": "2026-10-11T09:20:00.000Z",
+    "engine": "dom",
+    "id": "velvet-21",
+    "title": "벨벳 블랙잭",
+    "englishTitle": "Velvet Twenty One",
+    "description": "에메랄드 펠트와 황동 장식의 프라이빗 테이블. 가상 칩 1,000으로 3,000 달성 또는 딜러 파산에 도전하는 본격 블랙잭.",
+    "controls": "칩과 행동 버튼 클릭/탭, H 히트, S 스탠드, D 더블, P 스플릿",
+    "tags": [
+      "블랙잭",
+      "목표 달성"
+    ],
+    "palette": "#245747",
+    "emoji": "♠️",
+    "playHint": "목표 3,000칩 · 딜러와 30핸드 승부",
+    "rankingKey": "target"
+  }
+}

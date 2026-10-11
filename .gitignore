@@ -62,3 +62,6 @@ server.log
 __pycache__/
 *.pyc
 /tmp/
+
+# Private per-request billing audit and source generation outputs
+/output/imagegen/

@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "code-ball",
+  "version": "1.1.0",
+  "title": "코드볼 · 숫자영문 야구",
+  "entry": "index.html",
+  "thumbnail": "cover.png",
+  "files": [
+    "README.md",
+    "SOURCES.md",
+    "assets/art-prompts.json",
+    "assets/club.webp",
+    "base.css",
+    "cover.png",
+    "fonts/Cinzel-OFL.txt",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka-OFL.txt",
+    "fonts/Fredoka.ttf",
+    "fonts/Pretendard-LICENSE.txt",
+    "fonts/PretendardVariable.woff2",
+    "fonts/README.md",
+    "fonts/game-fonts.css",
+    "fonts/sources.json",
+    "game.css",
+    "game.manifest.json",
+    "game.mjs",
+    "index.html",
+    "input.mjs",
+    "rules.mjs",
+    "runtime.mjs"
+  ],
+  "assets": [
+    "assets/club.webp",
+    "cover.png",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka.ttf",
+    "fonts/PretendardVariable.woff2"
+  ],
+  "requirements": {
+    "webgl": false,
+    "modules": true,
+    "server": false,
+    "externalNetwork": false
+  },
+  "dependencies": [
+    {
+      "name": "Pretendard",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/PretendardVariable.woff2",
+        "fonts/Pretendard-LICENSE.txt"
+      ]
+    },
+    {
+      "name": "Fredoka",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Fredoka.ttf",
+        "fonts/Fredoka-OFL.txt"
+      ]
+    },
+    {
+      "name": "Cinzel",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Cinzel.ttf",
+        "fonts/Cinzel-OFL.txt"
+      ]
+    }
+  ],
+  "contract": {
+    "version": 1,
+    "events": [
+      "game-ready",
+      "game-start",
+      "game-mode",
+      "game-paused",
+      "game-resumed",
+      "game-score",
+      "game-finished"
+    ],
+    "commands": [
+      "start",
+      "restart",
+      "pause",
+      "resume",
+      "resize",
+      "dispose"
+    ],
+    "scoreFields": [
+      "score",
+      "roundId",
+      "durationMs",
+      "rankingKey"
+    ]
+  },
+  "presentation": {
+    "version": "1.1.0",
+    "publishedAt": "2026-10-11T09:20:00.000Z",
+    "engine": "dom",
+    "id": "code-ball",
+    "title": "코드볼 · 숫자영문 야구",
+    "englishTitle": "Code Ball",
+    "description": "야구장 고양이 코치와 숫자·영문자 3~6자리 코드를 풀어요. 순차 입력·자동 비우기·추리 기록·후보 메모로 연속 도전과 오늘의 경기!",
+    "controls": "기호 순서대로 클릭/탭/키보드, Enter 판독, Backspace 지우기, Delete 전체 지우기, 우클릭·메모 후보 표시",
+    "tags": [
+      "숫자·영문자 야구",
+      "추리 경쟁"
+    ],
+    "palette": "#305447",
+    "emoji": "⚾",
+    "playHint": "3~6자리 · 추리로 홈런 치기",
+    "rankingKey": "arcade-number-ladder"
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "id": "cat-bounce",
+  "version": "1.0.0",
+  "title": "냥이 충전 점프",
+  "englishTitle": "Pounce Parade",
+  "entry": "index.html",
+  "thumbnail": "cover.png",
+  "description": "꾹 누르면 몸이 납작해지고, 손을 떼면 통통! 쿠션 중앙에 착지해 골골 콤보를 이어가요. 단계가 올라갈수록 더 빠르게 진행되고 다음 품종도 만날 수 있어요.",
+  "controls": "꾹 누르고 놓기 / 스페이스 = 충전 점프, Esc = 일시정지",
+  "requirements": {
+    "webgl": 2,
+    "modules": true,
+    "server": false,
+    "externalNetwork": false
+  },
+  "dependencies": [
+    {
+      "name": "three",
+      "version": "0.172.0",
+      "license": "MIT",
+      "files": [
+        "vendor/three.module.min.js",
+        "vendor/three.core.min.js",
+        "vendor/THREE-LICENSE.txt"
+      ]
+    },
+    {
+      "name": "Pretendard",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/PretendardVariable.woff2",
+        "fonts/Pretendard-LICENSE.txt"
+      ]
+    },
+    {
+      "name": "Fredoka",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Fredoka.ttf",
+        "fonts/Fredoka-OFL.txt"
+      ]
+    },
+    {
+      "name": "Cinzel",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Cinzel.ttf",
+        "fonts/Cinzel-OFL.txt"
+      ]
+    }
+  ],
+  "contract": {
+    "version": 1,
+    "events": [
+      "game-ready",
+      "game-start",
+      "game-paused",
+      "game-resumed",
+      "game-score",
+      "game-finished"
+    ],
+    "commands": [
+      "start",
+      "pause",
+      "resume",
+      "restart",
+      "resize",
+      "dispose"
+    ]
+  },
+  "presentation": {
+    "id": "cat-bounce",
+    "title": "냥이 충전 점프",
+    "englishTitle": "Pounce Parade",
+    "mode": "jump",
+    "description": "꾹 누르면 몸이 납작해지고, 손을 떼면 통통! 쿠션 중앙에 착지해 골골 콤보를 이어가요. 단계가 올라갈수록 더 빠르게 진행되고 다음 품종도 만날 수 있어요.",
+    "hint": "꾹 눌렀다가 놓기 · 스페이스<br>쿠션 중앙에 착지하면 PERFECT",
+    "controls": "꾹 누르고 놓기 / 스페이스 = 충전 점프, Esc = 일시정지",
+    "palette": "#b6c5b0",
+    "tags": [
+      "고양이",
+      "충전 점프",
+      "3D 샘플"
+    ],
+    "emoji": "🐱",
+    "playHint": "냥이 충전 점프 · 일곱 냥이 샘플",
+    "version": "1.0.0",
+    "publishedAt": "2026-10-11T09:13:07.079Z",
+    "styles": [
+      "cats.css"
+    ],
+    "sample": true
+  },
+  "files": [
+    "README.md",
+    "SOURCES.md",
+    "assets/breeds/american.png",
+    "assets/breeds/british.png",
+    "assets/breeds/domestic.png",
+    "assets/breeds/maine-coon.png",
+    "assets/breeds/persian.png",
+    "assets/breeds/ragdoll.png",
+    "assets/breeds/siamese.png",
+    "breeds.mjs",
+    "cats.css",
+    "cats.mjs",
+    "cover.png",
+    "fonts/Cinzel-OFL.txt",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka-OFL.txt",
+    "fonts/Fredoka.ttf",
+    "fonts/Pretendard-LICENSE.txt",
+    "fonts/PretendardVariable.woff2",
+    "fonts/README.md",
+    "fonts/game-fonts.css",
+    "fonts/sources.json",
+    "game.css",
+    "game.manifest.json",
+    "game.mjs",
+    "index.html",
+    "runtime.mjs",
+    "sample-rules.mjs",
+    "sample.mjs",
+    "scene.mjs",
+    "speed.mjs",
+    "vendor/THREE-LICENSE.txt",
+    "vendor/three.core.min.js",
+    "vendor/three.module.min.js"
+  ],
+  "assets": [
+    "assets/breeds/american.png",
+    "assets/breeds/british.png",
+    "assets/breeds/domestic.png",
+    "assets/breeds/maine-coon.png",
+    "assets/breeds/persian.png",
+    "assets/breeds/ragdoll.png",
+    "assets/breeds/siamese.png",
+    "cover.png",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka.ttf",
+    "fonts/PretendardVariable.woff2"
+  ]
+}

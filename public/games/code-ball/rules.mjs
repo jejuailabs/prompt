@@ -1,0 +1,4 @@
+import {shuffle} from './runtime.mjs';
+export function feedback(secret,guess){let strikes=0;for(let i=0;i<secret.length;i++)if(secret[i]===guess[i])strikes++;const count=new Map();for(const c of secret)count.set(c,(count.get(c)||0)+1);let matches=0;for(const c of guess){if(count.get(c)>0){matches++;count.set(c,count.get(c)-1);}}return{strikes,balls:matches-strikes};}
+export function makePuzzle({letters=false,length=3,full=false,rng=Math.random}){const symbols=letters?'ABCDEFGHIJKLMNOPQRSTUVWXYZ':'0123456789';const size=letters&&!full?Math.min(26,length*2+2):symbols.length;const pool=shuffle(symbols,rng).slice(0,size).sort();return{pool,secret:shuffle(pool,rng).slice(0,length)};}
+export function solveScore(length,attempts,seconds,streak){return length*250+Math.max(0,10-attempts)*75+Math.min(10,streak)*100+Math.max(0,120-Math.floor(seconds))*2;}

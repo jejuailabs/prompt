@@ -1,0 +1,4 @@
+
+# Preserve upstream font license files verbatim.
+public/games/**/fonts/*-OFL.txt -whitespace
+public/games/**/fonts/*-LICENSE.txt -whitespace

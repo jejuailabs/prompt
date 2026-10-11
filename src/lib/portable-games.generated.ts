@@ -5,7 +5,7 @@ export const PORTABLE_GAMES = [
     "title": "프리즘 타워",
     "englishTitle": "Prism Stack",
     "publishedAt": "2026-10-11T01:32:10.000Z",
-    "description": "두툼하고 둥근 식빵 고양이를 두 방향에서 쌓는 3D 타이밍 게임. 정중앙이면 골골골! 한 판이 끝나면 쌓인 냥이들이 웃음·윙크·환호 표정으로 다 같이 다이빙하며, 높이 쌓을수록 더 긴 낙하와 통통 튀는 착지를 즐깁니다.",
+    "description": "7종 식빵 고양이를 높이에 따라 만나며 쌓는 3D 타이밍 게임. 기본 속도는 층수에 따라 올라가고 사용자 배율은 1–2배만 허용합니다. 한 판이 끝나면 냥이들이 다 함께 즐거운 다이빙!",
     "contentUrl": "/games/prism-stack/index.html",
     "fileUrl": "/games/prism-stack/cover.png",
     "artUrl": "/games/prism-stack/cover.png",
@@ -13,13 +13,79 @@ export const PORTABLE_GAMES = [
       "3D 고양이 쌓기",
       "두 축 타이밍"
     ],
-    "controls": "탭/클릭/스페이스 = 블록 놓기, Esc = 일시정지",
+    "controls": "탭/클릭/스페이스 = 놓기, 속도 1–2배, Esc = 일시정지",
     "palette": "#ada1d1",
     "emoji": "🐱",
     "playHint": "통통 냥이 탑, 다 같이 야호!",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.2.0"
+    "moduleVersion": "1.3.0"
+  },
+  {
+    "slug": "cat-bounce",
+    "title": "냥이 충전 점프",
+    "englishTitle": "Pounce Parade",
+    "publishedAt": "2026-10-11T09:13:07.079Z",
+    "description": "꾹 누르면 몸이 납작해지고, 손을 떼면 통통! 쿠션 중앙에 착지해 골골 콤보를 이어가요. 단계가 올라갈수록 더 빠르게 진행되고 다음 품종도 만날 수 있어요.",
+    "contentUrl": "/games/cat-bounce/index.html",
+    "fileUrl": "/games/cat-bounce/cover.png",
+    "artUrl": "/games/cat-bounce/cover.png",
+    "tags": [
+      "고양이",
+      "충전 점프",
+      "3D 샘플"
+    ],
+    "controls": "꾹 누르고 놓기 / 스페이스 = 충전 점프, Esc = 일시정지",
+    "palette": "#b6c5b0",
+    "emoji": "🐱",
+    "playHint": "냥이 충전 점프 · 일곱 냥이 샘플",
+    "portable": true,
+    "rewardedContinue": false,
+    "moduleVersion": "1.0.0"
+  },
+  {
+    "slug": "cat-flip",
+    "title": "냥이 뒤집기",
+    "englishTitle": "Loaf Flip",
+    "publishedAt": "2026-10-11T09:13:07.108Z",
+    "description": "꾹 누르고 놓으면 식빵 냥이가 빙글! 네 발로 쿠션에 착지해요. 공중에서 탭하면 회전이 줄어들어요. 높아지는 단계와 7종 친구들로 한 번 더 도전!",
+    "contentUrl": "/games/cat-flip/index.html",
+    "fileUrl": "/games/cat-flip/cover.png",
+    "artUrl": "/games/cat-flip/cover.png",
+    "tags": [
+      "고양이",
+      "회전 착지",
+      "3D 샘플"
+    ],
+    "controls": "누르고 놓기 = 점프·회전, 공중 탭 = 회전 줄이기, 스페이스 / Esc 지원",
+    "palette": "#e5b9c3",
+    "emoji": "🐱",
+    "playHint": "냥이 뒤집기 · 일곱 냥이 샘플",
+    "portable": true,
+    "rewardedContinue": false,
+    "moduleVersion": "1.0.0"
+  },
+  {
+    "slug": "cat-pack",
+    "title": "냥이 상자 포장",
+    "englishTitle": "Pocket Purrs",
+    "publishedAt": "2026-10-11T09:13:07.108Z",
+    "description": "모양이 다른 고양이들을 돌려 상자 안에 딱 맞게 포장해요. 모든 친구를 넣으면 새 상자로! 시간이 끝나기 전에 최대한 많이 완성해보세요.",
+    "contentUrl": "/games/cat-pack/index.html",
+    "fileUrl": "/games/cat-pack/cover.png",
+    "artUrl": "/games/cat-pack/cover.png",
+    "tags": [
+      "고양이",
+      "공간 퍼즐",
+      "3D 샘플"
+    ],
+    "controls": "드래그 = 배치, 회전 버튼 / R = 회전, 번호·방향키·Enter = 키보드 배치",
+    "palette": "#c7b1d8",
+    "emoji": "🐱",
+    "playHint": "냥이 상자 포장 · 일곱 냥이 샘플",
+    "portable": true,
+    "rewardedContinue": false,
+    "moduleVersion": "1.0.0"
   },
   {
     "slug": "neon-slope",

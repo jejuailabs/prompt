@@ -81,7 +81,7 @@ function draw() {
   ctx.restore();
   for (let i = 0; i < recipe.toppings.length; i++) topping(recipe.toppings[i] + rotation, i % 2 ? '#c99bdb' : '#7cbea9');
   if (recipe.berryAngle !== null) strawberry(recipe.berryAngle + rotation);
-  ctx.fillStyle = '#755344'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('완성 도넛 ' + finishedDonuts + '  ·  남은 토핑 ' + Math.max(0, recipe.goal - placed), 200, 40);
+  ctx.fillStyle = '#755344'; ctx.font = '11px Pretendard'; ctx.textAlign = 'center'; ctx.fillText('완성 도넛 ' + finishedDonuts + '  ·  남은 토핑 ' + Math.max(0, recipe.goal - placed), 200, 40);
   ctx.save(); ctx.strokeStyle = '#b98c7266'; ctx.setLineDash([3, 7]); ctx.beginPath(); ctx.moveTo(200, 422); ctx.lineTo(200, 505); ctx.stroke(); ctx.restore();
   if (!shell.finished && !transition) {
     const y = flying ? 532 - flying.progress * 185 : 532;
@@ -89,7 +89,7 @@ function draw() {
     ctx.fillStyle = '#91c8b6'; ctx.beginPath(); ctx.roundRect(196, y - 30, 8, 45, 4); ctx.fill(); ctx.fillStyle = '#fff9'; ctx.fillRect(197, y - 26, 2, 30);
   }
   for (const p of particles) { ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill(); } ctx.globalAlpha = 1;
-  if (transition) { ctx.font = 'bold 24px Georgia'; ctx.fillStyle = '#a06877'; ctx.fillText('SWEET! +100', 200, 457); }
+  if (transition) { ctx.font = 'bold 24px Pretendard'; ctx.fillStyle = '#a06877'; ctx.fillText('SWEET! +100', 200, 457); }
 }
 canvas.addEventListener('pointerdown', event => { event.preventDefault(); shoot(); });
 $('[data-action]').onclick = shoot; $('[data-end]').onclick = end;

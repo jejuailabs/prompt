@@ -221,6 +221,7 @@ export default function GameRoomView() {
             ))}
           </div>
         </div>
+        <p className="mb-2 text-[11px] text-muted-foreground">지뢰찾기 성공 시간은 해당 게임의 난이도별 랭킹에서 확인하세요.</p>
         {leaderboardError ? <p role="status" className="text-sm text-muted-foreground py-3">랭킹을 불러오지 못했어요.</p> : leaderboardLoading ? <p className="text-sm text-muted-foreground py-3">랭킹을 불러오는 중이에요.</p> : lbData?.rankings && lbData.rankings.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
             {lbData.rankings.map((r) => (

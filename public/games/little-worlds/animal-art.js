@@ -5,7 +5,7 @@ export function round(c, x, y, w, h, r, color) {
   c.fillStyle = color; c.beginPath(); c.roundRect(x, y, w, h, r); c.fill();
 }
 export function text(c, value, x, y, size = 12, color = '#79584b', weight = 600) {
-  c.fillStyle = color; c.font = `${weight} ${size}px "Segoe UI",sans-serif`; c.textAlign = 'center'; c.fillText(value, x, y);
+  c.fillStyle = color; c.font = `${weight} ${size}px Pretendard`; c.textAlign = 'center'; c.fillText(value, x, y);
 }
 export function hamster(c, x, y, size = 1, angle = 0, happy = false) {
   c.save(); c.translate(x, y); c.rotate(angle); c.scale(size, size);

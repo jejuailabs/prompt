@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "id": "minesweeper",
+  "version": "1.0.1",
+  "title": "메종 마인 · 지뢰찾기",
+  "entry": "index.html",
+  "thumbnail": "cover.png",
+  "files": [
+    "README.md",
+    "SOURCES.md",
+    "base.css",
+    "cover.png",
+    "fonts/Cinzel-OFL.txt",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka-OFL.txt",
+    "fonts/Fredoka.ttf",
+    "fonts/Pretendard-LICENSE.txt",
+    "fonts/PretendardVariable.woff2",
+    "fonts/README.md",
+    "fonts/game-fonts.css",
+    "fonts/sources.json",
+    "game.css",
+    "game.manifest.json",
+    "game.mjs",
+    "index.html",
+    "rules.mjs",
+    "runtime.mjs"
+  ],
+  "assets": [
+    "cover.png",
+    "fonts/Cinzel.ttf",
+    "fonts/Fredoka.ttf",
+    "fonts/PretendardVariable.woff2"
+  ],
+  "requirements": {
+    "webgl": false,
+    "modules": true,
+    "server": false,
+    "externalNetwork": false
+  },
+  "dependencies": [
+    {
+      "name": "Pretendard",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/PretendardVariable.woff2",
+        "fonts/Pretendard-LICENSE.txt"
+      ]
+    },
+    {
+      "name": "Fredoka",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Fredoka.ttf",
+        "fonts/Fredoka-OFL.txt"
+      ]
+    },
+    {
+      "name": "Cinzel",
+      "license": "OFL-1.1",
+      "files": [
+        "fonts/Cinzel.ttf",
+        "fonts/Cinzel-OFL.txt"
+      ]
+    }
+  ],
+  "contract": {
+    "version": 1,
+    "events": [
+      "game-ready",
+      "game-start",
+      "game-mode",
+      "game-paused",
+      "game-resumed",
+      "game-score",
+      "game-finished"
+    ],
+    "commands": [
+      "start",
+      "restart",
+      "pause",
+      "resume",
+      "resize",
+      "dispose"
+    ],
+    "scoreFields": [
+      "score",
+      "roundId",
+      "durationMs",
+      "rankingKey"
+    ]
+  },
+  "presentation": {
+    "version": "1.0.1",
+    "publishedAt": "2026-10-11T09:20:00.000Z",
+    "engine": "dom",
+    "id": "minesweeper",
+    "title": "메종 마인 · 지뢰찾기",
+    "englishTitle": "Maison Mine",
+    "description": "고전 지뢰찾기를 세련된 테이블에서. 초급·중급·고급과 사용자 지정, 좌우 동시·가운데·1.5클릭까지 지원하며 성공 시간으로 경쟁해요.",
+    "controls": "왼쪽 열기, 오른쪽 깃발·물음표, 좌우 동시/가운데/Shift+왼쪽 주변 열기, 터치 길게 누르기 또는 깃발 모드",
+    "tags": [
+      "지뢰찾기",
+      "시간 랭킹"
+    ],
+    "palette": "#a3b99d",
+    "emoji": "⚑",
+    "playHint": "고전 조작 그대로 · 세 난이도 기록 경쟁",
+    "legacyUrl": "/games/minesweeper.html",
+    "rankingKey": "beginner"
+  }
+}
