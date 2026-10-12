@@ -81,7 +81,7 @@ export const storage: LandingStorage = {
       bucket: BUCKET,
       path,
       token: data.token,
-      endpoint: "https://" + host + "/storage/v1/upload/resumable",
+      endpoint: "https://" + host + "/storage/v1/upload/resumable/sign",
       publicKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     };
   },

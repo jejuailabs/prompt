@@ -52,16 +52,20 @@ test("real PostgreSQL migration, owner queries, atomic name preservation and pri
     require: (name: string) => {
       if (name === "server-only") return {};
       if (name === "@/lib/db") return { db: fakeDb };
-      if (name === "@/lib/supabase/admin") return { supaAdmin: {} };
+      if (name === "@/lib/supabase/admin") return { supaAdmin: { storage: { from: (bucket: string) => ({ createSignedUploadUrl: async (path: string, options: {upsert: boolean}) => { assert.equal(bucket,"landing-pages"); assert.equal(options.upsert,false); return {data:{token:"test-signed-capability",path},error:null}; } }) } } };
       if (name === "./errors") return { LandingError };
       if (name === "./types") return { LIMITS };
       throw Error("Unexpected import " + name);
     },
     Buffer,
     URL,
-    process,
+    process: {env:{NEXT_PUBLIC_SUPABASE_URL:"https://exampleproject.supabase.co",NEXT_PUBLIC_SUPABASE_ANON_KEY:"test-public-key"}},
     Date,
   });
+  const upload=await exports.storage.signedUpload("owner/page/version/upload.zip");
+  assert.equal(upload.endpoint,"https://exampleproject.storage.supabase.co/storage/v1/upload/resumable/sign");
+  assert.equal(upload.token,"test-signed-capability");
+  assert.equal(upload.path,"owner/page/version/upload.zip");
   const repository = exports.repository,
     meta = {
       schema: 1,
