@@ -1,4 +1,5 @@
 import "server-only";
+import { objectKey } from "./object-key";
 import { db } from "@/lib/db";
 import { supaAdmin } from "@/lib/supabase/admin";
 import { LandingError } from "./errors";
@@ -86,9 +87,11 @@ export const storage: LandingStorage = {
     };
   },
   async read(path, maxBytes) {
-    const signed = await supaAdmin.storage
+    let signed = await supaAdmin.storage
       .from(BUCKET)
-      .createSignedUrl(path, 60);
+      .createSignedUrl(objectKey(path), 60);
+    // Read versions saved before the provider-key mapping was introduced.
+    if (signed.error && objectKey(path) !== path) signed = await supaAdmin.storage.from(BUCKET).createSignedUrl(path, 60);
     if (signed.error || !signed.data)
       throw new LandingError("저장된 파일을 읽을 수 없습니다.", 503);
     const r = await fetch(signed.data.signedUrl, {
@@ -123,11 +126,12 @@ export const storage: LandingStorage = {
   async put(path, data, contentType) {
     const r = await supaAdmin.storage
       .from(BUCKET)
-      .upload(path, data, { contentType, upsert: false, cacheControl: "0" });
+      .upload(objectKey(path), data, { contentType, upsert: false, cacheControl: "0" });
     if (r.error)
       throw new LandingError("압축 파일의 리소스를 저장하지 못했습니다.", 503);
   },
   async remove(paths) {
+    paths = [...new Set(paths.flatMap(path => { const key = objectKey(path); return key === path ? [path] : /^[\x20-\x7e]+$/.test(path) ? [key, path] : [key]; }))];
     for (let at = 0; at < paths.length; at += 100) {
       const r = await supaAdmin.storage
         .from(BUCKET)

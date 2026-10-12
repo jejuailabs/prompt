@@ -6,6 +6,7 @@ import ts from "typescript";
 import { randomUUID } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
 import { LIMITS } from "../src/modules/landing-pages/types";
+import { objectKey } from "../src/modules/landing-pages/object-key";
 import { LandingError } from "../src/modules/landing-pages/errors";
 test("real PostgreSQL migration, owner queries, atomic name preservation and private ACL", async () => {
   const pg = new PGlite();
@@ -53,6 +54,7 @@ test("real PostgreSQL migration, owner queries, atomic name preservation and pri
       if (name === "server-only") return {};
       if (name === "@/lib/db") return { db: fakeDb };
       if (name === "@/lib/supabase/admin") return { supaAdmin: { storage: { from: (bucket: string) => ({ createSignedUploadUrl: async (path: string, options: {upsert: boolean}) => { assert.equal(bucket,"landing-pages"); assert.equal(options.upsert,false); return {data:{token:"test-signed-capability",path},error:null}; } }) } } };
+      if (name === "./object-key") return {objectKey};
       if (name === "./errors") return { LandingError };
       if (name === "./types") return { LIMITS };
       throw Error("Unexpected import " + name);
@@ -136,4 +138,15 @@ test("real PostgreSQL migration, owner queries, atomic name preservation and pri
   assert.equal(await repository.delete(saved), true);
   assert.equal(await repository.get(record.id), null);
   await pg.close();
+});
+
+test("provider object keys preserve logical Unicode paths and bound physical key size", () => {
+ const prefix="owner/page/version/files/";
+ const logical=prefix+"폴더 한 단계/assets/우리 사진.svg";
+ const key=objectKey(logical);
+ assert.match(key,/^owner\/page\/version\/files\/[a-f0-9]{64}$/);
+ assert.equal(objectKey(logical),key);
+ assert.notEqual(objectKey(prefix+"폴더 한 단계/assets/다른 사진.svg"),key);
+ assert.equal(objectKey("owner/page/version/upload.zip"),"owner/page/version/upload.zip");
+ assert.equal(objectKey(prefix+"한".repeat(200)+".png").length,prefix.length+64);
 });
