@@ -401,4 +401,4 @@ created_at    timestamptz
 
 ## 랜딩페이지 비공개 저장 — 2026-10-11
 
-기존 public.Artifact의 RLS 비활성 상태를 변경하지 않고, 개인 업로드는 Data API에 노출하지 않는 landing_private.pages에 저장한다. 기존 PostgreSQL/Prisma 연결·Supabase Auth 소유자를 재사용한다. 검토용 SQL은 supabase/migrations/20261011102243_landing_pages_private_storage.sql이며 운영 적용 전이다. 파일은 전용 비공개 Storage 버킷, 제공은 별도 쿠키 사이트의 서명된 sandbox 경로를 사용한다. 계약·제한·검증과 적용 순서는 [랜딩페이지 문서](landing-pages.md)를 따른다.
+기존 public.Artifact의 RLS 비활성 상태를 변경하지 않고, 개인 업로드는 Data API에 노출하지 않는 landing_private.pages에 저장한다. 기존 PostgreSQL/Prisma 연결·Supabase Auth 소유자를 재사용한다. 검토용 SQL은 supabase/migrations/20261011102243_landing_pages_private_storage.sql이며 2026-10-12 운영에 적용했다. 파일은 전용 비공개 Storage 버킷, 제공은 별도 쿠키 사이트의 서명된 sandbox 경로를 사용한다. 계약·제한·검증과 적용 순서는 [랜딩페이지 문서](landing-pages.md)를 따른다.

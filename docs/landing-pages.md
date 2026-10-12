@@ -18,11 +18,11 @@
 
 기존 public.Artifact는 읽기 검사에서 RLS=false/정책 없음이 확인됐다. 개인 페이지를 여기에 추가하거나 기존 전체 아티팩트 권한을 바꾸지 않고, `landing_private.pages`를 별도로 사용한다. 제목·소유자·설명·등록일은 컬럼, 진입점·저장 prefix·파일 목록·상태·버전·미리보기 세션은 JSONB에 영구 저장한다. 기존 Prisma 연결로 매개변수 SQL을 사용하며 공개 Data API에 이 스키마를 추가하지 않는다.
 
-객체는 비공개 Supabase `landing-pages` 버킷에 보관한다.
+객체는 비공개 Supabase `landing-pages` 버킷에 보관한다. 원래 폴더 구조·파일명·파일 바이트는 원본 ZIP과 DB manifest에 유지하고 미리보기 URL도 원래 경로를 사용한다. Supabase 객체 API의 한글 키 제한 때문에 내부 객체 키만 경로 해시로 매핑한다. 이전 원래 키로 저장한 버전도 읽기·삭제가 가능하다.
 
 ```
 <owner UUID>/<page UUID>/<version UUID>/upload.zip
-<owner UUID>/<page UUID>/<version UUID>/files/<ZIP 안의 원래 경로>
+<owner UUID>/<page UUID>/<version UUID>/files/<원래 경로의 SHA-256 키>
 ```
 
 서버에서 검증한 로그인 사용자만 목록·수정·교체·삭제·미리보기 권한 발급을 할 수 있다. 다른 사용자의 ID 요청은 404이다. 공개 공유·공개 갤러리 등록·영구 공개 URL은 제공하지 않는다.
@@ -62,7 +62,7 @@ Supabase의 HTML 객체 URL을 iframe에 직접 넣지 않는다. 서버가 비�
 테스트 ZIP: `tmp/landing-qa/남원 기념행사.zip`.
 12개 파일, ZIP 1,862,101바이트 / 해제 1,904,331바이트. 원본 파일을 편집·이동·삭제하지 않았다.
 
-## 운영 적용 전에 필요한 항목 — 아직 적용 안 함
+## 운영 적용 절차 — 2026-10-12 적용 완료
 
 1. `supabase/migrations/20261011102243_landing_pages_private_storage.sql` 검토·적용. 비공개 schema/table, auth.users FK, 인덱스/RLS, anon/authenticated 접근 취소, service_role 권한, 비공개 50MiB 버킷, 기존 광범위 Storage 정책의 우회 차단을 포함한다. public.Artifact를 변경하지 않는다.
 2. 서버 DB 계정이 새 비공개 스키마를 사용할 권한이 있는지 확인한다. 기본 PostgreSQL 소유자 또는 권한을 받은 서버 역할을 사용한다. RLS/Storage advisor와 실제 일반 사용자 접근도 적용 뒤 다시 확인한다.
@@ -76,7 +76,7 @@ LANDING_PREVIEW_SECRET=<암호학적으로 무작위인 32바이트 이상 비�
 ```
 
 기존 DATABASE_URL·NEXT_PUBLIC_SUPABASE_URL·NEXT_PUBLIC_SUPABASE_ANON_KEY·SUPABASE_SERVICE_ROLE_KEY를 재사용한다. 미리보기 origin은 경로/쿼리 없이 지정한다. 두 origin은 같은 코드·DB·서명 키를 사용한다. 미리보기 호스트의 앱/인증/API/정적 파일 접근은 미리보기 경로 외에는 거부한다.
-5. 실제 Supabase signed TUS, 한글/공백 객체 키, 비공개 HTML 다운로드 후 제공, 정책 적용, 운영 Google 로그인, HTTPS/커스텀 도메인을 확인한 뒤 push·배포한다. 이 단계는 이번 로컬 검증에 포함하지 않았다.
+5. 실제 Supabase signed TUS, 한글/공백 객체 키, 비공개 HTML 다운로드 후 제공, 정책 적용, 운영 Google 로그인, HTTPS/커스텀 도메인을 확인한 뒤 push·배포한다. 최초 로컬 검증에는 포함하지 않았으며, 아래 2026-10-12 운영 검증 결과를 참조한다.
 
 ## 로컬 검증과 재실행
 
@@ -92,7 +92,7 @@ node scripts/landing-pages/browser-qa.mjs
 
 로컬 PostgreSQL(PGlite)은 운영 SQL과 실제 서버 repository 쿼리·FK·ACL·RLS·기존 버킷 정책 보존을 검증한다. 브라우저 검증은 실제 UI→직접 업로드→서버 DB/객체 저장→분리 출처의 HTML을 사용하며 인메모리 카드나 srcdoc만으로 검사하지 않는다. 실기기 Safari·운영 Supabase 설정·공개 배포는 별도 확인 대상이다.
 
-## 최종 검증 결과 — 2026-10-11
+## 최초 로컬 검증 결과 — 2026-10-11
 
 | 검사 | 결과 |
 |---|---|
@@ -115,3 +115,21 @@ node scripts/landing-pages/browser-qa.mjs
 첫 기본 빌드는 접근 제한된 local-h3-benchmark SSH 키의 파일 추적에서 실패했다. 개발 디스크 어댑터의 NODE_ENV 분기를 명시해 운영 번들에서 제외하고 local-h3-benchmark/tmp 추적도 제외한 뒤 기본 빌드 전체가 통과했다. 키 파일은 읽거나 수정하지 않았다. 대체 Webpack 빌드는 중간 중단했고, 최종 검증은 기본 빌드로 수행했다.
 
 검사 로그/화면은 Git 제외 경로 tmp/landing-qa의 tests.txt, browser-qa.txt, scoped-lint.txt, full-lint.txt, build-final.txt, namwon-desktop.png, namwon-mobile-view.png에 있다. 운영 설정 전에는 기본 앱의 랜딩페이지 API가 설정 필요 상태를 안내하며 테스트 데이터가 운영 DB에 섞이지 않는다.
+
+## 운영 적용·검증 결과 — 2026-10-12
+
+사용자가 운영 적용을 승인한 뒤 실제 prompt 프로젝트에 적용했다. 운영 앱은 https://prompt-two-theta.vercel.app, 미리보기 전용 출처는 https://prompt-landing-preview-jejuai.vercel.app 이다. 같은 기존 Vercel 프로젝트의 두 등록 도메인이고, 새 프로젝트는 만들지 않았다. 미리보기 주소는 이후 production 배포에도 자동으로 연결된다.
+
+- landing_private.pages·비공개 50MiB landing-pages 버킷·Storage 제한 정책 적용. 실제 PostgreSQL에서 RLS=true와 anon/authenticated 직접 SELECT 권한 없음 확인. CLI의 다중 SQL prepared statement 제한으로 동일한 검토 SQL을 기존 Prisma 연결의 한 트랜잭션으로 적용했다.
+- 운영 LANDING_APP_ORIGIN·LANDING_PREVIEW_ORIGIN·무작위 sensitive LANDING_PREVIEW_SECRET 설정과 재배포 완료. 비밀 값을 코드·문서·브라우저에 노출하지 않았다.
+- 실제 provider 검증에서 발견한 signed TUS의 /resumable/sign 경로 누락을 수정했다. 공개 클라이언트 접근 정책을 완화하지 않았다. 한글 객체 키 거부는 provider 내부 키만 매핑해 해결했다.
+- 임시 QA 계정의 실제 Supabase 로그인 쿠키로 UI 등록→직접 업로드→운영 DB/Storage 보관→분리 출처의 실제 HTML 모달을 검증했다. 개발 테스트 로그인/SQLite 저장소를 사용하지 않았다.
+- 남원 원본의 이미지·Inter Tight/Pretendard 폰트·신청 모의 접수 버튼·필터·스탬프·48개 애니메이션, PC/768/390 화면 너비·ESC·반복 열기·닫은 세션 폐기 통과.
+- 새로고침/재로그인 보존·다른 사용자의 목록/수정/교체/삭제/미리보기 차단·이름/설명 수정·잘못된 ZIP 교체 뒤 기존 페이지 유지 통과.
+- 감싸는 한글 폴더·한글/공백 파일명·로컬 폰트·/assets·fetch·앵커/다른 HTML 링크·음성 재생/206 부분 요청·닫은 뒤 스크립트 heartbeat 중단 통과.
+- 잘못된 ZIP·누락·용량 제한·앱 출처의 미리보기 거부·미리보기 출처의 앱/인증 API 거부·삭제 취소/확인 및 세션 폐기 통과. 실제 익명 Storage 다운로드·목록·공개 파일 URL도 차단/비노출 확인.
+- 8,567,274바이트 ZIP의 POST+PATCH 다중 청크 업로드, 20개 파일 보관·삭제 통과. 이전 원래 객체 키를 사용하는 페이지도 새 코드에서 HTML 200 응답 확인.
+- 회귀 12개·전체 TypeScript·변경 파일 ESLint 통과. 운영 Vercel production 빌드/배포 Ready 확인. 기존 전체 lint 문제는 위 최초 로컬 검증 기록과 같다.
+- 테스트 계정 2개와 해당 계정 아래의 페이지·잔여 객체 56개를 정리했다. 다른 사용자 데이터는 변경하지 않았다. 실기기 Safari와 Google OAuth 신규 로그인 전체 흐름은 별도 확인 대상이다.
+
+운영 브라우저 검사 로그와 화면은 Git 제외 경로 tmp/landing-qa/production-browser.txt, production-namwon-mobile-view.png, production-namwon-tablet-view.png에 남겼다. 운영 인증·환경변수·서명 키를 담은 임시 파일은 검증 뒤 삭제했다.

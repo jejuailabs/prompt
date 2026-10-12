@@ -1,4 +1,4 @@
--- Prepared for review. This file has NOT been applied to the operational project.
+-- Applied to the prompt operational project on 2026-10-12 after validation.
 -- The existing public Artifact table is left unchanged.
 BEGIN;
 CREATE SCHEMA IF NOT EXISTS landing_private;
