@@ -17,6 +17,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const user = await getSessionUserFast();
     const artifact = await db.artifact.findUnique({ where: { id }, include: { owner: true } });
     if (!artifact) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
+    if (artifact.sourceModule === 'landing-pages' && artifact.ownerId !== user?.id) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
     await db.artifact.update({ where: { id: artifact.id }, data: { views: { increment: 1 } } });
     return ok(await serializeArtifactSingle({ ...artifact, views: artifact.views + 1 }, user?.id ?? null));
   } catch (e) {
@@ -41,6 +42,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     if (!artifact) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
     if (artifact.sourceModule === 'ai-events' ? user.role !== 'admin' : artifact.ownerId !== user.id) throw new HttpError('권한이 없습니다', 403);
 
+    if (artifact.sourceModule === 'landing-pages') throw new HttpError('랜딩페이지 메뉴에서 수정해주세요. 공개 전환은 지원하지 않습니다.', 409);
     const body = await readJson<PatchBody>(req);
     const data: { title?: string; description?: string; metadata?: string; status?: string; visibility?: string; version?: string } = {};
 
@@ -97,6 +99,7 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
     if (!artifact) throw new HttpError('프로젝트를 찾을 수 없습니다', 404);
     if (artifact.sourceModule === 'ai-events' ? user.role !== 'admin' : artifact.ownerId !== user.id) throw new HttpError('권한이 없습니다', 403);
 
+    if(artifact.sourceModule === 'landing-pages'){const {landingHandler,landingService}=await import('@/modules/landing-pages/server');return landingHandler(async()=>{await(await landingService(_req)).remove(user.id,id);return null;});}
     await db.$transaction([
       db.generationJob.updateMany({ where: { resultArtifactId: id }, data: { resultArtifactId: null } }),
       db.pipelineRun.updateMany({ where: { resultArtifactId: id }, data: { resultArtifactId: null } }),

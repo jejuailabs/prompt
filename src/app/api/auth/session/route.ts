@@ -1,10 +1,12 @@
 // GET /api/auth/session — returns SessionUser | null based on Supabase Auth
+import { headers } from 'next/headers';
+import {localMode,readTestSession} from '@/modules/landing-pages/local-auth';
 import { getSessionUser } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 
 export async function GET() {
   try {
-    const user = await getSessionUser();
+    const user = localMode() ? readTestSession((await headers()).get('cookie')||'') : await getSessionUser();
     if (!user) return ok(null);
     return ok({
       id: user.id,

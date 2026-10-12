@@ -65,3 +65,7 @@ __pycache__/
 
 # Private per-request billing audit and source generation outputs
 /output/imagegen/
+
+# Landing-page development fixture source (not local data)
+!/src/modules/landing-pages/local-auth.ts
+!/scripts/landing-pages/local-upload.mjs

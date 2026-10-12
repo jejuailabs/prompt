@@ -21,6 +21,7 @@ const MarketplaceView = dynamic(() => import('@/components/views/market'), { loa
 const CommunityView = dynamic(() => import('@/components/views/community'), { loading: () => <ViewLoading /> });
 const AcademyView = dynamic(() => import('@/components/views/academy'), { loading: () => <ViewLoading /> });
 const VibeSetupView = dynamic(() => import('@/components/views/vibe-setup'), { loading: () => <ViewLoading /> });
+const LandingPagesView = dynamic(() => import('@/modules/landing-pages'), { loading: () => <ViewLoading /> });
 const AiEventsView = dynamic(() => import('@/modules/ai-events'), { loading: () => <ViewLoading /> });
 const AiToolsView = dynamic(() => import('@/components/views/ai-tools'), { loading: () => <ViewLoading /> });
 const MyProjectsView = dynamic(() => import('@/components/views/my-projects'), { loading: () => <ViewLoading /> });
@@ -72,6 +73,8 @@ export default function ViewRouter() {
       return <AcademyView />;
     case 'vibe-setup':
       return <VibeSetupView />;
+    case 'landing-pages':
+      return <LandingPagesView />;
     case 'ai-events':
       return <AiEventsView />;
     case 'ai-tools':
