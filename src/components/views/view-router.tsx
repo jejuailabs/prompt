@@ -23,6 +23,7 @@ const AcademyView = dynamic(() => import('@/components/views/academy'), { loadin
 const VibeSetupView = dynamic(() => import('@/components/views/vibe-setup'), { loading: () => <ViewLoading /> });
 const LandingPagesView = dynamic(() => import('@/modules/landing-pages'), { loading: () => <ViewLoading /> });
 const AiEventsView = dynamic(() => import('@/modules/ai-events'), { loading: () => <ViewLoading /> });
+const MotionLibraryView = dynamic(() => import('@/modules/motion-library'), { loading: () => <ViewLoading /> });
 const AiToolsView = dynamic(() => import('@/components/views/ai-tools'), { loading: () => <ViewLoading /> });
 const MyProjectsView = dynamic(() => import('@/components/views/my-projects'), { loading: () => <ViewLoading /> });
 const GameRoomView = dynamic(() => import('@/components/views/game-room'), { loading: () => <ViewLoading /> });
@@ -77,6 +78,8 @@ export default function ViewRouter() {
       return <LandingPagesView />;
     case 'ai-events':
       return <AiEventsView />;
+    case 'motion-library':
+      return <MotionLibraryView />;
     case 'ai-tools':
       return <AiToolsView />;
     case 'tool':

@@ -33,6 +33,7 @@ export type ViewKey =
   | 'academy'
   | 'vibe-setup'
   | 'ai-events'
+  | 'motion-library'
   | 'landing-pages'
   | 'ai-tools'
   | 'tool'

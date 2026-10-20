@@ -543,3 +543,11 @@ SocialKit 자막 요청은 공식 권장 130초 클라이언트 제한 적용. �
 - [x] 비공개 DB·객체 저장 어댑터, 분리된 쿠키 사이트의 sandbox HTML 제공, 파일/권한/경로/압축 제한.
 - [x] 남원 원본으로 실제 UI 등록·폰트/이미지/버튼/애니메이션·PC/태블릿/모바일·새로고침/재로그인·다른 사용자 차단 검증.
 - [x] 2026-10-12 운영 SQL·Storage 정책·분리 도메인·환경변수 적용 및 실제 서비스 등록/모달/교체/삭제/한글/미디어/권한 검증·push·배포. 상세 [구현과 검증](landing-pages.md).
+
+### 2026-10-20 — 모션 라이브러리 (Remotion 예제 44개)
+
+- [x] `motion-library` 모듈을 레지스트리에 등록해 상단 메뉴 "모션"·전체 메뉴·홈 내비게이션에 연결. 누구나 볼 수 있음(로그인 불필요).
+- [x] FunJeju Motion Library의 이름·설명·태그·SVG 콘셉트 커버 이식. 원본 Remotion 코드 44개는 수정 없이 `public/motion-library/codes/`에 두고 상세 화면에서 복사·파일 저장 제공(2026-10-20 사용자 지시, 게시 책임은 사용자). 공통 설정 `Root.tsx`·`font.ts`는 `public/motion-library/setup/`. 출처 CONNECT AI LAB / AI CITY BUILDERS(aicitybuilders.com/remotion)를 화면과 코드 안에 유지.
+- [x] 로컬 개발 서버에서 PC 목록·상세·검색 필터·모바일 375px 가로 넘침 없음, 상세 코드 로드와 실제 클릭 복사 확인.
+- [x] "No Remotion" 탭: 리모션 없이 브라우저에서 재생하고 MP4로 받는 첫 10개(01a·01b·16·41·44·45·51·52·56·57). `no-remotion/runtime.tsx`(Motion Lite)가 Remotion API 일부(useCurrentFrame·spring·interpolate·Sequence·Series·Loop·Freeze·Img 등)를 대신하고, 장면 코드는 import만 바꿔 원본 그대로 사용. MP4는 html-to-image로 프레임 캡처 → WebCodecs H.264 → mp4-muxer. 공개용 코드 사본은 `scripts/sync-motion-web-code.ts`(predev/prebuild)가 `public/motion-library/web/`에 생성.
+- [ ] 나머지 34개 이식(부가 패키지 대체 필요), MP4 생성 속도 개선(현재 6초 영상에 headless Chrome 기준 약 1.5분).
