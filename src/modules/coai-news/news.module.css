@@ -3,6 +3,7 @@
 .headerRow{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;padding-bottom:20px;border-bottom:1px solid var(--coai-border);margin-bottom:20px}
 .eyebrow{font:700 14px/1.4 var(--coai-font);color:var(--coai-blue-strong)}
 .headerRow h1{font:700 28px/1.35 var(--coai-font);letter-spacing:-.02em;color:var(--coai-text-strong);margin:6px 0 8px}
+.headerActions{display:flex;gap:8px;flex-wrap:wrap}
 .headerRow p:last-child{font-size:16px;line-height:1.6;color:var(--coai-text-muted)}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
 .filters button{height:38px;padding:0 16px;border-radius:999px;border:1px solid var(--coai-border-strong);background:var(--coai-bg-surface);font-size:15px;font-weight:600;color:var(--coai-text-body)}
@@ -63,7 +64,7 @@
 .eventStatus[data-status=closed]{color:var(--coai-text-muted)}.eventStatus[data-status=ongoing]{color:var(--coai-brand)}
 .eventSkeleton{aspect-ratio:3/5.2;border-radius:var(--coai-radius-lg);background:var(--coai-bg-subtle)}
 @media (max-width:767px){
-  .page{padding:18px 16px 40px}.headerRow{flex-direction:column;align-items:stretch}.headerRow h1{font-size:22px}
+  .page{padding:18px 16px 40px}.headerRow{flex-direction:column;align-items:stretch}.headerActions .primary{flex:1}.headerRow h1{font-size:22px}
   .panel{padding:4px 16px 16px}.item{gap:12px;padding:16px 0}.thumb{flex-basis:96px;height:72px}
   .events{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;scrollbar-width:none}.events::-webkit-scrollbar{display:none}
   .event,.eventSkeleton{flex:0 0 62%;scroll-snap-align:start}

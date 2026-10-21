@@ -52,7 +52,7 @@ function EventStrip() {
   );
 }
 
-function NewsList({ open, isAdmin, write }: { open: (id: string) => void; isAdmin: boolean; write: () => void }) {
+function NewsList({ open }: { open: (id: string) => void }) {
   const [category, setCategory] = useState<NewsCategory | ''>('');
   const list = useQuery({ queryKey: ['news', category], queryFn: () => api.get<NewsDTO[]>(`/api/news?category=${category}`) });
   return (
@@ -82,7 +82,6 @@ function NewsList({ open, isAdmin, write }: { open: (id: string) => void; isAdmi
             <Newspaper size={32} />
             <p>아직 등록된 뉴스가 없어요.</p>
             <small>운영진이 AI 소식을 3줄 요약과 해설로 정리해 올려요.</small>
-            {isAdmin && <button type="button" className={styles.primary} onClick={write}><Plus size={16} />첫 뉴스 등록</button>}
           </div>
         )}
       </section>
@@ -177,11 +176,14 @@ export default function CoaiNews() {
     <div className={styles.page}>
       <header className={styles.headerRow}>
         <div><p className={styles.eyebrow}>뉴스·이벤트</p><h1>AI 뉴스·행사</h1><p>오늘 알아두면 좋은 AI 소식과 참여할 만한 행사·강의를 한 화면에서 확인하세요.</p></div>
-        {isAdmin && !params.write && <button type="button" className={styles.primary} onClick={write}><Plus size={16} />뉴스 등록</button>}
+        {isAdmin && !params.write && !params.id && <div className={styles.headerActions}>
+          <button type="button" className={styles.primary} onClick={() => navigate('ai-events', { new: '1' })}><Plus size={16} />행사 등록</button>
+          <button type="button" className={styles.primary} onClick={write}><Plus size={16} />뉴스 등록</button>
+        </div>}
       </header>
       {params.write && isAdmin ? <NewsEditor done={(id) => navigate('news', { id })} cancel={() => navigate('news')} />
         : params.id ? <NewsDetail key={params.id} id={params.id} back={() => navigate('news')} isAdmin={isAdmin} />
-        : <><EventStrip /><NewsList open={(id) => navigate('news', { id })} isAdmin={isAdmin} write={write} /></>}
+        : <><EventStrip /><NewsList open={(id) => navigate('news', { id })} /></>}
     </div>
   );
 }
