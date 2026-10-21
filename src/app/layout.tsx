@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { GOOGLE_SITE_VERIFICATION, NAVER_SITE_VERIFICATION, SITE_NAME, SITE_URL } from "@/lib/site";
+// Self-hosted Pretendard: an external CDN stylesheet blocked first paint for seconds.
+import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 import Providers from "@/components/providers";
 
@@ -32,10 +34,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" data-playlab-design="coai" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="" />
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-      </head>
       <body
         className="antialiased bg-background text-foreground"
       >

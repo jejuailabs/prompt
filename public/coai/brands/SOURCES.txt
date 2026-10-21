@@ -1,0 +1,7 @@
+Brand marks for the home "AI 서비스 가이드" tiles (copied from the aiguidepage project).
+
+openai.svg, claude-color.svg, gemini-color.svg, perplexity.svg, notebooklm.svg, suno.svg:
+LobeHub lobe-icons, @lobehub/icons-static-svg 1.95.1.
+https://github.com/lobehub/lobe-icons
+See LICENSE-lobe-icons.txt for the MIT license. Service trademarks remain
+the property of their respective owners.

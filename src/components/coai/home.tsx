@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, ChevronLeft, ChevronRight, Code2, Copy, FileText, Heart, Image as ImageIcon, MapPin, MessageCircle, Eye, Newspaper } from 'lucide-react';
@@ -40,6 +41,15 @@ function formatDate(value: string | undefined, locale: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return locale === 'en' ? date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : `${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDate()}`;
+}
+
+// Uploads are full-size originals (often 1–3MB PNG) served with no-cache, so
+// Supabase thumbnails go through the Next image optimizer (resized, cached WebP).
+const STORAGE_PREFIX = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/`;
+
+function Thumb({ src, className, size }: { src: string; className: string; size: number }) {
+  if (!src.startsWith(STORAGE_PREFIX)) return <img className={className} src={src} alt="" loading="lazy" />;
+  return <Image className={className} src={src} alt="" width={size} height={size} />;
 }
 
 // ── hero poster carousel (§2.2) ──────────────────────────────────────────
@@ -160,7 +170,7 @@ function LatestNews() {
       {news.data?.map((item) => (
         <a key={item.id} className="coai-news" href={hrefFor('news', { id: item.id })} onClick={(event) => go(event, 'news', { id: item.id })}>
           {item.imageUrl
-            ? <img className="coai-news-thumb" src={item.imageUrl} alt="" loading="lazy" />
+            ? <Thumb className="coai-news-thumb" src={item.imageUrl} size={112} />
             : <span className="coai-news-thumb" aria-hidden="true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--coai-blue-strong)', background: 'var(--coai-blue-soft)' }}><Newspaper size={26} /></span>}
           <div className="coai-news-body">
             <h3 className="coai-clamp-2">{item.title}</h3>
@@ -172,7 +182,7 @@ function LatestNews() {
       {useEvents && items.map((item) => (
         <a key={item.id} className="coai-news" href={hrefFor('ai-events', { id: item.id })} onClick={(event) => go(event, 'ai-events', { id: item.id })}>
           {item.posterUrl
-            ? <img className="coai-news-thumb" src={item.posterUrl} alt="" loading="lazy" />
+            ? <Thumb className="coai-news-thumb" src={item.posterUrl} size={112} />
             : <span className="coai-news-thumb" aria-hidden="true" style={{ background: item.surface, color: item.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, textAlign: 'center', lineHeight: 1.15, padding: 6 }}>{item.posterLines.slice(0, 2).join(' ')}</span>}
           <div className="coai-news-body">
             <h3 className="coai-clamp-2">{item.title}</h3>
@@ -233,8 +243,8 @@ function GuideServices() {
     <Panel title={t('homeGuideServices')} view="vibe-setup">
       <div className="coai-tools">
         {GUIDE_SERVICES.map((service) => (
-          <a key={service.slug} className="coai-tool" href={service.url} target="_blank" rel="noreferrer">
-            <span className="coai-tool-logo" style={{ background: service.color }} aria-hidden="true">{service.initials}</span>
+          <a key={service.slug} className="coai-tool" href={service.url} target="_blank" rel="noreferrer" title={service.description}>
+            <span className="coai-tool-logo" style={{ background: service.color, '--brand-mark': `url(${service.icon})` } as CSSProperties} aria-hidden="true" />
             <span className="coai-tool-text"><strong>{service.name}</strong><span>{service.summary}</span></span>
             <ChevronRight size={14} />
           </a>
@@ -289,7 +299,7 @@ function CommunityPopular() {
                 <p className="coai-meta coai-clamp-2">{item.description || item.owner?.username}</p>
                 <div className="coai-meta-row"><span aria-label={t('likes')}><Heart size={15} />{item.likeCount}</span><span aria-label={t('comments')}><MessageCircle size={15} />{item.commentCount}</span><span aria-label={t('views')}><Eye size={15} />{item.views}</span><span>{formatDate(item.createdAt, locale)}</span></div>
               </div>
-              {thumb ? <img className="coai-post-thumb" src={thumb} alt="" loading="lazy" /> : null}
+              {thumb ? <Thumb className="coai-post-thumb" src={thumb} size={88} /> : null}
             </a>
           );
         })}
