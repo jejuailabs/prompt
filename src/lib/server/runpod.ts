@@ -70,6 +70,7 @@ export function getRunpodEndpointId(engine: RunpodEngine, h3Gpu?: H3Gpu): string
   if (engine === 'qwen_image') return '50ix6zz1yiywxl';
   if (engine === 'trellis') return 'fmxxi8wa0gxkcm';
   if (engine === 'ace_music') return DEFAULT_ACE_STEP_ENDPOINT_ID;
+  if (engine === 'qwen3_tts') return 'vcqwvmo7lgmis3';
   return null;
 }
 

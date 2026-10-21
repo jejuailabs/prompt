@@ -36,7 +36,7 @@ const KNOWN_ENGINE_IDS: Partial<Record<ManagedRunpodEngine, string>> = {
   whisper: process.env.RUNPOD_WHISPER_ENDPOINT_ID?.trim(),
   trellis: process.env.RUNPOD_TRELLIS_ENDPOINT_ID?.trim() || 'fmxxi8wa0gxkcm',
   ace_music: process.env.RUNPOD_ACE_STEP_ENDPOINT_ID?.trim() || 'uw755pa2qvi8uo',
-  qwen3_tts: process.env.RUNPOD_QWEN3_TTS_ENDPOINT_ID?.trim(),
+  qwen3_tts: process.env.RUNPOD_QWEN3_TTS_ENDPOINT_ID?.trim() || 'vcqwvmo7lgmis3',
 };
 
 const ENGINE_LABELS: Record<ManagedRunpodEngine, string> = {
@@ -211,7 +211,7 @@ export async function setRunpodEndpointCapacity(input: { endpointId: string; wor
   const endpoint = inventory.endpoints.find((item) => item.id === input.endpointId);
   if (!endpoint) throw new Error('RunPod 엔드포인트를 찾을 수 없습니다.');
   const after = inventory.configuredSlots - endpoint.workersMax + desired;
-  if (after > PLAYLAB_WORKER_SLOT_LIMIT) throw new Error(`PLAYLAB 워커 한도(${PLAYLAB_WORKER_SLOT_LIMIT})를 초과합니다. 먼저 다른 워커를 줄여주세요.`);
+  if (after > PLAYLAB_WORKER_SLOT_LIMIT) throw new Error(`워커 한도(${PLAYLAB_WORKER_SLOT_LIMIT})를 초과합니다. 먼저 다른 워커를 줄여주세요.`);
   // Explicit zero matters: it is the reliable Serverless off value, so do not
   // omit workersMin/workersMax when disabling an endpoint.
   await controlFetch<unknown>(`/endpoints/${encodeURIComponent(input.endpointId)}`, {

@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { logEvent } from '@/lib/events';
 import { chargeCredits, refundCredits } from '@/lib/server/credits';
 
-export type MeteredEngine = 'h3' | 'wan' | 'ltx' | 'flux' | 'blender' | 'whisper' | 'trellis' | 'ace_music';
+export type MeteredEngine = 'h3' | 'wan' | 'ltx' | 'flux' | 'blender' | 'whisper' | 'trellis' | 'ace_music' | 'qwen3_tts';
 
 // All values are internal KRW estimates. They are deliberately stored with the
 // operation so a future invoice import can replace the estimate without losing
@@ -18,6 +18,8 @@ const CATALOG: Record<MeteredEngine, { providerId: string; label: string; catego
   // Initial public rate for a 30s XL-Turbo render. This is deliberately
   // recorded as an estimate per job so it can be reconciled against RunPod
   // runtime data without losing the original user charge.
+  // Preset-speaker narration on the shared Qwen3-TTS worker (RTX 4090 class).
+  qwen3_tts: { providerId: 'runpod-qwen3-tts', label: 'Qwen3-TTS · Runpod', category: 'audio', creditCharge: 15, gpuKrwPerMinute: 10 },
   ace_music: { providerId: 'runpod-ace-step', label: 'ACE-Step 1.5 XL-Turbo · Runpod', category: 'audio', creditCharge: 40, gpuKrwPerMinute: 18 },
 };
 

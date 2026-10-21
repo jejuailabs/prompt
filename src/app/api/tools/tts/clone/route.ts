@@ -81,7 +81,7 @@ export async function POST(req: Request) {
       metadata: JSON.stringify({ status: 'QUEUED', text: content, language, referencePath, queuedAt: new Date().toISOString(), model: 'Qwen3-TTS-12Hz-1.7B-Base' } satisfies CloneMeta),
     } });
     try {
-      const job = await queueRunpodJob('qwen3_tts', { text: content, ref_text: referenceText, language, ref_audio_base64: reference.toString('base64') });
+      const job = await queueRunpodJob('qwen3_tts', { mode: 'clone', text: content, ref_text: referenceText, language, ref_audio_base64: reference.toString('base64') });
       artifact = await db.artifact.update({ where: { id: artifact.id }, data: { metadata: JSON.stringify({ ...meta(artifact.metadata), runpodJobId: job.id, status: job.status || 'IN_QUEUE' } satisfies CloneMeta) } });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Qwen3-TTS 작업을 시작하지 못했습니다.';

@@ -1,34 +1,153 @@
-import { checkToolAccess } from '@/lib/server/tool-access';
-import { NextRequest, NextResponse } from 'next/server';
+import { HttpError, requireUser } from '@/lib/auth';
+import { db } from '@/lib/db';
+import { fail, ok, readJson } from '@/lib/server/handler';
+import { beginMeteredOperation, failMeteredOperation, finishMeteredOperation } from '@/lib/server/operation-ledger';
+import { activeTtsProvider, ttsProvider, TtsProviderError, type TtsProvider } from '@/lib/server/tts';
+import { saveVoiceOutput, signedVoiceOutputUrl } from '@/lib/server/voice-reference-storage';
+import { isTtsVoice, TTS_DESIGN_MAX_CHARS, TTS_LANGUAGES, TTS_MAX_CHARS, TTS_STYLES } from '@/lib/tts-voices';
 
-const MODEL = 'gemini-2.5-flash-preview-tts';
-const VOICES = new Set(['Charon', 'Fenrir', 'Puck', 'Orus', 'Enceladus', 'Kore', 'Aoede', 'Leda', 'Zephyr', 'Callirrhoe']);
+export const runtime = 'nodejs';
+export const maxDuration = 60;
 
-export async function POST(req: NextRequest) {
-  const denied = await checkToolAccess();
-  if (denied) return denied;
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return NextResponse.json({ error: 'TTS를 사용하려면 GEMINI_API_KEY가 필요합니다.' }, { status: 503 });
+const SOURCE_MODULE = 'tool-tts';
+const LANGUAGE_IDS = new Set<string>(TTS_LANGUAGES.map((item) => item.id));
+
+type TtsMeta = {
+  provider?: string;
+  model?: string;
+  mode?: 'tts' | 'design';
+  description?: string;
+  jobId?: string;
+  operationId?: string;
+  status?: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  voice?: string;
+  language?: string;
+  style?: string;
+  outputPath?: string;
+  error?: string;
+  queuedAt?: string;
+  completedAt?: string;
+  executionTimeMs?: number;
+};
+
+const FAILED_MESSAGE = '음성 생성에 실패했어요. 사용한 크레딧은 돌려드렸어요. 잠시 후 다시 시도해 주세요.';
+
+function meta(raw: string): TtsMeta { try { return JSON.parse(raw) as TtsMeta; } catch { return {}; } }
+
+async function respond(artifact: { id: string; metadata: string }) {
+  const value = meta(artifact.metadata);
+  return ok({
+    artifactId: artifact.id,
+    status: value.status || 'QUEUED',
+    error: value.error || null,
+    audioUrl: value.outputPath ? await signedVoiceOutputUrl(value.outputPath) : null,
+  });
+}
+
+async function update(id: string, current: TtsMeta, patch: Partial<TtsMeta>) {
+  return db.artifact.update({ where: { id }, data: { metadata: JSON.stringify({ ...current, ...patch } satisfies TtsMeta) } });
+}
+
+async function complete(artifactId: string, current: TtsMeta, userId: string, wav: Buffer, executionTimeMs?: number) {
+  const outputPath = await saveVoiceOutput({ userId, artifactId, bytes: wav });
+  if (current.operationId) await finishMeteredOperation({ operationId: current.operationId, engine: 'qwen3_tts', status: 'COMPLETED', executionTimeMs });
+  return update(artifactId, current, { status: 'COMPLETED', outputPath, completedAt: new Date().toISOString(), executionTimeMs });
+}
+
+async function markFailed(artifactId: string, current: TtsMeta, providerStatus: string, executionTimeMs?: number) {
+  // Refunds the charged credits; the raw provider status stays server-side.
+  if (current.operationId) await failMeteredOperation(current.operationId, `Qwen3-TTS ${providerStatus}`);
+  return update(artifactId, current, { status: 'FAILED', error: FAILED_MESSAGE, completedAt: new Date().toISOString(), executionTimeMs });
+}
+
+export async function POST(req: Request) {
   try {
-    const body = await req.json() as { text?: string; voice?: string };
-    const text = body.text?.trim() || '';
-    if (!text) return NextResponse.json({ error: '읽을 텍스트를 입력해 주세요.' }, { status: 400 });
-    if (text.length > 10_000) return NextResponse.json({ error: '텍스트는 10,000자까지 입력할 수 있습니다.' }, { status: 400 });
-    if (!body.voice || !VOICES.has(body.voice)) return NextResponse.json({ error: '유효하지 않은 음성입니다.' }, { status: 400 });
+    const user = await requireUser();
+    const body = await readJson<Record<string, unknown>>(req);
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text }] }],
-        generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: body.voice } } } },
-      }),
-    });
-    const data = await response.json() as { error?: { message?: string }; candidates?: { content?: { parts?: { inlineData?: { data?: string; mimeType?: string } }[] } }[] };
-    if (!response.ok) return NextResponse.json({ error: data.error?.message || 'Gemini TTS 생성에 실패했습니다.' }, { status: response.status });
-    const audio = data.candidates?.[0]?.content?.parts?.find((part) => part.inlineData)?.inlineData;
-    if (!audio?.data) return NextResponse.json({ error: 'Gemini에서 오디오를 받지 못했습니다.' }, { status: 502 });
-    return NextResponse.json({ audioBase64: audio.data, mimeType: audio.mimeType || 'audio/L16;rate=24000' });
+    if (body.action === 'cancel') {
+      const artifact = await db.artifact.findFirst({ where: { id: String(body.artifactId || ''), ownerId: user.id, sourceModule: SOURCE_MODULE } });
+      if (!artifact) throw new HttpError('음성 생성 작업을 찾을 수 없어요.', 404);
+      const current = meta(artifact.metadata);
+      if (current.jobId && (current.status === 'QUEUED' || current.status === 'RUNNING')) {
+        await ttsProvider(current.provider)?.cancel(current.jobId).catch(() => undefined);
+        if (current.operationId) await failMeteredOperation(current.operationId, 'cancelled by user');
+        return respond(await update(artifact.id, current, { status: 'CANCELLED', error: '생성을 취소했어요.', completedAt: new Date().toISOString() }));
+      }
+      return respond(artifact);
+    }
+
+    const text = typeof body.text === 'string' ? body.text.trim() : '';
+    if (!text) throw new HttpError('읽을 텍스트를 입력해 주세요.', 400);
+    if (text.length > TTS_MAX_CHARS) throw new HttpError(`텍스트는 ${TTS_MAX_CHARS.toLocaleString()}자까지 입력할 수 있어요.`, 400);
+    const mode = body.mode === 'design' ? 'design' : 'tts';
+    const language = typeof body.language === 'string' && LANGUAGE_IDS.has(body.language) ? body.language : 'Korean';
+    const style = TTS_STYLES.find((item) => item.id === body.style) ?? TTS_STYLES[0];
+    const description = typeof body.description === 'string' ? body.description.trim() : '';
+    let voice: string | undefined;
+    if (mode === 'tts') {
+      if (!isTtsVoice(body.voice)) throw new HttpError('유효하지 않은 목소리예요.', 400);
+      voice = body.voice;
+    } else {
+      if (!description) throw new HttpError('만들고 싶은 목소리를 설명해 주세요.', 400);
+      if (description.length > TTS_DESIGN_MAX_CHARS) throw new HttpError(`목소리 설명은 ${TTS_DESIGN_MAX_CHARS}자까지 입력할 수 있어요.`, 400);
+    }
+    const instruct = mode === 'design' ? description : style.instruct || undefined;
+
+    const provider: TtsProvider = activeTtsProvider();
+    // Only the self-hosted GPU worker is metered; Gemini was never charged.
+    const ledger = provider.id === 'qwen'
+      ? await beginMeteredOperation({ userId: user.id, engine: 'qwen3_tts', prompt: text, aspect: 'audio', style: voice ?? 'voice-design' })
+      : null;
+
+    let current: TtsMeta = {
+      provider: provider.id, model: provider.model, mode, operationId: ledger?.operationId, status: 'QUEUED',
+      voice, description: mode === 'design' ? description : undefined, language, style: mode === 'tts' ? style.id : undefined, queuedAt: new Date().toISOString(),
+    };
+    let artifact = await db.artifact.create({ data: {
+      ownerId: user.id, type: 'audio', title: text.slice(0, 80), description: mode === 'design' ? 'AI Tools 목소리 디자인 나레이션' : 'AI Tools TTS 나레이션',
+      sourceModule: SOURCE_MODULE, visibility: 'private', status: 'draft', metadata: JSON.stringify(current),
+    } });
+
+    try {
+      const started = await provider.start({ mode, text, voice, language, instruct });
+      if (started.kind === 'done') artifact = await complete(artifact.id, current, user.id, started.wav);
+      else {
+        current = { ...current, jobId: started.jobId };
+        artifact = await update(artifact.id, current, { status: 'QUEUED' });
+      }
+    } catch (error) {
+      if (ledger) await failMeteredOperation(ledger.operationId, 'provider start failed');
+      const message = error instanceof TtsProviderError ? error.userMessage : FAILED_MESSAGE;
+      await update(artifact.id, current, { status: 'FAILED', error: message, completedAt: new Date().toISOString() });
+      throw new HttpError(message, error instanceof TtsProviderError ? error.status : 502);
+    }
+    return respond(artifact);
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'TTS 생성 중 오류가 발생했습니다.' }, { status: 500 });
+    return fail(error);
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const user = await requireUser();
+    const artifactId = new URL(req.url).searchParams.get('id');
+    if (!artifactId) throw new HttpError('작업 ID가 필요해요.', 400);
+    let artifact = await db.artifact.findFirst({ where: { id: artifactId, ownerId: user.id, sourceModule: SOURCE_MODULE } });
+    if (!artifact) throw new HttpError('음성 생성 작업을 찾을 수 없어요.', 404);
+    const current = meta(artifact.metadata);
+    const provider = ttsProvider(current.provider);
+    if (!provider || !current.jobId || (current.status !== 'QUEUED' && current.status !== 'RUNNING')) return respond(artifact);
+
+    const result = await provider.check(current.jobId);
+    if (result.status === 'done') artifact = await complete(artifact.id, current, user.id, result.wav, result.executionTimeMs);
+    else if (result.status === 'failed') artifact = await markFailed(artifact.id, current, result.providerStatus, result.executionTimeMs);
+    else if (result.providerStatus === 'IN_PROGRESS' && current.status !== 'RUNNING') {
+      if (current.operationId) await finishMeteredOperation({ operationId: current.operationId, engine: 'qwen3_tts', status: 'IN_PROGRESS' });
+      artifact = await update(artifact.id, current, { status: 'RUNNING' });
+    }
+    return respond(artifact);
+  } catch (error) {
+    return fail(error);
   }
 }

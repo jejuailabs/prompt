@@ -24,7 +24,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 export function QwenVoiceCloneTool() {
   const [sample, setSample] = useState<File | null>(null);
   const [referenceText, setReferenceText] = useState('안녕하세요. 이 목소리를 기준으로 자연스럽고 또렷한 나레이션을 생성해 주세요.');
-  const [script, setScript] = useState('PLAYLAB에서 내 목소리로 만드는 자연스러운 AI 나레이션입니다.');
+  const [script, setScript] = useState('COAI에서 내 목소리로 만드는 자연스러운 AI 나레이션입니다.');
   const [language, setLanguage] = useState('Korean');
   const [consent, setConsent] = useState(false);
   const [job, setJob] = useState<CloneJob | null>(null);

@@ -1,5 +1,5 @@
 export const AI_STUDIO_TOOLS = [
-  { id: 'tool-tts', titleKo: 'TTS 메이커', descKo: 'Gemini 음성으로 자연스러운 내레이션을 제작합니다', icon: 'mic', status: 'new', features: ['Gemini TTS 음성 생성', '10개 음성 미리듣기', '최대 10,000자 대본', 'WAV 다운로드'] },
+  { id: 'tool-tts', titleKo: 'TTS 메이커', descKo: '준비된 목소리·목소리 디자인·내 목소리 클론으로 자연스러운 내레이션을 제작합니다', icon: 'mic', status: 'new', features: ['Qwen3-TTS 9개 기본 목소리', '글로 설명하는 목소리 디자인', '내 목소리 클론', '최대 10,000자 대본 · WAV 다운로드'] },
   { id: 'tool-storyboard', titleKo: '스토리보드 제너레이터', descKo: '영상 기획부터 컷 분할과 이미지·영상 프롬프트까지', icon: 'clapperboard', status: 'active', features: ['AI 스토리보드 설계', '컷·비트보드 분해', '퍼스트프레임 프롬프트', '영상 모델 프롬프트'] },
   { id: 'tool-suno', titleKo: '수노 뮤직 메이커', descKo: 'AI 음악 프롬프트와 가사를 만듭니다', icon: 'music', status: 'new', features: ['Suno 스타일 프롬프트', '가사·제목 생성', 'BPM·무드 설정', '퍼블리싱 노트'] },
   { id: 'tool-ace-music', titleKo: 'ACE-Step 노래 생성', descKo: 'ACE-Step 1.5 XL-Turbo로 노래와 배경음악을 생성합니다', icon: 'music', status: 'new', features: ['XL-Turbo 8스텝', '가사·보컬 언어 지정', 'MP3 재생·다운로드', '생성 취소·처리시간 기록'] },

@@ -12,41 +12,72 @@ import { AceMusicTool } from './ace-music-tool';
 import { QwenVoiceCloneTool } from './qwen-voice-clone-tool';
 import { PreviewNotice, useRuntime } from '@/components/runtime-context';
 import { ConverterTool } from './converter-tool';
+import { TTS_DESIGN_MAX_CHARS, TTS_DESIGN_PRESETS, TTS_LANGUAGES, TTS_MAX_CHARS, TTS_STYLES, TTS_VOICES } from '@/lib/tts-voices';
 
-const voices = ['Charon', 'Fenrir', 'Puck', 'Orus', 'Enceladus', 'Kore', 'Aoede', 'Leda', 'Zephyr', 'Callirrhoe'];
-const labels: Record<string, string> = { Charon: '차분한 남성', Fenrir: '에너지 있는 남성', Puck: '친근한 남성', Orus: '설명형 남성', Enceladus: '부드러운 남성', Kore: '맑은 여성', Aoede: '따뜻한 여성', Leda: '전문적인 여성', Zephyr: '경쾌한 여성', Callirrhoe: '고급스러운 여성' };
-
-function pcmToWav(base64: string) {
-  const binary = atob(base64); const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
-  const pcm = new Int16Array(bytes.buffer); const buffer = new ArrayBuffer(44 + pcm.byteLength); const view = new DataView(buffer);
-  const write = (offset: number, value: string) => [...value].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
-  write(0, 'RIFF'); view.setUint32(4, 36 + pcm.byteLength, true); write(8, 'WAVE'); write(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); view.setUint32(24, 24000, true); view.setUint32(28, 48000, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true); write(36, 'data'); view.setUint32(40, pcm.byteLength, true); new Int16Array(buffer, 44).set(pcm);
-  return new Blob([buffer], { type: 'audio/wav' });
-}
 function ErrorBox({ text }: { text: string }) { return text ? <p className="mt-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{text}</p> : null; }
 
+type TtsJob = { artifactId: string; status: string; error: string | null; audioUrl: string | null };
+const TTS_ACTIVE = new Set(['QUEUED', 'RUNNING']);
+type TtsTab = 'tts' | 'design' | 'clone';
+const TTS_TABS: { id: TtsTab; label: string; hint: string }[] = [
+  { id: 'tts', label: '기본 목소리', hint: '준비된 9명의 목소리에서 골라 말투를 입혀요.' },
+  { id: 'design', label: '목소리 디자인', hint: '원하는 목소리를 글로 설명하면 새 목소리를 만들어요.' },
+  { id: 'clone', label: '내 목소리 클론', hint: '참조 음성을 올리면 그 목소리로 읽어요.' },
+];
+
 function TtsTool() {
-  const [text, setText] = useState('안녕하세요. PLAYLAB AI Tools에서 자연스러운 AI 음성을 만들어 보세요.'); const [voice, setVoice] = useState('Charon'); const [url, setUrl] = useState(''); const [loading, setLoading] = useState(false); const [error, setError] = useState('');
-  useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
-  async function generate(preview = false) {
-    setLoading(true); setError('');
-    try { const response = await fetch('/api/tools/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: preview ? '안녕하세요. 이 음성의 분위기와 발음을 미리 들어보세요.' : text, voice }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); const next = URL.createObjectURL(pcmToWav(data.audioBase64)); if (preview) { const player = new Audio(next); player.onended = () => URL.revokeObjectURL(next); await player.play(); } else setUrl((current) => { if (current) URL.revokeObjectURL(current); return next; }); } catch (caught) { setError(caught instanceof Error ? caught.message : '음성 생성에 실패했습니다.'); } finally { setLoading(false); }
+  const [tab, setTab] = useState<TtsTab>('tts'); const [description, setDescription] = useState(TTS_DESIGN_PRESETS[0].description);
+  const [text, setText] = useState('안녕하세요. COAI 바로쓰기에서 자연스러운 AI 음성을 만들어 보세요.'); const [voice, setVoice] = useState(TTS_VOICES[0].id); const [language, setLanguage] = useState('Korean'); const [style, setStyle] = useState('default');
+  const [job, setJob] = useState<TtsJob | null>(null); const [submitting, setSubmitting] = useState(false); const [error, setError] = useState('');
+  const busy = submitting || (!!job && TTS_ACTIVE.has(job.status));
+  async function call(init?: RequestInit, id?: string) {
+    const response = await fetch(id ? `/api/tools/tts?id=${encodeURIComponent(id)}` : '/api/tools/tts', init); const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.error || '음성 생성에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    return data.data as TtsJob;
   }
-  return <><section className="tts-workspace">
+  useEffect(() => {
+    if (!job || !TTS_ACTIVE.has(job.status)) return;
+    const timer = window.setInterval(() => { call(undefined, job.artifactId).then((next) => { setJob(next); if (next.error) setError(next.error); }).catch((caught) => setError(caught instanceof Error ? caught.message : '상태를 확인하지 못했어요.')); }, 3000);
+    return () => window.clearInterval(timer);
+  }, [job]);
+  async function generate() {
+    setSubmitting(true); setError(''); setJob(null);
+    try { const next = await call({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tab === 'design' ? { mode: 'design', text, description, language } : { mode: 'tts', text, voice, language, style }) }); setJob(next); if (next.error) setError(next.error); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : '음성 생성에 실패했어요.'); } finally { setSubmitting(false); }
+  }
+  async function cancel() { if (!job) return; try { setJob(await call({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', artifactId: job.artifactId }) })); } catch (caught) { setError(caught instanceof Error ? caught.message : '취소하지 못했어요.'); } }
+  function preview() { setError(''); new Audio(`/tts-samples/${voice}.mp3`).play().catch(() => setError('미리듣기 샘플을 준비 중이에요.')); }
+  const url = job?.status === 'COMPLETED' ? job.audioUrl : null;
+  const progress = !job ? '' : job.status === 'RUNNING' ? '목소리를 입히는 중이에요…' : '작업 순서를 기다리는 중이에요… 첫 요청은 GPU가 켜지느라 1분 정도 걸릴 수 있어요.';
+  const tabs = <div role="tablist" aria-label="음성 만들기 방식" className="mt-6 flex flex-wrap gap-x-6 gap-y-2 border-b">{TTS_TABS.map(item => <button key={item.id} role="tab" aria-selected={tab === item.id} onClick={() => { setTab(item.id); setError(''); }} className={`-mb-px border-b-2 pb-3 text-sm ${tab === item.id ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground'}`}>{item.label}</button>)}</div>;
+  const hint = <p className="mt-3 text-xs text-muted-foreground">{TTS_TABS.find(item => item.id === tab)?.hint}</p>;
+  if (tab === 'clone') return <>{tabs}{hint}<QwenVoiceCloneTool /></>;
+  return <>{tabs}{hint}<section className="tts-workspace">
     <div className="tts-input">
-      <div className="flex items-center justify-between"><label htmlFor="tts-script" className="eyebrow">01 / 읽을 내용</label><span className="text-xs text-muted-foreground">{text.length.toLocaleString()} / 10,000</span></div>
-      <textarea id="tts-script" value={text} onChange={event => setText(event.target.value)} maxLength={10000} rows={8} placeholder="어떤 이야기를 들려줄까요?" className="mt-4 w-full resize-y border-0 border-b bg-transparent p-0 pb-5 text-base leading-8 outline-none focus:border-primary" />
-      <div className="mt-7 flex items-center justify-between gap-3"><h2 className="eyebrow">02 / 목소리 선택</h2><button onClick={() => generate(true)} disabled={loading} className="quiet-link text-xs"><Play size={13} />미리듣기</button></div>
-      <div className="voice-options">{voices.map(item => <button key={item} onClick={() => setVoice(item)} aria-pressed={voice === item} className={voice === item ? 'selected' : ''}><span>{item}</span><small>{labels[item]}</small></button>)}</div>
-      <button onClick={() => generate()} disabled={loading || !text.trim()} className="ribbon-cta mt-7 w-full">{loading ? '목소리를 만들고 있어요…' : '음성 만들기'}{loading ? <Loader2 size={17} className="animate-spin" /> : <ArrowRight size={17} />}</button><ErrorBox text={error} />
+      <div className="flex items-center justify-between"><label htmlFor="tts-script" className="eyebrow">01 / 읽을 내용</label><span className="text-xs text-muted-foreground">{text.length.toLocaleString()} / {TTS_MAX_CHARS.toLocaleString()}</span></div>
+      <textarea id="tts-script" value={text} onChange={event => setText(event.target.value)} maxLength={TTS_MAX_CHARS} rows={8} placeholder="어떤 이야기를 들려줄까요?" className="mt-4 w-full resize-y border-0 border-b bg-transparent p-0 pb-5 text-base leading-8 outline-none focus:border-primary" />
+      {tab === 'tts' ? <>
+        <div className="mt-7 flex items-center justify-between gap-3"><h2 className="eyebrow">02 / 목소리 선택</h2><button onClick={preview} className="quiet-link text-xs"><Play size={13} />미리듣기</button></div>
+        <div className="voice-options">{TTS_VOICES.map(item => <button key={item.id} onClick={() => setVoice(item.id)} aria-pressed={voice === item.id} className={voice === item.id ? 'selected' : ''}><span>{item.id.replace('_', ' ')}</span><small>{item.label} · {item.native}</small></button>)}</div>
+        <h2 className="eyebrow mt-7">03 / 말투 · 언어</h2>
+        <div className="mt-3 flex flex-wrap gap-2">{TTS_STYLES.map(item => <button key={item.id} onClick={() => setStyle(item.id)} aria-pressed={style === item.id} className={`rounded-full border px-3 py-1.5 text-xs ${style === item.id ? 'border-primary text-primary' : 'text-muted-foreground'}`}>{item.label}</button>)}</div>
+      </> : <>
+        <div className="mt-7 flex items-center justify-between gap-3"><label htmlFor="tts-design" className="eyebrow">02 / 목소리 설명</label><span className="text-xs text-muted-foreground">{description.length} / {TTS_DESIGN_MAX_CHARS}</span></div>
+        <div className="mt-3 flex flex-wrap gap-2">{TTS_DESIGN_PRESETS.map(item => <button key={item.label} onClick={() => setDescription(item.description)} aria-pressed={description === item.description} className={`rounded-full border px-3 py-1.5 text-xs ${description === item.description ? 'border-primary text-primary' : 'text-muted-foreground'}`}>{item.label}</button>)}</div>
+        <textarea id="tts-design" value={description} onChange={event => setDescription(event.target.value)} maxLength={TTS_DESIGN_MAX_CHARS} rows={3} placeholder="예: 30대 여성, 차분하고 신뢰감 있는 아나운서 톤. 또박또박 천천히." className="mt-3 w-full resize-y rounded-md border bg-background p-3 text-sm leading-6 outline-none focus:border-primary" />
+        <h2 className="eyebrow mt-7">03 / 언어</h2>
+      </>}
+      <select value={language} onChange={event => setLanguage(event.target.value)} aria-label="읽을 언어" className="mt-3 w-full rounded-md border bg-background px-3 py-2 text-sm">{TTS_LANGUAGES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
+      <button onClick={generate} disabled={busy || !text.trim() || (tab === 'design' && !description.trim())} className="ribbon-cta mt-7 w-full">{busy ? '목소리를 만들고 있어요…' : '음성 만들기'}{busy ? <Loader2 size={17} className="animate-spin" /> : <ArrowRight size={17} />}</button>
+      {job && TTS_ACTIVE.has(job.status) && <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted-foreground"><span>{progress}</span><button onClick={cancel} className="quiet-link text-xs">취소</button></div>}
+      <ErrorBox text={error} />
     </div>
-    <aside className="tts-result"><p className="eyebrow">03 / LISTEN TO YOUR IDEA</p><div className="sound-sculpture" aria-hidden="true">{[12,24,42,66,100,76,46,24,44,80,110,76,38,22,50,84,56,28,16].map((h,i) => <i key={i} style={{height:h}} />)}</div>
+    <aside className="tts-result"><p className="eyebrow">04 / LISTEN TO YOUR IDEA</p><div className="sound-sculpture" aria-hidden="true">{[12,24,42,66,100,76,46,24,44,80,110,76,38,22,50,84,56,28,16].map((h,i) => <i key={i} style={{height:h}} />)}</div>
       <h2>{url ? '당신의 목소리가 준비됐어요.' : '글이 목소리가 되는 순간.'}</h2><p>{url ? '들어보고, 내려받아 다음 작업에 사용하세요.' : '내용을 입력하고 목소리를 골라보세요. 완성된 음성이 여기에 도착해요.'}</p>
       {url && <div className="mt-6"><audio className="w-full" controls src={url} /><a download="playlab-tts.wav" href={url} className="mt-5 flex items-center justify-center gap-2 text-sm text-primary"><Download size={16} />WAV 다운로드</a></div>}
-      <span className="tts-format">GEMINI VOICE · WAV / 24 kHz</span>
+      <span className="tts-format">{tab === 'design' ? 'QWEN3-TTS VOICE DESIGN' : 'QWEN3-TTS CUSTOM VOICE'} · WAV / 24 kHz</span>
     </aside>
-  </section><details className="mt-8 border-t pt-6"><summary className="cursor-pointer text-sm text-muted-foreground">내 목소리로 만들기 · 보이스 클로닝</summary><QwenVoiceCloneTool /></details></>;
+  </section></>;
 
 }
 
