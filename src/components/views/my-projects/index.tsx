@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { ArrowUpRight, Clapperboard, Heart, Loader2, LogOut, Trash2, Upload, User, Film, CheckCircle2, XCircle, Play } from 'lucide-react';
+import { ArrowUpRight, Clapperboard, Heart, Loader2, LogOut, ShieldCheck, Trash2, Upload, User, Film, CheckCircle2, XCircle, Play } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { CancelVideo } from '@/components/shared/cancel-video';
 import { useAppStore } from '@/lib/store';
@@ -168,6 +168,7 @@ export default function MyProjectsView() {
             <div className={styles.profileActions}>
               <button type="button" onClick={() => navigate('community', { write: '1' })}>{locale === 'en' ? 'Write a post' : '글쓰기'}</button>
               <button type="button" onClick={() => navigate('ai-tools')}>{locale === 'en' ? 'Open tools' : '바로쓰기'}</button>
+              {session.role === 'admin' && <button type="button" className={styles.adminButton} onClick={() => navigate('admin')}><ShieldCheck size={16} />{locale === 'en' ? 'Admin mode' : '관리자 모드'}</button>}
             </div>
           </div>
         </div>

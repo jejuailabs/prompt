@@ -13,7 +13,7 @@ interface UserPatchBody {
 
 export async function PATCH(req: NextRequest) {
   try {
-    await requireAdmin();
+    const me = await requireAdmin();
     const body = await readJson<UserPatchBody>(req);
     if (!body.id) throw new HttpError('사용자 id가 필요합니다', 400);
 
@@ -29,6 +29,14 @@ export async function PATCH(req: NextRequest) {
     }
     if (body.banned !== undefined) data.banned = Boolean(body.banned);
     if (!Object.keys(data).length) throw new HttpError('변경할 내용이 없습니다', 400);
+
+    // Any admin may appoint admins. Guard against locking the site out:
+    // no one removes or bans themselves, and the last active admin always stays.
+    const losesAdmin = profile.role === 'admin' && (data.role === 'user' || data.banned === true);
+    if (losesAdmin && profile.id === me.id) throw new HttpError('내 관리자 권한은 직접 해제하거나 정지할 수 없습니다', 400);
+    if (losesAdmin && (await db.profile.count({ where: { role: 'admin', banned: false } })) <= 1) {
+      throw new HttpError('마지막 관리자는 해제할 수 없습니다', 400);
+    }
 
     const updated = await db.profile.update({ where: { id: profile.id }, data });
     const [dto] = await serializeAdminUsers([updated]);

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { AlertTriangle, ArrowDown, ArrowUp, BarChart3, CheckCircle, Circle, Clock, Coins, Film, Info, Loader2, Radar, ReceiptText, RotateCcw, ServerCog, Shield, Trash2, Users, Wallet, Wrench, Zap } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, BarChart3, CheckCircle, Circle, Clock, Coins, Film, Info, Loader2, Radar, ReceiptText, RotateCcw, ServerCog, Shield, ShieldCheck, ShieldOff, Trash2, Users, Wallet, Wrench, Zap } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { CreditRequests } from './credit-requests';
 import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
@@ -543,6 +543,7 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [adjustments, setAdjustments] = useState<Record<string, string>>({});
+  const myId = useAppStore((s) => s.session?.id);
 
   const patchM = useMutation({
     mutationFn: (body: { id: string; role?: 'user' | 'admin'; banned?: boolean }) =>
@@ -557,6 +558,11 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
     },
     onError: (e: Error) => toast({ title: e.message, variant: 'destructive' }),
   });
+
+  const setRole = (u: AdminUserDTO, role: 'user' | 'admin') => {
+    const ok = window.confirm(role === 'admin' ? `@${u.username} 님을 관리자로 지정할까요?\n공지·뉴스·일정 작성과 관리자 모드를 쓸 수 있게 됩니다.` : `@${u.username} 님의 관리자 권한을 해제할까요?`);
+    if (ok) patchM.mutate({ id: u.id, role });
+  };
 
   const creditM = useMutation({
     mutationFn: ({ userId, amount }: { userId: string; amount: number }) => api.post<{ balance: number }>('/api/admin/finance', { userId, amount, memo: '관리자 수동 조정' }),
@@ -602,18 +608,9 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
                 {u.credits.toLocaleString(locale === 'en' ? 'en-US' : 'ko-KR')}
               </TableCell>
               <TableCell>
-                <Select
-                  value={u.role}
-                  onValueChange={(v) => patchM.mutate({ id: u.id, role: v as 'user' | 'admin' })}
-                >
-                  <SelectTrigger className="h-8 w-24">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">user</SelectItem>
-                    <SelectItem value="admin">admin</SelectItem>
-                  </SelectContent>
-                </Select>
+                {u.role === 'admin'
+                  ? <Button size="sm" variant="outline" className="h-8 gap-1 px-2 text-xs" disabled={patchM.isPending || u.id === myId} title={u.id === myId ? '내 권한은 다른 관리자가 해제할 수 있어요' : undefined} onClick={() => setRole(u, 'user')}><ShieldOff className="size-3.5" />관리자 해제</Button>
+                  : <Button size="sm" className="h-8 gap-1 px-2 text-xs" disabled={patchM.isPending || u.banned} onClick={() => setRole(u, 'admin')}><ShieldCheck className="size-3.5" />관리자 지정</Button>}
               </TableCell>
               <TableCell>
                 <div className="flex min-w-44 gap-1.5">
@@ -637,7 +634,7 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
               <TableCell>
                 <Switch
                   checked={u.banned}
-                  disabled={patchM.isPending}
+                  disabled={patchM.isPending || u.id === myId}
                   onCheckedChange={(banned) => patchM.mutate({ id: u.id, banned })}
                 />
               </TableCell>

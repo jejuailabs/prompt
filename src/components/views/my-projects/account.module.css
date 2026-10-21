@@ -35,6 +35,7 @@
 .profileActions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .profileActions button{display:inline-flex;align-items:center;height:38px;margin:0;padding:0 14px;gap:0;border-radius:var(--coai-radius-md);border:1px solid var(--coai-border-strong);font-size:14px;font-weight:600;color:var(--coai-text-body);background:var(--coai-bg-surface)}
 .profileActions button:first-child{background:var(--coai-brand);border-color:var(--coai-brand);color:#fff}
+.profileActions .adminButton{gap:6px;border-color:var(--coai-blue);color:var(--coai-blue-strong);background:var(--coai-blue-soft)}
 .creditPanel{border-left:0;background:var(--coai-bg-surface)}
 .creditPanel h3,.stats h3{font:700 16px/1.4 var(--coai-font);color:var(--coai-text-strong);margin:0 0 12px}
 .credits{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
