@@ -3,11 +3,13 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowUpRight, Eye, MessageCircle, Newspaper, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, CalendarDays, ChevronRight, Eye, MapPin, MessageCircle, Newspaper, Plus, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { toast } from '@/hooks/use-toast';
 import type { CommentDTO } from '@/lib/types';
+import { eventStatus, filterEvents, type AiEvent } from '@/modules/ai-events/catalogue';
+import { EventPoster } from '@/modules/ai-events/event-poster';
 import { NEWS_CATEGORIES, newsCategoryLabel, type NewsCategory, type NewsDTO, type NewsInput } from './news';
 import styles from './news.module.css';
 
@@ -16,11 +18,46 @@ function formatDate(value: string) {
   return `${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDate()}`;
 }
 
+/** Upcoming 행사·모임 posters shown above the news list; the full board stays at #ai-events. */
+function EventStrip() {
+  const navigate = useAppStore((s) => s.navigate);
+  const events = useQuery({ queryKey: ['ai-events', 'public'], queryFn: () => api.get<AiEvent[]>('/api/ai-events'), staleTime: 60_000 });
+  const now = new Date();
+  const items = filterEvents(events.data ?? [], {}, now).slice(0, 4);
+  if (!events.isLoading && !items.length) return null;
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHead}>
+        <h2>행사·모임</h2>
+        <button type="button" onClick={() => navigate('ai-events')}>전체 일정<ChevronRight size={16} /></button>
+      </div>
+      <div className={styles.events}>
+        {events.isLoading && Array.from({ length: 4 }, (_, i) => <div key={i} className={styles.eventSkeleton} />)}
+        {items.map((item) => {
+          const status = eventStatus(item, now);
+          return (
+            <button key={item.id} type="button" className={styles.event} onClick={() => navigate('ai-events', { id: item.id })}>
+              <span className={styles.eventPoster}><EventPoster item={item} now={now} /></span>
+              <span className={styles.eventInfo}>
+                <span className={styles.eventStatus} data-status={status.code}>{status.label}</span>
+                <strong>{item.title}</strong>
+                <span><CalendarDays size={13} />{item.registrationClosed ? '주최측 접수 마감 안내' : item.applyUntil ? '접수 ~ ' + item.applyUntil.replaceAll('-', '.') : item.schedule}</span>
+                <span><MapPin size={13} />{item.location}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function NewsList({ open, isAdmin, write }: { open: (id: string) => void; isAdmin: boolean; write: () => void }) {
   const [category, setCategory] = useState<NewsCategory | ''>('');
   const list = useQuery({ queryKey: ['news', category], queryFn: () => api.get<NewsDTO[]>(`/api/news?category=${category}`) });
   return (
-    <>
+    <section className={styles.section}>
+      <div className={styles.sectionHead}><h2>AI 뉴스</h2></div>
       <div className={styles.filters} role="group" aria-label="뉴스 분류">
         <button type="button" aria-pressed={!category} onClick={() => setCategory('')}>전체</button>
         {NEWS_CATEGORIES.map((item) => <button key={item.id} type="button" aria-pressed={category === item.id} onClick={() => setCategory(item.id)}>{item.label}</button>)}
@@ -49,7 +86,7 @@ function NewsList({ open, isAdmin, write }: { open: (id: string) => void; isAdmi
           </div>
         )}
       </section>
-    </>
+    </section>
   );
 }
 
@@ -130,7 +167,7 @@ function NewsEditor({ done, cancel }: { done: (id: string) => void; cancel: () =
   );
 }
 
-/** 뉴스·이벤트 > 뉴스: list with category filters, detail (summary · commentary · meaning · source), staff editor. */
+/** 뉴스·이벤트: upcoming event posters + news list on one screen, news detail (summary · commentary · meaning · source), staff editor. */
 export default function CoaiNews() {
   const params = useAppStore((s) => s.params);
   const navigate = useAppStore((s) => s.navigate);
@@ -139,12 +176,12 @@ export default function CoaiNews() {
   return (
     <div className={styles.page}>
       <header className={styles.headerRow}>
-        <div><p className={styles.eyebrow}>뉴스·이벤트</p><h1>AI 뉴스</h1><p>오늘 알아두면 좋은 AI 소식을 3줄 요약과 운영진 해설로 전해요.</p></div>
+        <div><p className={styles.eyebrow}>뉴스·이벤트</p><h1>AI 뉴스·행사</h1><p>오늘 알아두면 좋은 AI 소식과 참여할 만한 행사·강의를 한 화면에서 확인하세요.</p></div>
         {isAdmin && !params.write && <button type="button" className={styles.primary} onClick={write}><Plus size={16} />뉴스 등록</button>}
       </header>
       {params.write && isAdmin ? <NewsEditor done={(id) => navigate('news', { id })} cancel={() => navigate('news')} />
         : params.id ? <NewsDetail key={params.id} id={params.id} back={() => navigate('news')} isAdmin={isAdmin} />
-        : <NewsList open={(id) => navigate('news', { id })} isAdmin={isAdmin} write={write} />}
+        : <><EventStrip /><NewsList open={(id) => navigate('news', { id })} isAdmin={isAdmin} write={write} /></>}
     </div>
   );
 }

@@ -52,9 +52,3 @@ export const COAI_MAKE_SECTIONS: { id: string; label: string; labelEn: string; t
   { id: '3d', label: '3D 생성', labelEn: '3D', target: { view: '3d-studio' }, views: ['3d-studio'] },
   { id: 'music', label: '음악 생성', labelEn: 'Music', target: { view: 'tool', params: { slug: 'ace-music' } }, views: [] },
 ];
-
-/** 뉴스·이벤트 tabs (docs/coai/04 §2: 뉴스 | 행사·모임). */
-export const COAI_NEWS_SECTIONS: typeof COAI_MAKE_SECTIONS = [
-  { id: 'news', label: '뉴스', labelEn: 'News', target: { view: 'news' }, views: ['news'] },
-  { id: 'events', label: '행사·모임', labelEn: 'Events', target: { view: 'ai-events' }, views: ['ai-events'] },
-];

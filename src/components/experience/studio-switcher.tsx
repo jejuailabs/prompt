@@ -1,8 +1,8 @@
 'use client';
 import { useAppStore } from '@/lib/store';
-import { COAI_MAKE_SECTIONS, COAI_NEWS_SECTIONS, activeCoaiMenu } from '@/lib/coai-navigation';
+import { COAI_MAKE_SECTIONS, activeCoaiMenu } from '@/lib/coai-navigation';
 
-/** Section tabs for menus that group several screens: 만들어보기 and 뉴스·이벤트. */
+/** Section tabs for 만들어보기, which groups several screens. 뉴스·이벤트 shows news and events on one screen. */
 export function StudioSwitcher() {
   const view = useAppStore(s => s.view);
   const slug = useAppStore(s => s.params.slug);
@@ -10,7 +10,7 @@ export function StudioSwitcher() {
   const en = useAppStore(s => s.locale) === 'en';
   const music = view === 'tool' && slug === 'ace-music';
   const menu = music ? 'make' : activeCoaiMenu(view);
-  const sections = menu === 'make' ? COAI_MAKE_SECTIONS : menu === 'news' ? COAI_NEWS_SECTIONS : null;
+  const sections = menu === 'make' ? COAI_MAKE_SECTIONS : null;
   if (!sections) return null;
   return <nav className="coai-make-tabs" aria-label={en ? 'Sections' : '하위 메뉴'}>
     <div className="coai-container">

@@ -47,8 +47,25 @@
 .field legend{margin-bottom:8px}
 .row{display:grid;grid-template-columns:1fr 2fr;gap:12px}
 .actions{display:flex;justify-content:flex-end;gap:10px}.actions .ghost{margin-top:0}
+.section{margin-bottom:32px}
+.sectionHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.sectionHead h2{font:700 20px/1.4 var(--coai-font);color:var(--coai-text-strong);margin:0}
+.sectionHead button{display:inline-flex;align-items:center;gap:2px;font-size:15px;color:var(--coai-text-muted)}
+.sectionHead button:hover{color:var(--coai-blue-strong)}
+.events{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.event{display:flex;flex-direction:column;min-width:0;background:var(--coai-bg-surface);border:1px solid var(--coai-border);border-radius:var(--coai-radius-lg);overflow:hidden;text-align:left}
+.event:hover{box-shadow:var(--coai-shadow-hover)}.event:hover strong{color:var(--coai-blue-strong)}
+.eventPoster{position:relative;display:block;aspect-ratio:3/4;container-type:inline-size;overflow:hidden}
+.eventInfo{display:flex;flex-direction:column;gap:4px;padding:12px 14px 14px;min-width:0}
+.eventInfo strong{font-size:16px;font-weight:700;line-height:1.45;color:var(--coai-text-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eventInfo span{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--coai-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eventInfo .eventStatus{font-weight:600;color:var(--coai-tag-general-fg)}
+.eventStatus[data-status=closed]{color:var(--coai-text-muted)}.eventStatus[data-status=ongoing]{color:var(--coai-brand)}
+.eventSkeleton{aspect-ratio:3/5.2;border-radius:var(--coai-radius-lg);background:var(--coai-bg-subtle)}
 @media (max-width:767px){
   .page{padding:18px 16px 40px}.headerRow{flex-direction:column;align-items:stretch}.headerRow h1{font-size:22px}
   .panel{padding:4px 16px 16px}.item{gap:12px;padding:16px 0}.thumb{flex-basis:96px;height:72px}
+  .events{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;scrollbar-width:none}.events::-webkit-scrollbar{display:none}
+  .event,.eventSkeleton{flex:0 0 62%;scroll-snap-align:start}
   .itemBody strong{font-size:16px}.summary{font-size:14px;-webkit-line-clamp:1}.title{font-size:22px}.row{grid-template-columns:1fr}
 }
