@@ -79,7 +79,7 @@ export class LandingService {
   constructor(
     public repo: LandingRepository,
     public storage: LandingStorage,
-    public config: { appOrigin: string; previewOrigin: string; secret: string },
+    public config: { appOrigin: string; previewOrigin: string; secret: string; previewPath?: string; maxSessions?: number },
   ) {}
   async owned(id: string, owner: string) {
     const r = await this.repo.get(id);
@@ -367,10 +367,10 @@ export class LandingService {
         .digest("base64url"),
       token = payload + "." + signature;
     session.hash = hash(token);
-    m.sessions = m.sessions.filter((s) => s.expiresAt > Date.now()).slice(-9);
+    m.sessions = m.sessions.filter((s) => s.expiresAt > Date.now()).slice(-((this.config.maxSessions || 10) - 1));
     m.sessions.push(session);
     await this.swap(r, m);
-    const prefix = this.config.previewOrigin + "/landing-preview/" + token,
+    const prefix = this.config.previewOrigin + (this.config.previewPath || "/landing-preview/") + token,
       entry = m.active.manifest.entry
         .slice(m.active.manifest.siteRoot.length)
         .split("/")
@@ -462,7 +462,7 @@ export class LandingService {
       createHash("sha256").update(bytes).digest("hex") !== info.sha256
     )
       throw new LandingError("저장된 파일 무결성 검사에 실패했습니다.", 500);
-    const prefix = this.config.previewOrigin + "/landing-preview/" + token,
+    const prefix = this.config.previewOrigin + (this.config.previewPath || "/landing-preview/") + token,
       body = renderFile(path, bytes, m.active.manifest, prefix, session.id),
       origins = m.active.manifest.externalOrigins.join(" ");
     let output = body,

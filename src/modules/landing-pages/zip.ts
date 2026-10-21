@@ -50,7 +50,9 @@ function crc(bytes: Uint8Array) {
   for (const b of bytes) n = table[(n ^ b) & 255] ^ (n >>> 8);
   return (n ^ 0xffffffff) >>> 0;
 }
-export function unpackZip(input: Uint8Array, limits: typeof LIMITS = LIMITS) {
+// Source archives use the same bounded ZIP parser, with their own file policy.
+// The default policy remains unchanged for private landing pages.
+export function unpackZip(input: Uint8Array, limits: typeof LIMITS = LIMITS, sourcePolicy?: (path: string, folder: boolean) => void) {
   const b = Buffer.from(input);
   if (b.length > limits.zipBytes)
     throw new LandingError("ZIP은 50MB 이하만 지원합니다.", 413);
@@ -144,7 +146,8 @@ export function unpackZip(input: Uint8Array, limits: typeof LIMITS = LIMITS) {
       const folder = name.endsWith("/");
       if (folder) name = name.slice(0, -1);
       safePath(name);
-      if (
+      if (sourcePolicy) sourcePolicy(name, folder);
+      if (!sourcePolicy && (
         name
           .split("/")
           .some(
@@ -154,7 +157,7 @@ export function unpackZip(input: Uint8Array, limits: typeof LIMITS = LIMITS) {
         /(?:^|\/)(?:package(?:-lock)?\.json|yarn\.lock|pnpm-lock\.yaml|.*\.pem|.*\.key|.*\.env(?:\..*)?|Dockerfile|Thumbs\.db)$/i.test(
           name,
         )
-      )
+      ))
         throw new LandingError(
           "비밀 설정·빌드 파일은 지원하지 않습니다: " + name,
         );
@@ -166,7 +169,7 @@ export function unpackZip(input: Uint8Array, limits: typeof LIMITS = LIMITS) {
         if (size) throw new LandingError("잘못된 폴더 항목: " + name);
         continue;
       }
-      if (!MIME[extension(name)])
+      if (!sourcePolicy && !MIME[extension(name)])
         throw new LandingError(
           "지원하지 않는 파일입니다. 서버 코드·중첩 압축·빌드 파일은 제외해주세요: " +
             name,
