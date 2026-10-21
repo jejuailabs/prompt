@@ -194,5 +194,27 @@ export const PORTABLE_GAMES = [
     "portable": true,
     "rewardedContinue": false,
     "moduleVersion": "1.0.0"
+  },
+  {
+    "slug": "cat-reaction",
+    "title": "번개 냥이 반응속도",
+    "englishTitle": "Lightning Paws",
+    "publishedAt": "2026-10-21T06:00:00.000Z",
+    "description": "초록색으로 바뀌고 냥이가 깨어나는 순간 톡! 기본·가짜 신호·연속 반응 3단계 평균으로 최고 반응속도(ms)에 도전해요.",
+    "contentUrl": "/games/cat-reaction/index.html",
+    "fileUrl": "/games/cat-reaction/cover.png",
+    "artUrl": "/games/cat-reaction/cover.png",
+    "tags": [
+      "고양이",
+      "반응속도",
+      "3단계"
+    ],
+    "controls": "초록색이 되면 화면 터치 / 클릭 / 스페이스, Esc = 일시정지",
+    "palette": "#9ec5f5",
+    "emoji": "⚡",
+    "playHint": "번개 냥이 · 초록이면 바로 톡!",
+    "portable": true,
+    "rewardedContinue": false,
+    "moduleVersion": "1.0.0"
   }
 ] as const;

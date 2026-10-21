@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/auth';
 import { PUZZLE_GAMES } from '@/lib/puzzle-games.generated';
 import { LITTLE_WORLDS } from '@/lib/little-worlds';
 import { fail, ok } from '@/lib/server/handler';
+import { TIME_RANKING_KEYS, rankingPrefix } from '@/lib/game-ranking-modes';
 
 // Built-in games (/games/<slug>.html) ship a gameplay screenshot at /games/thumbs/<slug>.png.
 // It replaces a missing or legacy seed thumbnail so every built-in card has a real image.
@@ -19,7 +20,7 @@ async function topPlayers(gameIds: string[]) {
   if (gameIds.length === 0) return new Map<string, { rank: number; username: string; score: number }[]>();
   const best = await db.gamePlay.groupBy({
     by: ['artifactId', 'userId'],
-    where: { artifactId: { in: gameIds }, userId: { not: null }, user: { banned: false }, score: { gt: 0 } },
+    where: { artifactId: { in: gameIds }, userId: { not: null }, user: { banned: false }, score: { gt: 0 }, NOT: { OR: TIME_RANKING_KEYS.map((k) => ({ id: { startsWith: rankingPrefix(k) } })) } },
     _max: { score: true },
   });
   const userIds = [...new Set(best.map((b) => b.userId).filter((id): id is string => Boolean(id)))];
