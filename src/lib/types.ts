@@ -32,6 +32,7 @@ export type ViewKey =
   | 'community'
   | 'academy'
   | 'vibe-setup'
+  | 'ai-guide'
   | 'ai-events'
   | 'news'
   | 'motion-library'

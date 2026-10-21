@@ -5,7 +5,7 @@ import type { Locale, SessionUser, ViewKey } from '@/lib/types';
 
 const VIEW_KEYS: ViewKey[] = [
   'home', 'gallery', 'prompt', 'prompt-wiki', 'project', 'lab', 'pipelines', 'pipeline-run',
-  'smoke', 'revenue', 'market', 'community', 'academy', 'vibe-setup', 'ai-events', 'news', 'motion-library', 'landing-pages', 'ai-tools', 'my-projects',
+  'smoke', 'revenue', 'market', 'community', 'academy', 'vibe-setup', 'ai-guide', 'ai-events', 'news', 'motion-library', 'landing-pages', 'ai-tools', 'my-projects',
   'game-room', 'game-play', 'video-studio', '3d-studio', 'admin', 'tool',
 ];
 

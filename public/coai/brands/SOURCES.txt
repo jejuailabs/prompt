@@ -1,7 +1,16 @@
-Brand marks for the home "AI 서비스 가이드" tiles (copied from the aiguidepage project).
+Brand marks for the home "AI 서비스 가이드" tiles and the guide shelf (copied from the aiguidepage project).
 
-openai.svg, claude-color.svg, gemini-color.svg, perplexity.svg, notebooklm.svg, suno.svg:
+openai.svg, claude-color.svg, gemini-color.svg, perplexity.svg, notebooklm.svg, suno.svg,
+grok.svg, google-color.svg:
 LobeHub lobe-icons, @lobehub/icons-static-svg 1.95.1.
 https://github.com/lobehub/lobe-icons
 See LICENSE-lobe-icons.txt for the MIT license. Service trademarks remain
 the property of their respective owners.
+
+genspark.svg:
+Official Genspark square icon, downloaded without modification.
+https://www.genspark.ai/brand/genspark
+Genspark brand guidelines apply.
+
+Google Flow and Google Flow Music are represented by Google's brand icon;
+it does not imply a separate product mark.

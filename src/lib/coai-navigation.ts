@@ -24,8 +24,8 @@ export const COAI_MENUS: CoaiMenu[] = [
   { id: 'prompts', labelKey: 'navPrompts', icon: 'sparkles', target: { view: 'gallery', params: { tab: 'prompts' } }, views: ['prompt-wiki', 'prompt'] },
   { id: 'make', labelKey: 'navMake', icon: 'play-square', target: { view: 'game-room' }, views: ['game-room', 'game-play', 'landing-pages', 'motion-library', 'project', 'lab', 'video-studio', '3d-studio'] },
   { id: 'tools', labelKey: 'navTools', icon: 'wrench', target: { view: 'ai-tools' }, views: ['ai-tools', 'tool'] },
-  // Until the guide menu ships (S3) it opens the existing vibe-coding starter guide.
-  { id: 'guide', labelKey: 'navGuide', icon: 'compass', target: { view: 'vibe-setup' }, views: ['vibe-setup'] },
+  // AI 서비스 사용설명서 shelf; the vibe-coding starter guide is linked from it.
+  { id: 'guide', labelKey: 'navGuide', icon: 'compass', target: { view: 'ai-guide' }, views: ['ai-guide', 'vibe-setup'] },
   { id: 'learn', labelKey: 'navLearn', icon: 'book-open', target: { view: 'academy' }, views: ['academy'] },
   { id: 'community', labelKey: 'navCommunity', icon: 'users', target: { view: 'community' }, views: ['community', 'gallery'] },
 ];

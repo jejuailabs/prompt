@@ -204,13 +204,13 @@
 
 /* tool tiles (guide services) */
 .coai-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.coai-tool { display: flex; align-items: center; gap: 8px; min-height: 72px; padding: 12px 10px; border: 1px solid var(--coai-border); border-radius: var(--coai-radius-lg); text-decoration: none; min-width: 0; }
-.coai-tool-logo { flex: 0 0 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #fff; }
+.coai-tool { display: flex; align-items: center; gap: 6px; min-height: 72px; padding: 12px 6px 12px 8px; border: 1px solid var(--coai-border); border-radius: var(--coai-radius-lg); text-decoration: none; min-width: 0; }
+.coai-tool-logo { flex: 0 0 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; color: #fff; }
 .coai-tool-logo::before { content: ""; width: 20px; height: 20px; background: #fff; -webkit-mask: var(--brand-mark) center / contain no-repeat; mask: var(--brand-mark) center / contain no-repeat; }
 .coai-tool-text { min-width: 0; flex: 1; }
-.coai-tool-text strong { display: block; font-size: 15px; font-weight: 700; color: var(--coai-text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coai-tool-text strong { display: block; font-size: 15px; font-weight: 700; letter-spacing: -.02em; color: var(--coai-text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .coai-tool-text span { display: block; font-size: 13px; color: var(--coai-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.coai-tool > svg:last-child { color: var(--coai-text-muted); flex-shrink: 0; margin-left: -4px; }
+.coai-tool > svg:last-child { color: var(--coai-text-muted); flex-shrink: 0; margin-left: -6px; }
 
 /* community popular */
 .coai-panel-wide { margin-top: 24px; }

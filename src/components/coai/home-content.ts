@@ -46,16 +46,3 @@ export const HOME_PHOTO_POSTERS: HomePhotoPoster[] = [
   { id: 'shop', kind: 'course', badge: '교육', title: '우리 가게에\nAI를 더하다', when: '10.31까지 모집', where: '전국 10개 권역', cta: '모집 안내', image: '/coai/posters/photo/shop.webp', eventId: 'small-business-ai-2026' },
   { id: 'award', kind: 'contest', badge: '공모전', title: 'AI 코리아\n대상 2026', when: '시상식 2026.11.12', where: 'JW메리어트 동대문', cta: '자세히 보기', image: '/coai/posters/photo/award.webp', eventId: 'ai-korea-awards-2026' },
 ];
-
-export type GuideService = { slug: string; name: string; summary: string; description: string; icon: string; color: string; url: string };
-
-// Brand marks are LobeHub icons (MIT, public/coai/brands/SOURCES.txt), drawn
-// white on the brand-color tile. Copy follows the aiguidepage AI 전시관.
-export const GUIDE_SERVICES: GuideService[] = [
-  { slug: 'chatgpt', name: 'ChatGPT', summary: '대화·글쓰기', description: '일상의 질문부터 글쓰기와 아이디어까지, 대화하며 함께 풀어가는 AI예요.', icon: '/coai/brands/openai.svg', color: '#10A37F', url: 'https://chatgpt.com' },
-  { slug: 'claude', name: 'Claude', summary: '긴 문서·글 다듬기', description: '문서를 함께 읽고, 생각을 정리하고, 글의 완성도를 높이는 대화 상대예요.', icon: '/coai/brands/claude-color.svg', color: '#D97757', url: 'https://claude.ai' },
-  { slug: 'gemini', name: 'Gemini', summary: '글·이미지 이해', description: '글과 이미지에 대해 질문하고, 새로운 아이디어를 탐색할 수 있는 Google의 AI예요.', icon: '/coai/brands/gemini-color.svg', color: '#4F7BF7', url: 'https://gemini.google.com' },
-  { slug: 'perplexity', name: 'Perplexity', summary: '출처 있는 검색', description: '궁금한 내용을 검색하고, 답변과 함께 제시된 출처를 확인하며 더 깊이 알아보세요.', icon: '/coai/brands/perplexity.svg', color: '#1F8A8A', url: 'https://www.perplexity.ai' },
-  { slug: 'notebooklm', name: 'NotebookLM', summary: '내 자료 정리', description: '내가 넣은 자료를 바탕으로 질문하고, 핵심 내용을 정리하며 이해를 깊게 할 수 있어요.', icon: '/coai/brands/notebooklm.svg', color: '#1F2937', url: 'https://notebooklm.google.com' },
-  { slug: 'suno', name: 'Suno', summary: '노래 만들기', description: '원하는 분위기와 주제를 적어 나만의 노래를 만들어 보세요. 음악 경험이 없어도 시작할 수 있어요.', icon: '/coai/brands/suno.svg', color: '#7C5CE0', url: 'https://suno.com' },
-];

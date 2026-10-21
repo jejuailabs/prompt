@@ -11,7 +11,8 @@ import { useAppStore } from '@/lib/store';
 import { toast } from '@/hooks/use-toast';
 import type { ArtifactDTO, PromptDTO, ViewKey } from '@/lib/types';
 import type { AiEvent } from '@/modules/ai-events/catalogue';
-import { GUIDE_SERVICES, HOME_PHOTO_POSTERS, HOME_POSTERS } from './home-content';
+import { HOME_PHOTO_POSTERS, HOME_POSTERS } from './home-content';
+import { GUIDE_SERVICES, HOME_GUIDE_IDS } from '@/modules/ai-guide/catalogue';
 import { boardDef, type BoardPostDTO } from '@/modules/community-board/boards';
 import type { NewsDTO } from '@/modules/coai-news/news';
 
@@ -239,13 +240,15 @@ function RecommendedPrompts() {
 
 function GuideServices() {
   const t = useTranslations('coai');
+  const go = useGo();
+  const services = HOME_GUIDE_IDS.map((id) => GUIDE_SERVICES.find((service) => service.id === id)!);
   return (
-    <Panel title={t('homeGuideServices')} view="vibe-setup">
+    <Panel title={t('homeGuideServices')} view="ai-guide">
       <div className="coai-tools">
-        {GUIDE_SERVICES.map((service) => (
-          <a key={service.slug} className="coai-tool" href={service.url} target="_blank" rel="noreferrer" title={service.description}>
-            <span className="coai-tool-logo" style={{ background: service.color, '--brand-mark': `url(${service.icon})` } as CSSProperties} aria-hidden="true" />
-            <span className="coai-tool-text"><strong>{service.name}</strong><span>{service.summary}</span></span>
+        {services.map((service) => (
+          <a key={service.id} className="coai-tool" href={hrefFor('ai-guide', { id: service.id })} onClick={(event) => go(event, 'ai-guide', { id: service.id })} title={service.description}>
+            <span className="coai-tool-logo" style={{ background: service.tile, '--brand-mark': `url(/coai/brands/${service.logo})` } as CSSProperties} aria-hidden="true" />
+            <span className="coai-tool-text"><strong>{service.name}</strong><span>{service.short}</span></span>
             <ChevronRight size={14} />
           </a>
         ))}
