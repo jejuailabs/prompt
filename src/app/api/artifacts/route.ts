@@ -9,6 +9,7 @@ import { serializeArtifactSingle } from '@/lib/server/serialize';
 import { logEvent } from '@/lib/events';
 import type { ArtifactDTO, ArtifactMetadata, ArtifactType, ExecutionTier } from '@/lib/types';
 
+const FEED_EXCLUDED_MODULES = new Set(['community-board', 'ai-events']);
 const DEFAULT_LIMIT = 24;
 
 interface CreateBody {
@@ -45,7 +46,8 @@ export async function GET(req: NextRequest) {
     let query = supaAdmin
       .from('Artifact')
       .select('*, owner:Profile!Artifact_ownerId_fkey(*)')
-      .limit(limit);
+      // Over-fetch for the feed: board posts / AI 일정 rows are dropped below.
+      .limit(scope === 'feed' && !moduleId ? limit + 40 : limit);
 
     if (scope === 'mine' || scope === 'drafts') {
       if (!user) throw new HttpError('로그인이 필요합니다', 401);
@@ -76,6 +78,8 @@ export async function GET(req: NextRequest) {
         .select('id, enabled');
       const disabled = new Set((modules ?? []).filter((m: Record<string, unknown>) => !m.enabled).map((m: Record<string, unknown>) => m.id as string));
       filtered = filtered.filter((a: Record<string, unknown>) => !a.sourceModule || !disabled.has(a.sourceModule as string));
+      // Board posts and AI 일정 records are text artifacts with their own screens; keep them out of the work feed.
+      if (!moduleId) filtered = filtered.filter((a: Record<string, unknown>) => !FEED_EXCLUDED_MODULES.has(a.sourceModule as string)).slice(0, limit);
     }
 
     let likedSet = new Set<string>();
