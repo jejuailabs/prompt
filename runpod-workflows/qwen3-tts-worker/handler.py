@@ -1,7 +1,8 @@
-"""RunPod adapter for Qwen3-TTS: preset-speaker TTS and voice cloning.
+"""RunPod adapter for Qwen3-TTS: preset-speaker TTS, voice design and cloning.
 
-input.mode = "tts"   -> 1.7B CustomVoice, requires text + speaker (instruct optional)
-input.mode = "clone" -> 1.7B Base, requires text + ref_text + ref_audio_base64
+input.mode = "tts"    -> 1.7B CustomVoice, requires text + speaker (instruct optional)
+input.mode = "design" -> 1.7B VoiceDesign, requires text + instruct (voice description)
+input.mode = "clone"  -> 1.7B Base, requires text + ref_text + ref_audio_base64
 A payload without mode but with ref_audio_base64 is treated as "clone" so the
 existing PLAYLAB voice-clone route keeps working unchanged.
 """
@@ -34,9 +35,10 @@ PAUSE_SECONDS = 0.25
 LANGUAGES = {"Korean", "Auto", "English", "Japanese", "Chinese"}
 MODEL_PATHS = {
     "tts": os.environ.get("QWEN3_TTS_CUSTOM_VOICE_MODEL", "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"),
+    "design": os.environ.get("QWEN3_TTS_VOICE_DESIGN_MODEL", "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"),
     "clone": os.environ.get("QWEN3_TTS_BASE_MODEL", "Qwen/Qwen3-TTS-12Hz-1.7B-Base"),
 }
-MODEL_NAMES = {"tts": "Qwen3-TTS-12Hz-1.7B-CustomVoice", "clone": "Qwen3-TTS-12Hz-1.7B-Base"}
+MODEL_NAMES = {"tts": "Qwen3-TTS-12Hz-1.7B-CustomVoice", "design": "Qwen3-TTS-12Hz-1.7B-VoiceDesign", "clone": "Qwen3-TTS-12Hz-1.7B-Base"}
 _models: dict[str, Qwen3TTSModel] = {}
 _model_lock = threading.Lock()
 _generation_lock = threading.Lock()
@@ -102,21 +104,30 @@ def split_text(text: str) -> list[str]:
     return chunks
 
 
-def generate_chunked(generate, chunks: list[str], output: Path, **common: Any) -> int:
-    """Run generate() over batches of chunks and write one joined PCM_16 WAV."""
+def run_batches(generate, chunks: list[str], **common: Any) -> tuple[list[np.ndarray], int]:
+    """Run generate() over batches of chunks. Keys prefixed "_" are shared, not per-item."""
     parts: list[np.ndarray] = []
     sample_rate = 24000
-    with _generation_lock, torch.inference_mode():
-        for start in range(0, len(chunks), BATCH_SIZE):
-            batch = chunks[start:start + BATCH_SIZE]
-            extra = {key: [value] * len(batch) for key, value in common.items() if not key.startswith("_")}
-            extra.update({key[1:]: value for key, value in common.items() if key.startswith("_")})
-            wavs, sample_rate = generate(text=batch, **extra)
-            parts.extend(np.asarray(wav, dtype=np.float32).reshape(-1) for wav in wavs)
+    for start in range(0, len(chunks), BATCH_SIZE):
+        batch = chunks[start:start + BATCH_SIZE]
+        extra = {key: [value] * len(batch) for key, value in common.items() if not key.startswith("_")}
+        extra.update({key[1:]: value for key, value in common.items() if key.startswith("_")})
+        wavs, sample_rate = generate(text=batch, **extra)
+        parts.extend(np.asarray(wav, dtype=np.float32).reshape(-1) for wav in wavs)
+    return parts, int(sample_rate)
+
+
+def write_joined(parts: list[np.ndarray], sample_rate: int, output: Path) -> int:
     pause = np.zeros(int(sample_rate * PAUSE_SECONDS), dtype=np.float32)
     joined = np.concatenate([segment for part in parts for segment in (part, pause)][:-1])
     sf.write(output, joined, sample_rate, subtype="PCM_16")
-    return int(sample_rate)
+    return sample_rate
+
+
+def generate_chunked(generate, chunks: list[str], output: Path, **common: Any) -> int:
+    with _generation_lock, torch.inference_mode():
+        parts, sample_rate = run_batches(generate, chunks, **common)
+    return write_joined(parts, sample_rate, output)
 
 
 def normalize_reference(source: Path, target: Path) -> None:
@@ -138,6 +149,24 @@ def synthesize_tts(payload: dict[str, Any], text: str, language: str, output: Pa
     return generate_chunked(model.generate_custom_voice, split_text(text), output, **common)
 
 
+def synthesize_design(payload: dict[str, Any], text: str, language: str, output: Path) -> int:
+    instruct = required_string(payload.get("instruct"), "instruct", MAX_INSTRUCT_CHARS)
+    chunks = split_text(text)
+    design = get_model("design")
+    with _generation_lock, torch.inference_mode():
+        wavs, sample_rate = design.generate_voice_design(text=chunks[0], language=language, instruct=instruct)
+        first = np.asarray(wavs[0], dtype=np.float32).reshape(-1)
+        parts = [first]
+        if len(chunks) > 1:
+            # "Voice Design then Clone": designing every chunk separately drifts
+            # the timbre, so the first designed chunk becomes the clone reference.
+            clone = get_model("clone")
+            prompt = clone.create_voice_clone_prompt(ref_audio=(first, sample_rate), ref_text=chunks[0], x_vector_only_mode=False)
+            rest, sample_rate = run_batches(clone.generate_voice_clone, chunks[1:], language=language, _voice_clone_prompt=prompt)
+            parts.extend(rest)
+    return write_joined(parts, int(sample_rate), output)
+
+
 def synthesize_clone(payload: dict[str, Any], text: str, language: str, folder: Path, output: Path) -> int:
     reference_text = required_string(payload.get("ref_text"), "ref_text", MAX_TEXT_CHARS)
     reference = decode_b64(payload.get("ref_audio_base64"), "ref_audio_base64", MAX_REFERENCE_BYTES)
@@ -155,7 +184,7 @@ def handler(event: dict[str, Any]) -> dict[str, Any]:
     payload = event.get("input") or {}
     mode = payload.get("mode") or ("clone" if payload.get("ref_audio_base64") else "tts")
     if mode not in MODEL_PATHS:
-        raise ValueError("mode must be tts or clone")
+        raise ValueError("mode must be tts, design, or clone")
     text = required_string(payload.get("text"), "text", MAX_TEXT_CHARS)
     language = str(payload.get("language") or "Korean").strip()
     if language not in LANGUAGES:
@@ -165,6 +194,8 @@ def handler(event: dict[str, Any]) -> dict[str, Any]:
         output = folder / "output.wav"
         if mode == "tts":
             sample_rate = synthesize_tts(payload, text, language, output)
+        elif mode == "design":
+            sample_rate = synthesize_design(payload, text, language, output)
         else:
             sample_rate = synthesize_clone(payload, text, language, folder, output)
         audio = output.read_bytes()
