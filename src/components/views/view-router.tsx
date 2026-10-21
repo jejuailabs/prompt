@@ -23,6 +23,7 @@ const AcademyView = dynamic(() => import('@/components/views/academy'), { loadin
 const VibeSetupView = dynamic(() => import('@/components/views/vibe-setup'), { loading: () => <ViewLoading /> });
 const LandingPagesView = dynamic(() => import('@/modules/landing-pages'), { loading: () => <ViewLoading /> });
 const AiEventsView = dynamic(() => import('@/modules/ai-events'), { loading: () => <ViewLoading /> });
+const CoaiNewsView = dynamic(() => import('@/modules/coai-news'), { loading: () => <ViewLoading /> });
 const CommunityBoardView = dynamic(() => import('@/modules/community-board'), { loading: () => <ViewLoading /> });
 const MotionLibraryView = dynamic(() => import('@/modules/motion-library'), { loading: () => <ViewLoading /> });
 const AiToolsView = dynamic(() => import('@/components/views/ai-tools'), { loading: () => <ViewLoading /> });
@@ -69,6 +70,8 @@ export default function ViewRouter() {
       return <RevenueView />;
     case 'market':
       return <MarketplaceView />;
+    case 'news':
+      return <CoaiNewsView />;
     case 'community':
       return <CommunityBoardView />;
     case 'academy':

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, ChevronLeft, ChevronRight, Code2, Copy, FileText, Heart, Image as ImageIcon, MapPin, MessageCircle, Eye } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Code2, Copy, FileText, Heart, Image as ImageIcon, MapPin, MessageCircle, Eye, Newspaper } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { toast } from '@/hooks/use-toast';
@@ -12,6 +12,7 @@ import type { ArtifactDTO, PromptDTO, ViewKey } from '@/lib/types';
 import type { AiEvent } from '@/modules/ai-events/catalogue';
 import { GUIDE_SERVICES, HOME_PHOTO_POSTERS, HOME_POSTERS } from './home-content';
 import { boardDef, type BoardPostDTO } from '@/modules/community-board/boards';
+import type { NewsDTO } from '@/modules/coai-news/news';
 
 const AUTO_ADVANCE_MS = 5000;
 
@@ -146,16 +147,33 @@ function LatestNews() {
   const t = useTranslations('coai');
   const locale = useAppStore((s) => s.locale);
   const go = useGo();
-  const { data = [], isLoading } = useQuery({ queryKey: ['coai-home', 'events'], queryFn: () => api.get<AiEvent[]>('/api/ai-events'), staleTime: 60_000 });
-  const items = [...data].sort((a, b) => (b.startsAt || b.verifiedAt || '').localeCompare(a.startsAt || a.verifiedAt || '')).slice(0, 3);
+  const news = useQuery({ queryKey: ['coai-home', 'news'], queryFn: () => api.get<NewsDTO[]>('/api/news?limit=3'), staleTime: 60_000 });
+  // Until staff publish news, upcoming AI 일정 fill the panel.
+  const useEvents = news.isSuccess && news.data.length === 0;
+  const events = useQuery({ queryKey: ['coai-home', 'events'], queryFn: () => api.get<AiEvent[]>('/api/ai-events'), staleTime: 60_000, enabled: useEvents });
+  const items = [...(events.data ?? [])].sort((a, b) => (b.startsAt || b.verifiedAt || '').localeCompare(a.startsAt || a.verifiedAt || '')).slice(0, 3);
+  const loading = news.isLoading || (useEvents && events.isLoading);
+  const empty = !loading && !news.data?.length && items.length === 0;
   return (
-    <Panel title={t('homeLatestNews')} view="ai-events">
-      {!isLoading && items.length === 0 && <p className="coai-empty">{t('homeEmpty')}</p>}
-      {items.map((item) => (
+    <Panel title={t('homeLatestNews')} view="news">
+      {empty && <p className="coai-empty">{t('homeEmpty')}</p>}
+      {news.data?.map((item) => (
+        <a key={item.id} className="coai-news" href={hrefFor('news', { id: item.id })} onClick={(event) => go(event, 'news', { id: item.id })}>
+          {item.imageUrl
+            ? <img className="coai-news-thumb" src={item.imageUrl} alt="" loading="lazy" />
+            : <span className="coai-news-thumb" aria-hidden="true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--coai-blue-strong)', background: 'var(--coai-blue-soft)' }}><Newspaper size={26} /></span>}
+          <div className="coai-news-body">
+            <h3 className="coai-clamp-2">{item.title}</h3>
+            <p className="coai-meta coai-clamp-1">{item.summary[0]}</p>
+            <div className="coai-meta coai-news-foot"><span>{formatDate(item.createdAt, locale)}</span><span><MessageCircle size={14} style={{ display: 'inline', verticalAlign: '-2px' }} /> {item.commentCount}</span></div>
+          </div>
+        </a>
+      ))}
+      {useEvents && items.map((item) => (
         <a key={item.id} className="coai-news" href={hrefFor('ai-events', { id: item.id })} onClick={(event) => go(event, 'ai-events', { id: item.id })}>
           {item.posterUrl
             ? <img className="coai-news-thumb" src={item.posterUrl} alt="" loading="lazy" />
-            : <span className="coai-news-thumb" aria-hidden="true" style={{ background: item.surface, color: item.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, textAlign: 'center', lineHeight: 1.15, padding: 6 }}>{item.posterLines.slice(0, 2).join('\n')}</span>}
+            : <span className="coai-news-thumb" aria-hidden="true" style={{ background: item.surface, color: item.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, textAlign: 'center', lineHeight: 1.15, padding: 6 }}>{item.posterLines.slice(0, 2).join(' ')}</span>}
           <div className="coai-news-body">
             <h3 className="coai-clamp-2">{item.title}</h3>
             <p className="coai-meta coai-clamp-1">{item.subtitle}</p>

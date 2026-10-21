@@ -1,18 +1,20 @@
 'use client';
 import { useAppStore } from '@/lib/store';
-import { COAI_MAKE_SECTIONS, activeCoaiMenu } from '@/lib/coai-navigation';
+import { COAI_MAKE_SECTIONS, COAI_NEWS_SECTIONS, activeCoaiMenu } from '@/lib/coai-navigation';
 
-/** 만들어보기 section tabs: games, web, motion and the creative studios live under one menu. */
+/** Section tabs for menus that group several screens: 만들어보기 and 뉴스·이벤트. */
 export function StudioSwitcher() {
   const view = useAppStore(s => s.view);
   const slug = useAppStore(s => s.params.slug);
   const navigate = useAppStore(s => s.navigate);
   const en = useAppStore(s => s.locale) === 'en';
   const music = view === 'tool' && slug === 'ace-music';
-  if (activeCoaiMenu(view) !== 'make' && !music) return null;
-  return <nav className="coai-make-tabs" aria-label={en ? 'Make sections' : '만들어보기 메뉴'}>
+  const menu = music ? 'make' : activeCoaiMenu(view);
+  const sections = menu === 'make' ? COAI_MAKE_SECTIONS : menu === 'news' ? COAI_NEWS_SECTIONS : null;
+  if (!sections) return null;
+  return <nav className="coai-make-tabs" aria-label={en ? 'Sections' : '하위 메뉴'}>
     <div className="coai-container">
-      {COAI_MAKE_SECTIONS.map(section => {
+      {sections.map(section => {
         const current = section.id === 'music' ? music : section.views.includes(view);
         return <button key={section.id} type="button" aria-current={current ? 'page' : undefined} onClick={() => navigate(section.target.view, section.target.params)}>{en ? section.labelEn : section.label}</button>;
       })}

@@ -19,7 +19,7 @@ export type CoaiMenu = {
 
 export const COAI_MENUS: CoaiMenu[] = [
   { id: 'home', labelKey: 'navHome', icon: 'home', target: { view: 'home' }, views: ['home'] },
-  { id: 'news', labelKey: 'navNews', icon: 'newspaper', target: { view: 'ai-events' }, views: ['ai-events'] },
+  { id: 'news', labelKey: 'navNews', icon: 'newspaper', target: { view: 'news' }, views: ['news', 'ai-events'] },
   { id: 'prompts', labelKey: 'navPrompts', icon: 'sparkles', target: { view: 'prompt-wiki' }, views: ['prompt-wiki', 'prompt'] },
   { id: 'make', labelKey: 'navMake', icon: 'play-square', target: { view: 'game-room' }, views: ['game-room', 'game-play', 'landing-pages', 'motion-library', 'project', 'lab', 'video-studio', '3d-studio'] },
   { id: 'tools', labelKey: 'navTools', icon: 'wrench', target: { view: 'ai-tools' }, views: ['ai-tools', 'tool'] },
@@ -51,4 +51,10 @@ export const COAI_MAKE_SECTIONS: { id: string; label: string; labelEn: string; t
   { id: 'video', label: '영상 생성', labelEn: 'Video', target: { view: 'video-studio' }, views: ['video-studio'] },
   { id: '3d', label: '3D 생성', labelEn: '3D', target: { view: '3d-studio' }, views: ['3d-studio'] },
   { id: 'music', label: '음악 생성', labelEn: 'Music', target: { view: 'tool', params: { slug: 'ace-music' } }, views: [] },
+];
+
+/** 뉴스·이벤트 tabs (docs/coai/04 §2: 뉴스 | 행사·모임). */
+export const COAI_NEWS_SECTIONS: typeof COAI_MAKE_SECTIONS = [
+  { id: 'news', label: '뉴스', labelEn: 'News', target: { view: 'news' }, views: ['news'] },
+  { id: 'events', label: '행사·모임', labelEn: 'Events', target: { view: 'ai-events' }, views: ['ai-events'] },
 ];

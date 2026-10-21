@@ -9,7 +9,7 @@ import { serializeArtifactSingle } from '@/lib/server/serialize';
 import { logEvent } from '@/lib/events';
 import type { ArtifactDTO, ArtifactMetadata, ArtifactType, ExecutionTier } from '@/lib/types';
 
-const FEED_EXCLUDED_MODULES = new Set(['community-board', 'ai-events']);
+const FEED_EXCLUDED_MODULES = new Set(['community-board', 'ai-events', 'coai-news']);
 const DEFAULT_LIMIT = 24;
 
 interface CreateBody {
