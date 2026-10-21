@@ -51,3 +51,46 @@
 .codeSection>.webHint{margin-top:-6px}
 @media(max-width:1050px){.webDetail{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:700px){.playerBar{flex-wrap:wrap}.playerBar input{order:3;flex-basis:100%}.recordButton{margin-left:auto}.modeTabs button{font-size:12px;margin-right:12px}}
+
+/* COAI tone (2026-10-21): light page, Pretendard headings, white cards. Covers and code blocks stay dark. */
+.page{background:transparent;color:var(--coai-text-body);max-width:1248px;margin:0 auto;padding:28px 24px 56px}
+.page button:focus-visible,.page a:focus-visible,.page input:focus-visible{outline-color:var(--coai-focus)}
+.eyebrow{font:700 14px/1.4 var(--coai-font);letter-spacing:0;color:var(--coai-blue-strong)}
+.hero{padding:0 0 20px;border-bottom:1px solid var(--coai-border);align-items:flex-end}
+.hero h1{font:700 28px/1.35 var(--coai-font);letter-spacing:-.02em;color:var(--coai-text-strong);margin:6px 0 8px}
+.hero h1 em{color:var(--coai-blue-strong)}
+.hero p{font-size:16px;line-height:1.6;color:var(--coai-text-muted)}
+.heroMark{background:var(--coai-blue-soft);border:0;border-radius:var(--coai-radius-lg);color:var(--coai-blue-strong);padding:16px 22px;min-width:0}
+.heroMark>span{font:800 40px/1 var(--coai-font)}
+.heroMark>small{font:600 13px var(--coai-font);letter-spacing:0;color:var(--coai-text-muted)}
+.collectionHead h2{font:700 22px/1.4 var(--coai-font);letter-spacing:-.02em;color:var(--coai-text-strong)}
+.collectionHead h2 small{color:var(--coai-blue-strong);font-family:var(--coai-font)}
+.search{border-color:var(--coai-border);background:var(--coai-bg-surface);border-radius:var(--coai-radius-md);color:var(--coai-text-muted)}
+.search input{color:var(--coai-text-strong);font-size:14px}
+.filters button{border-color:var(--coai-border-strong);color:var(--coai-text-body);font-size:14px;background:var(--coai-bg-surface)}
+.filters button[aria-pressed=true]{background:var(--coai-blue-soft);color:var(--coai-blue-strong);border-color:var(--coai-blue)}
+.result{font-size:14px;color:var(--coai-text-muted)}
+.card{background:var(--coai-bg-surface);border:1px solid var(--coai-border);border-radius:var(--coai-radius-lg);overflow:hidden}
+.card:hover{box-shadow:var(--coai-shadow-hover)}
+.cardInfo{padding:14px 16px 16px}
+.category{font-size:13px;font-weight:600;letter-spacing:0;color:var(--coai-blue-strong)}
+.cardInfo h3{font-size:17px;font-weight:700;color:var(--coai-text-strong)}
+.cardInfo p{font-size:14px;color:var(--coai-text-muted)}
+.empty{border-color:var(--coai-border);border-radius:var(--coai-radius-lg);background:var(--coai-bg-surface);color:var(--coai-text-muted);font-size:15px}.empty button{color:var(--coai-blue-strong)}
+.foot{border-top-color:var(--coai-border)}.foot>a{color:var(--coai-blue-strong);font-size:14px;font-weight:600}
+.sourceNote{font-size:14px;border-left-color:var(--coai-blue);background:var(--coai-blue-soft);color:var(--coai-text-body)}.sourceNote a{color:var(--coai-blue-strong)}
+.back{color:var(--coai-text-muted);font-size:14px}
+.detailCopy h1{font:700 28px/1.35 var(--coai-font);letter-spacing:-.02em;color:var(--coai-text-strong)}
+.titleEn{font:600 13px var(--coai-font);letter-spacing:0;color:var(--coai-text-muted)}
+.description{font-size:16px;line-height:1.7;color:var(--coai-text-body)}
+.tags span{font-size:13px;border-color:var(--coai-border);color:var(--coai-text-body)}
+.codeSection,.setup{border-top-color:var(--coai-border)}
+.codeSection h2,.setup h2{font:700 20px/1.4 var(--coai-font);color:var(--coai-text-strong)}
+.setup>p{font-size:15px;color:var(--coai-text-body)}
+.setup code{color:var(--coai-blue-strong);background:var(--coai-blue-soft);font-size:13px}
+@media (max-width:767px){.page{padding:18px 16px 40px}.hero h1{font-size:22px}}
+.modeTabs{border-bottom-color:var(--coai-border)}
+.modeTabs button{font-size:15px;color:var(--coai-text-muted)}
+.modeTabs button small{font:600 13px var(--coai-font);color:var(--coai-blue-strong)}
+.modeTabs button[aria-selected=true]{color:var(--coai-blue-strong)}
+.modeTabs button[aria-selected=true]:after{height:3px;background:linear-gradient(90deg,var(--coai-blue),var(--coai-cyan))}

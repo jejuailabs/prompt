@@ -126,7 +126,7 @@ export default function AdminView() {
       transition={{ duration: 0.25 }}
       className="editorial-page admin-page"
     >
-      <ViewHeader eyebrow="PLAYLAB / CONTROL ROOM" title={t('title')} subtitle={t('subtitle')} />
+      <ViewHeader eyebrow="관리자" title={t('title')} subtitle={t('subtitle')} />
 
       {overviewQ.isLoading ? (
         <div className="space-y-4">

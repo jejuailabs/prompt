@@ -41,7 +41,7 @@ export function EventEditor({item}:{item?:AiEvent}) {
   const field=(key:keyof EventInput,label:string,placeholder='',required=false,type='text')=><label className={styles.field}>{label}{required&&<span> *</span>}<input name={key} type={type} value={String(input[key])} onChange={e=>set(key,e.target.value)} placeholder={placeholder} required={required} maxLength={key==='sourceUrl'?2000:key==='title'?100:200} disabled={saving}/></label>;
   return <div className={styles.page}>
     <button className={styles.back} disabled={saving} onClick={()=>navigate('ai-events',item?{id:item.id,...(item.published===false?{manage:'1'}:{})}:{})}><ArrowLeft size={16}/>{item?'일정 상세로':'AI 일정 목록'}</button>
-    <header className={styles.editorHead}><span className={styles.eyebrow}>PLAYLAB / AI NOTICEBOARD</span><h1>{item?'일정 수정':'새 일정 등록'}</h1><p>포스터와 정보를 올리면 AI 일정 메뉴에 표시됩니다.</p></header>
+    <header className={styles.editorHead}><span className={styles.eyebrow}>뉴스·이벤트</span><h1>{item?'일정 수정':'새 일정 등록'}</h1><p>포스터와 정보를 올리면 AI 일정 메뉴에 표시됩니다.</p></header>
     {previewMode&&<p role="status" className={styles.sourceNote}>등록 화면 미리보기입니다. 입력·이미지 선택은 가능하며, 저장은 운영 사이트의 관리자 계정에서 할 수 있습니다.</p>}
     <form onSubmit={submit} className={styles.editor}>
       <div className={styles.formFields}>
@@ -60,7 +60,7 @@ export function EventEditor({item}:{item?:AiEvent}) {
         {error&&<p className={styles.formError} role="alert">{error}</p>}
         <div className={styles.formActions}><button type="button" disabled={saving} onClick={()=>navigate('ai-events')}>취소</button><button type="submit" className={styles.registerButton} disabled={saving||previewMode}>{saving?<Loader2 className={styles.spin} size={16}/>:item?<Upload size={16}/>:<Plus size={16}/>} {saving?'저장 중…':item?'수정 내용 저장':'일정 등록'}</button></div>
       </div>
-      <aside className={styles.editorPreview}><span className={styles.eyebrow}>POSTER PREVIEW</span><div className={styles.detailPoster}><EventPoster item={poster} now={new Date()}/></div><h2>{input.title||'새로운 AI 일정'}</h2><p>{input.schedule||'일정 안내가 여기에 표시됩니다.'}</p><p>이미지는 전체가 보이도록 표시합니다.</p></aside>
+      <aside className={styles.editorPreview}><span className={styles.eyebrow}>포스터 미리보기</span><div className={styles.detailPoster}><EventPoster item={poster} now={new Date()}/></div><h2>{input.title||'새로운 AI 일정'}</h2><p>{input.schedule||'일정 안내가 여기에 표시됩니다.'}</p><p>이미지는 전체가 보이도록 표시합니다.</p></aside>
     </form>
   </div>;
 }

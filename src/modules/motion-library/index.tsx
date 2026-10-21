@@ -14,12 +14,12 @@ const WEB_ITEMS = MOTION_ITEMS.filter(item => webSceneById(item.id));
 type Mode = 'remotion' | 'web';
 
 function SourceNote() {
-  return <p className={styles.sourceNote}>예제 코드 원본: <a href={MOTION_SOURCE.url} target="_blank" rel="noopener noreferrer">{MOTION_SOURCE.name}</a> 리모션 실습 갤러리. 코드는 원본 그대로이고, 이름·설명·커버는 PLAYLAB이 따로 만들었어요.</p>;
+  return <p className={styles.sourceNote}>예제 코드 원본: <a href={MOTION_SOURCE.url} target="_blank" rel="noopener noreferrer">{MOTION_SOURCE.name}</a> 리모션 실습 갤러리. 코드는 원본 그대로이고, 이름·설명·커버는 COAI가 따로 만들었어요.</p>;
 }
 
 function SetupFiles() {
   return <section className={styles.setup}>
-    <span className={styles.eyebrow}>FIRST TIME ONLY</span>
+    <span className={styles.eyebrow}>처음 한 번만</span>
     <h2>처음 한 번만: 리모션 프로젝트에 파일 2개 만들기</h2>
     <p>리모션 프로젝트의 <code>src/Root.tsx</code>와 <code>src/font.ts</code>를 아래 코드로 바꿔 두세요. 그다음 예제 코드를 <code>src/Scene.tsx</code>에 붙여넣고 저장하면 미리보기에 영상이 나와요.</p>
     <div className={styles.setupGrid}>
@@ -107,7 +107,7 @@ export default function MotionLibraryView() {
   return <div className={styles.page}>
     <header className={styles.hero}>
       <div>
-        <span className={styles.eyebrow}>{mode === 'web' ? 'PLAYLAB / NO REMOTION' : 'PLAYLAB / REMOTION MOTION REFERENCES'}</span>
+        <span className={styles.eyebrow}>{mode === 'web' ? '만들어보기 · 모션' : '만들어보기 · 모션'}</span>
         {mode === 'web'
           ? <><h1>설치 없이,<br /><em>바로 영상.</em></h1><p>리모션 없이 브라우저에서 바로 재생하고 MP4로 받는 모션그래픽이에요.<br />같은 장면 코드를 작은 runtime 파일 하나로 돌려요. 지금 {WEB_ITEMS.length}개, 계속 늘어나요.</p></>
           : <><h1>코드로 만드는<br /><em>모션그래픽.</em></h1><p>제품 광고, 캐릭터, 자막, 전환 효과까지 44가지 리모션 예제를 모았어요.<br />마음에 드는 장면을 고르고 코드를 복사해 이미지 주소와 글자만 바꿔 보세요.</p></>}
@@ -117,7 +117,7 @@ export default function MotionLibraryView() {
     {tabs}
     {params.id && !selected && <p role="alert" className={styles.sourceNote}>이 예제를 찾을 수 없어요. 아래 목록에서 다시 골라 주세요.</p>}
     <div className={styles.collectionHead}>
-      <div><span className={styles.eyebrow}>{mode === 'web' ? 'PLAY IN THE BROWSER' : 'THE MOTION SHELF'}</span><h2>{mode === 'web' ? '눌러서 재생하고, MP4로 받기' : '장면을 고르고, 바로 만들기'} <small>{pool.length}</small></h2></div>
+      <div><span className={styles.eyebrow}>{mode === 'web' ? 'PLAY IN THE BROWSER' : '장면 고르기'}</span><h2>{mode === 'web' ? '눌러서 재생하고, MP4로 받기' : '장면을 고르고, 바로 만들기'} <small>{pool.length}</small></h2></div>
       <label className={styles.search}><Search size={17} /><input value={query} onChange={e => setQuery(e.target.value)} aria-label="모션 예제 검색" placeholder="효과, 태그, 원본 제목 검색" /></label>
     </div>
     <div className={styles.filters} role="group" aria-label="모션 종류">

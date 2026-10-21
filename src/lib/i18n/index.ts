@@ -17,11 +17,13 @@ import market from '@/components/views/market/messages';
 import admin from '@/components/views/admin/messages';
 import videoStudio from '@/components/views/video-studio/messages';
 import studio3d from '@/components/views/3d-studio/messages';
+import coai from '@/components/coai/messages';
 
 type Pack = { ko: Record<string, string>; en: Record<string, string> };
 
 const registry: Record<string, Pack> = {
   core: core as unknown as Pack,
+  coai: coai as unknown as Pack,
   home: home as unknown as Pack,
   gallery: gallery as unknown as Pack,
   prompt: prompt as unknown as Pack,

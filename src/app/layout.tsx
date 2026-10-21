@@ -5,18 +5,18 @@ import Providers from "@/components/providers";
 
 
 export const metadata: Metadata = {
-  title: "PLAYLAB — 바이브코딩 올인원 플랫폼",
+  title: "COAI — 쉽게 보고, 바로 써보는 AI 커뮤니티",
   description:
-    "아이디어 구상부터 수익화까지. 프롬프트 전시실, 멀티모델 비교, AI 파이프라인, 스모크테스트까지 바이브코딩 전 과정을 하나의 여정으로.",
-  keywords: ["PLAYLAB", "바이브코딩", "바이브코딩 매뉴얼", "AI 코딩", "프롬프트", "vibe coding"],
-  icons: { icon: "/logo.svg" },
+    "AI를 같이 배우고, 같이 쓰고, 같이 만드는 커뮤니티. AI 뉴스와 행사, 프롬프트, 바로 쓰는 AI 도구, 배우기와 만들어보기까지 한곳에서.",
+  keywords: ["COAI", "AI 커뮤니티", "AI 스터디", "프롬프트", "AI 뉴스", "바이브코딩"],
+  icons: { icon: "/coai/brand/icon.png", apple: "/coai/brand/apple-icon.png" },
   metadataBase: new URL(SITE_URL),
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
     locale: "ko_KR",
-    title: "PLAYLAB — 바이브코딩 올인원 플랫폼",
-    description: "아이디어 구상부터 수익화까지, 바이브코딩 전 과정을 하나의 여정으로.",
+    title: "COAI — 쉽게 보고, 바로 써보는 AI 커뮤니티",
+    description: "AI를 같이 배우고, 같이 쓰고, 같이 만드는 커뮤니티.",
   },
   robots: { index: true, follow: true },
   verification: {
@@ -31,7 +31,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" data-playlab-design="poster" suppressHydrationWarning>
+    <html lang="ko" data-playlab-design="coai" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+      </head>
       <body
         className="antialiased bg-background text-foreground"
       >

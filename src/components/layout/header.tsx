@@ -50,7 +50,7 @@ function useMounted(): boolean {
   );
 }
 
-function ThemeToggle() {
+export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useMounted();
   const dark = mounted && resolvedTheme === 'dark';
@@ -90,7 +90,7 @@ function eventTitle(e: EventDTO): string {
   return e.type;
 }
 
-function NotificationBell() {
+export function NotificationBell() {
   const t = useTranslations('core');
   const locale = useAppStore((s) => s.locale);
   const [open, setOpen] = useState(false);
@@ -143,7 +143,7 @@ function NotificationBell() {
 
 // ─── account dropdown (desktop) ─────────────────────────────────────────────
 
-function AccountMenu({ onCredits }: { onCredits: () => void }) {
+export function AccountMenu({ onCredits }: { onCredits: () => void }) {
   const t = useTranslations('core');
   const locale = useAppStore((s) => s.locale);
   const session = useAppStore((s) => s.session);
@@ -215,7 +215,7 @@ function AccountMenu({ onCredits }: { onCredits: () => void }) {
 
 // ─── create / quick actions ─────────────────────────────────────────────────
 
-function CreateMenu() {
+export function CreateMenu() {
   const t = useTranslations('core');
   const locale = useAppStore((s) => s.locale);
   const navigate = useAppStore((s) => s.navigate);

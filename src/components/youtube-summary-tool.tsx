@@ -54,7 +54,7 @@ export default function YoutubeSummaryTool() {
   const save = async () => { if (!analysis) return; await api.post('/api/youtube/saved', { analysisId: analysis.id }); setSaved(true); };
 
   return <div className="mx-auto w-full max-w-5xl p-4 md:p-8">
-    <div className="mb-8"><p className="text-sm font-medium text-primary">PLAYLAB TOOL</p><h1 className="mt-1 text-3xl font-bold">YouTube 영상 요약하기</h1><p className="mt-2 text-muted-foreground">영상 URL을 넣으면 자막 기반 학습 노트로 정리하고, 내 프로젝트에 보관합니다.</p></div>
+    <div className="mb-8"><p className="text-sm font-medium text-primary">COAI 바로쓰기</p><h1 className="mt-1 text-3xl font-bold">YouTube 영상 요약하기</h1><p className="mt-2 text-muted-foreground">영상 URL을 넣으면 자막 기반 학습 노트로 정리하고, 내 프로젝트에 보관합니다.</p></div>
     <Card className="gap-3 p-4 md:flex-row">
       <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." disabled={pending} />
       <Button onClick={() => void start()} disabled={!url.trim() || pending} className="shrink-0">{pending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />} 분석하기</Button>

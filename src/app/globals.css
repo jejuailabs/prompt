@@ -621,3 +621,76 @@ h1,h2,h3,p { word-break:keep-all; overflow-wrap:break-word; }
   .ribbon-drag-hint { top:207px; bottom:auto; left:22px; right:auto; }
   .ribbon-hero::after { height:65%; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   COAI design tokens (docs/coai/03-design-system.md §1). Declared last so
+   they win over the legacy PLAYLAB palettes above. Tokens are prefixed
+   --coai-* because Tailwind v4 owns the --color-* namespace.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  --coai-brand: #D9411E; --coai-brand-hover: #C2361A; --coai-brand-soft: #FDEDE8; --coai-brand-soft-strong: #F4A48E;
+  --coai-bg-page: #F7F7F8; --coai-bg-surface: #FFFFFF; --coai-bg-subtle: #F3F4F6;
+  --coai-text-strong: #111114; --coai-text-body: #33363B; --coai-text-muted: #6B7078; --coai-text-inverse: #FFFFFF;
+  --coai-border: #E6E7EA; --coai-border-strong: #D1D4D9;
+  --coai-poster-event-bg: #FCE9DF; --coai-poster-event-accent: #C8250E;
+  --coai-poster-feature-bg: #E3EEFB; --coai-poster-feature-accent: #1A2F9E;
+  --coai-poster-challenge-bg: #E4F4EA; --coai-poster-challenge-accent: #0B5A3A;
+  --coai-poster-news-bg: #E8E9FB; --coai-poster-news-accent: #2A2CB8;
+  --coai-tag-general-fg: #21763A; --coai-tag-general-bg: #E3F4E8;
+  --coai-tag-qna-fg: #225BE0; --coai-tag-qna-bg: #E4ECFD;
+  --coai-tag-tip-fg: #532FD6; --coai-tag-tip-bg: #ECE7FC;
+  --coai-tag-work-fg: #6A4BD8; --coai-tag-work-bg: #EFEAFD;
+  --coai-tag-image-fg: #C2410C; --coai-tag-image-bg: #FDECE3;
+  --coai-tag-code-fg: #15803D; --coai-tag-code-bg: #E5F5EA;
+  --coai-icon-tile-blue: #E8F0FE; --coai-icon-blue: #2563EB;
+  --coai-icon-tile-purple: #F1E8FE; --coai-icon-purple: #9333EA;
+  --coai-icon-tile-green: #E6F6EC; --coai-icon-green: #16A34A;
+  --coai-focus: #2563EB;
+  /* Logo palette (owner guideline): links, active menu, highlights. Orange --coai-brand = primary CTA. */
+  --coai-blue: #2D8CFF; --coai-blue-strong: #1A6FE0; --coai-deep: #0F2B6B; --coai-cyan: #00D4FF; --coai-blue-soft: #E8F2FF;
+  --coai-radius-sm: 6px; --coai-radius-md: 10px; --coai-radius-lg: 14px; --coai-radius-xl: 18px;
+  --coai-shadow-card: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  --coai-shadow-hover: 0 6px 16px rgba(16,24,40,.10);
+  --coai-shadow-arrow: 0 2px 8px rgba(16,24,40,.15);
+  --coai-font: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+
+  /* Existing shadcn-based screens inherit the COAI palette until S5 restyles them. */
+  --radius: .625rem;
+  --background: var(--coai-bg-page); --foreground: var(--coai-text-strong);
+  --card: var(--coai-bg-surface); --card-foreground: var(--coai-text-strong);
+  --popover: var(--coai-bg-surface); --popover-foreground: var(--coai-text-strong);
+  --primary: var(--coai-brand); --primary-foreground: #fff;
+  --secondary: var(--coai-bg-subtle); --secondary-foreground: var(--coai-text-body);
+  --muted: var(--coai-bg-subtle); --muted-foreground: var(--coai-text-muted);
+  --accent: var(--coai-brand-soft); --accent-foreground: var(--coai-text-strong);
+  --border: var(--coai-border); --input: var(--coai-border-strong); --ring: var(--coai-focus);
+  --sidebar: var(--coai-bg-surface); --sidebar-foreground: var(--coai-text-strong); --sidebar-primary: var(--coai-brand);
+  --sidebar-accent: var(--coai-brand-soft); --sidebar-accent-foreground: var(--coai-text-strong); --sidebar-border: var(--coai-border);
+  --font-geist-sans: var(--coai-font);
+}
+.dark {
+  --coai-brand: #F0603C; --coai-brand-hover: #FF7650; --coai-brand-soft: #3A1F18; --coai-brand-soft-strong: #9C4A35;
+  --coai-bg-page: #0F1013; --coai-bg-surface: #181A1F; --coai-bg-subtle: #22252B;
+  --coai-text-strong: #F4F5F7; --coai-text-body: #D3D6DB; --coai-text-muted: #9CA1AA;
+  --coai-border: #2A2D34; --coai-border-strong: #3A3E46;
+  --coai-poster-event-bg: #3A2119; --coai-poster-event-accent: #FF8A6A;
+  --coai-poster-feature-bg: #182544; --coai-poster-feature-accent: #8FB0FF;
+  --coai-poster-challenge-bg: #132E22; --coai-poster-challenge-accent: #6FD3A0;
+  --coai-poster-news-bg: #1E1E45; --coai-poster-news-accent: #A5A7FF;
+  --coai-tag-general-bg: #173322; --coai-tag-general-fg: #7BD69A;
+  --coai-tag-qna-bg: #18264A; --coai-tag-qna-fg: #8FB0FF;
+  --coai-tag-tip-bg: #261E4A; --coai-tag-tip-fg: #B9A6FF;
+  --coai-tag-work-bg: #29204A; --coai-tag-work-fg: #C3B2FF;
+  --coai-tag-image-bg: #3A2016; --coai-tag-image-fg: #FFAA80;
+  --coai-tag-code-bg: #15301F; --coai-tag-code-fg: #7FD9A0;
+  --coai-icon-tile-blue: #172544; --coai-icon-blue: #8FB0FF;
+  --coai-icon-tile-purple: #271A40; --coai-icon-purple: #C9A2FF;
+  --coai-icon-tile-green: #15301F; --coai-icon-green: #6FD3A0;
+  --coai-focus: #8FB0FF;
+  --coai-blue: #5AA6FF; --coai-blue-strong: #7DB8FF; --coai-deep: #C9DCFF; --coai-cyan: #4FE3FF; --coai-blue-soft: #16243D;
+  --coai-shadow-card: 0 1px 2px rgba(0,0,0,.3);
+  --coai-shadow-hover: 0 6px 16px rgba(0,0,0,.45);
+  --coai-shadow-arrow: 0 2px 8px rgba(0,0,0,.5);
+  --primary-foreground: #fff;
+}
+body { font-family: var(--coai-font); }

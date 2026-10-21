@@ -245,7 +245,7 @@ export default function ProjectView() {
             )}
           </div>
           <div className="project-toolbar">
-            <span>{isExecutable ? (isPlaying ? '실행 중 · 작품 안을 눌러 조작하세요' : 'PLAYGROUND / 직접 경험하기') : 'PLAYLAB / 작품 미리보기'}</span>
+            <span>{isExecutable ? (isPlaying ? '실행 중 · 작품 안을 눌러 조작하세요' : '직접 실행해 보기') : '작품 미리보기'}</span>
             <div className="flex gap-2">
               {isPlaying && <button aria-label="실행 중지" onClick={() => setPlayingId(null)}><Square size={15} /></button>}
               <button aria-label="전체 화면" onClick={() => { void document.getElementById('project-player')?.requestFullscreen?.().catch(() => toast({ title: '이 브라우저에서는 전체 화면을 사용할 수 없어요.' })); }}><Maximize size={16} /></button>

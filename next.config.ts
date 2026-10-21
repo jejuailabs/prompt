@@ -6,9 +6,6 @@ const nextConfig: NextConfig = {
   logging: { incomingRequests: { ignore: [/^\/landing-preview\//] } },
   agentRules: false,
   outputFileTracingExcludes: { '*': ['./local-h3-benchmark/**/*', './tmp/**/*'] },
-  async rewrites() {
-    return { beforeFiles: [{ source: '/', destination: '/design/streaming-v1/index.html' }] };
-  },
   typescript: {
     ignoreBuildErrors: false,
   },

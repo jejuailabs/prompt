@@ -7,9 +7,10 @@
 
 ## 1. 프로젝트 한 줄 정의
 
-**아이디어 구상 → 프롬프트 실험 → AI 파이프라인 제작 → 결과물 공유/평가 → 결제 연동 → 광고 스모크테스트까지, 바이브코딩의 전 과정에서 발생하는 마찰을 단계적으로 낮춰주는 AI 네이티브 올인원 플랫폼.**
+**COAI — "쉽게 보고, 바로 써보는 AI 커뮤니티".** AI를 같이 배우고(배우기·가이드), 같이 쓰고(바로쓰기·프롬프트), 같이 만들어 보여주는(만들어보기·커뮤니티) 스터디 겸 커뮤니티. CO = Collaboration · Color · Communication.
 
-세부 배경과 5단계 로드맵은 `docs/01-vision-positioning.md`, `docs/03-phases-roadmap.md` 참조.
+> **2026-10-21 전환 결정:** 브랜드를 PLAYLAB에서 COAI로 바꿉니다. 화면·메뉴·디자인은 `docs/coai/`가 기준이고, 이 저장소에 적용할 때의 차이(Supabase 유지 등)는 `docs/coai/00-playlab-adaptation.md`가 우선합니다.
+> 기존 PLAYLAB 로드맵(파이프라인, 마켓플레이스, 결제 연동, 광고 스모크테스트)은 폐기가 아니라 **이후 모듈로 하나씩 붙이는 확장**으로 둡니다. 배경은 `docs/01-vision-positioning.md`, `docs/03-phases-roadmap.md` 참조.
 
 ---
 
@@ -55,9 +56,10 @@ Phase 2(모델 비교)와 Phase 3(파이프라인)는 시장 반응에 따라 �
 
 ## 4. 현재 개발 상태
 
-- **Active Phase: Phase 1 — 프롬프트 전시실 (Prompt Wiki)**
-- 다음 착수 후보: Phase 2(멀티모델 비교) 또는 Phase 3(파이프라인) — 시장 신호에 따라 결정
-- Phase별 상세 To-Do는 `docs/03-phases-roadmap.md`의 체크리스트 사용
+- **Active: COAI 전환 (S0~S5)** — 단계와 완료 기준은 `docs/coai/00-playlab-adaptation.md` §4, 마일스톤 체크리스트는 `docs/coai/ORCHESTRATION.md` §5
+- 디자인은 `docs/coai/design/reference/home-desktop-mobile.png` 시안을 그대로 재현한다 (`docs/coai/03-design-system.md`). 임의로 "개선"하지 않는다.
+- 필요한 일러스트·이미지는 OpenAI `gpt-image-2.5-flare`(quality `medium`)로 생성하고, 장당 비용(토큰 사용량 기준)을 기록한다.
+- 기존 PLAYLAB Phase(스모크테스트, 애드센스, 결제 수익 분배 등)는 COAI 전환 이후 모듈로 추가한다.
 
 ---
 
@@ -84,7 +86,10 @@ Phase 2(모델 비교)와 Phase 3(파이프라인)는 시장 반응에 따라 �
 | `docs/06-ui-layout-system.md` | 메인 화면(전시실) 동적 레이아웃, 다크/라이트 |
 | `docs/07-sandbox-execution-engine.md` | 실행 엔진 추상화, 3단계 기술 옵션 |
 | `docs/08-i18n-auth-admin-theme.md` | 다국어, 로그인, 관리자 모드, 테마 구현 스펙 |
-| `docs/09-design-system.md` | PLAYLAB UI 정의 — 화면별 레이아웃, 모듈 매핑, 공통 컴포넌트 인벤토리 |
+| `docs/09-design-system.md` | (구) PLAYLAB UI 정의 — COAI 전환 중에는 `docs/coai/03-design-system.md`가 우선 |
+| `docs/coai/00-playlab-adaptation.md` | **COAI 전환 규칙** — 확정 사항, Firebase→Supabase 대응, 기능→메뉴 매핑, 단계 |
+| `docs/coai/ORCHESTRATION.md` | COAI 총괄 지침, 절대 원칙, 마일스톤 |
+| `docs/coai/01`~`10` | COAI 제품·IA·디자인·페이지·데이터·권한·샌드박스·도구·i18n 스펙 |
 
 ---
 

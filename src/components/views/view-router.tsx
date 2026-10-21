@@ -2,6 +2,7 @@
 
 // SPA view router — the ONLY navigation layer (single visible page route).
 // Views map 1:1 to ModuleConfig.entryView registered in the module registry.
+import CoaiHome from '@/components/coai/home';
 import dynamic from 'next/dynamic';
 import { useAppStore } from '@/lib/store';
 import { useRuntime } from '@/components/runtime-context';
@@ -18,11 +19,11 @@ const PipelineRunView = dynamic(() => import('@/components/views/pipelines/run')
 const SmokeTestView = dynamic(() => import('@/components/views/smoke'), { loading: () => <ViewLoading /> });
 const RevenueView = dynamic(() => import('@/components/views/revenue'), { loading: () => <ViewLoading /> });
 const MarketplaceView = dynamic(() => import('@/components/views/market'), { loading: () => <ViewLoading /> });
-const CommunityView = dynamic(() => import('@/components/views/community'), { loading: () => <ViewLoading /> });
 const AcademyView = dynamic(() => import('@/components/views/academy'), { loading: () => <ViewLoading /> });
 const VibeSetupView = dynamic(() => import('@/components/views/vibe-setup'), { loading: () => <ViewLoading /> });
 const LandingPagesView = dynamic(() => import('@/modules/landing-pages'), { loading: () => <ViewLoading /> });
 const AiEventsView = dynamic(() => import('@/modules/ai-events'), { loading: () => <ViewLoading /> });
+const CommunityBoardView = dynamic(() => import('@/modules/community-board'), { loading: () => <ViewLoading /> });
 const MotionLibraryView = dynamic(() => import('@/modules/motion-library'), { loading: () => <ViewLoading /> });
 const AiToolsView = dynamic(() => import('@/components/views/ai-tools'), { loading: () => <ViewLoading /> });
 const MyProjectsView = dynamic(() => import('@/components/views/my-projects'), { loading: () => <ViewLoading /> });
@@ -46,7 +47,7 @@ export default function ViewRouter() {
   // Key by view+params.id so detail views remount cleanly when target changes
   switch (view) {
     case 'home':
-      return <ViewLoading />;
+      return <CoaiHome />;
     case 'gallery':
       return <GalleryView key={[params.q, params.tab, params.type].join('-')} />;
     case 'prompt':
@@ -69,7 +70,7 @@ export default function ViewRouter() {
     case 'market':
       return <MarketplaceView />;
     case 'community':
-      return <CommunityView />;
+      return <CommunityBoardView />;
     case 'academy':
       return <AcademyView />;
     case 'vibe-setup':

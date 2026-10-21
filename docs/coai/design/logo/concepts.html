@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COAI 로고 시안</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<style>
+  :root { --brand:#D9411E; --brand-soft:#F4A48E; --amber:#F2992E; --ink:#111114; --muted:#6B7078; --page:#F7F7F8; --line:#E6E7EA; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:32px 16px 64px; font-family:"Pretendard Variable",Pretendard,-apple-system,"Malgun Gothic",sans-serif; background:var(--page); color:var(--ink); }
+  main { max-width:1080px; margin:0 auto; }
+  h1 { font-size:26px; margin:0 0 6px; letter-spacing:-.02em; }
+  .lead { color:var(--muted); margin:0 0 28px; font-size:15px; line-height:1.6; }
+  .concept { background:#fff; border:1px solid var(--line); border-radius:18px; padding:24px; margin-bottom:20px; }
+  .concept h2 { font-size:18px; margin:0 0 4px; }
+  .concept p { margin:0 0 18px; color:var(--muted); font-size:14px; line-height:1.6; }
+  .row { display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:14px; }
+  .tile svg, .header svg { max-width:100%; height:auto; }
+  .tile { min-width:0; border-radius:14px; display:flex; align-items:center; justify-content:center; min-height:120px; padding:18px; }
+  .light { background:#fff; border:1px solid var(--line); }
+  .dark { background:#181A1F; }
+  .dark .ink { fill:#F4F5F7; }
+  .header { background:#fff; border:1px solid var(--line); border-radius:12px; display:flex; align-items:center; gap:12px; padding:14px 18px; margin-top:14px; }
+  .header small { color:var(--muted); font-size:13px; }
+  .sizes { display:flex; align-items:end; gap:18px; }
+  .sizes span { display:block; text-align:center; font-size:11px; color:var(--muted); margin-top:6px; }
+  @media (max-width:760px) { .row { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>COAI 로고 시안 3종</h1>
+  <p class="lead">CO = Collaboration · Color · Communication, AI = 사람과 사람이 만나는 지점에서 반짝이는 스파크(✦).<br>브랜드색은 시안의 회원가입 버튼색(#D9411E)을 그대로 쓰고, Color 의미로 앰버(#F2992E)를 보조색으로 더했습니다.</p>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="spark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2992E"/><stop offset="1" stop-color="#D9411E"/></linearGradient>
+      <linearGradient id="warm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F7B04A"/><stop offset="1" stop-color="#EE7B2C"/></linearGradient>
+      <!-- A: interlocked rings -->
+      <symbol id="mark-a" viewBox="0 0 48 48">
+        <path d="M27.19 16.29 A12 12 0 1 0 27.19 31.71" fill="none" stroke="#D9411E" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="30" cy="24" r="12" fill="none" stroke="url(#warm)" stroke-width="5"/>
+        <path d="M26.49 31.71 A12 12 0 0 1 21 34.39" fill="none" stroke="#D9411E" stroke-width="5" stroke-linecap="butt"/>
+        <path d="M24 17.2 Q24.7 23.3 30.8 24 Q24.7 24.7 24 30.8 Q23.3 24.7 17.2 24 Q23.3 23.3 24 17.2Z" fill="url(#spark)"/>
+      </symbol>
+      <!-- B: speech bubble of two circles -->
+      <clipPath id="clip-c"><circle cx="18" cy="22" r="13"/></clipPath>
+      <symbol id="mark-b" viewBox="0 0 48 48">
+        <path d="M9.2 31.8 L5.5 42.5 L16.4 35.6 Z" fill="#D9411E" stroke="#D9411E" stroke-width="1.5" stroke-linejoin="round"/>
+        <circle cx="18" cy="22" r="13" fill="#D9411E"/>
+        <circle cx="30" cy="22" r="13" fill="url(#warm)"/>
+        <circle cx="30" cy="22" r="13" fill="#B8301A" clip-path="url(#clip-c)"/>
+        <path d="M24 14.2 Q24.75 21.25 31.2 22 Q24.75 22.75 24 29.8 Q23.25 22.75 16.8 22 Q23.25 21.25 24 14.2Z" fill="#fff"/>
+      </symbol>
+      <!-- C: monogram, C embracing a person-dot, spark at the opening -->
+      <symbol id="mark-c" viewBox="0 0 48 48">
+        <path d="M33.6 13.1 A15 15 0 1 0 33.6 34.9" fill="none" stroke="#D9411E" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="22" cy="24" r="6.5" fill="url(#warm)"/>
+        <path d="M37 13.5 Q37.55 18.45 42.5 19 Q37.55 19.55 37 24.5 Q36.45 19.55 31.5 19 Q36.45 18.45 37 13.5Z" fill="url(#spark)"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- wordmark helper rendered per concept -->
+  <section class="concept">
+    <h2>A. 맞물린 두 고리</h2>
+    <p>C와 O가 위아래로 엮여 두 사람이 손잡은 모양(Collaboration). 두 고리의 색이 달라 각자의 개성(Color)을 살리고, 교차점 안쪽에 AI 스파크를 둡니다. 획이 가늘어 가장 섬세한 인상입니다.</p>
+    <div class="row">
+      <div class="tile light"><svg viewBox="0 0 230 56" width="300" role="img" aria-label="COAI"><use href="#mark-a" x="0" y="4" width="48" height="48"/><text x="58" y="40" font-family="Pretendard Variable,Pretendard,sans-serif" font-weight="800" font-size="34" letter-spacing="-0.7"><tspan class="ink" fill="#111114">CO</tspan><tspan fill="#D9411E">AI</tspan></text></svg></div>
+      <div class="tile dark"><svg viewBox="0 0 230 56" width="200" role="img" aria-label="COAI 다크"><use href="#mark-a" x="0" y="4" width="48" height="48"/><text x="58" y="40" font-family="Pretendard Variable,Pretendard,sans-serif" font-weight="800" font-size="34" letter-spacing="-0.7"><tspan class="ink">CO</tspan><tspan fill="#F0603C">AI</tspan></text></svg></div>
+      <div class="tile light"><div class="sizes"><div><svg width="64" height="64"><use href="#mark-a" width="64" height="64"/></svg><span>앱 아이콘</span></div><div><svg width="32" height="32"><use href="#mark-a" width="32" height="32"/></svg><span>32px</span></div><div><svg width="16" height="16"><use href="#mark-a" width="16" height="16"/></svg><span>파비콘</span></div></div></div>
+    </div>
+    <div class="header"><svg viewBox="0 0 230 56" width="128"><use href="#mark-a" x="0" y="4" width="48" height="48"/><text x="58" y="40" font-family="Pretendard Variable,Pretendard,sans-serif" font-weight="800" font-size="34" letter-spacing="-0.7"><tspan fill="#111114">CO</tspan><tspan fill="#D9411E">AI</tspan></text></svg><small>쉽게 보고, 바로 써보는 AI 커뮤니티</small></div>
+  </section>
+
+  <section class="concept">
+    <h2>B. 말풍선이 된 두 원</h2>
+    <p>겹친 두 원 아래 꼬리를 달아 말풍선(Communication)으로 읽히게 했습니다. 겹친 부분은 두 색이 섞인 진한 색이 되고, 그 자리에서 흰 스파크가 반짝입니다. 면이 꽉 차 있어 작은 크기에서도 가장 또렷합니다.</p>
+    <div class="row">
+      <div class="tile light"><svg viewBox="0 0 230 56" width="300" role="img" aria-label="COAI"><use href="#mark-b" x="0" y="4" width="48" height="48"/><text x="58" y="40" font-family="Pretendard Variable,Pretendard,sans-serif" font-weight="800" font-size="34" letter-spacing="-0.7"><tspan fill="#111114">CO</tspan><tspan fill="#D9411E">AI</tspan></text></svg></div>
+      <div class="tile dark"><svg viewBox="0 0 230 56" width="200" role="img" aria-label="COAI 다크"><use href="#mark-b" x="0" y="4" width="48" height="48"/><text x="58" y="40" font-family="Pretendard Variable,Pretendard,sans-serif" font-weight="800" font-size="34" letter-spacing="-0.7"><tspan class="ink">CO</tspan><tspan fill="#F0603C">AI</tspan></text></svg></div>
+      <div class="tile light"><div class="sizes"><div><svg width="64" height="64"><use href="#mark-b" width="64" height="64"/></svg><span>앱 아이콘</span></div><div><svg width="32" height="32"><use href="#mark-b" width="32" height="32"/></svg><span>32px</span></div><div><svg width="16" height="16"><use href="#mark-b" width="16" height="16"/></svg><span>파비콘</span></div></div></div>
+    </div>
+    <div class="header"><svg viewBox="0 0 230 56" width="128"><use href="#mark-b" x="0" y="4" width="48" height="48"/><text x="58" y="40" font-family="Pretendard Variable,Pretendard,sans-serif" font-weight="800" font-size="34" letter-spacing="-0.7"><tspan fill="#111114">CO</tspan><tspan fill="#D9411E">AI</tspan></text></svg><small>쉽게 보고, 바로 써보는 AI 커뮤니티</small></div>
+  </section>
+
+  <section class="concept">
+    <h2>C. 품어 주는 C</h2>
+    <p>큰 C가 사람(O)을 감싸 안는 모노그램입니다. 열린 쪽으로 AI 스파크가 튀어나와 "함께 있으면 AI가 반짝인다"는 이야기를 담았습니다. 시안의 기존 로고(사람 + 반짝임)와 가장 가까운 무게감입니다.</p>
+    <div class="row">
+      <div class="tile light"><svg viewBox="0 0 230 56" width="300" role="img" aria-label="COAI"><use href="#mark-c" x="0" y="4" width="48" height="48"/><text x="58" y="40" font-family="Pretendard Variable,Pretendard,sans-serif" font-weight="800" font-size="34" letter-spacing="-0.7"><tspan fill="#111114">CO</tspan><tspan fill="#D9411E">AI</tspan></text></svg></div>
+      <div class="tile dark"><svg viewBox="0 0 230 56" width="200" role="img" aria-label="COAI 다크"><use href="#mark-c" x="0" y="4" width="48" height="48"/><text x="58" y="40" font-family="Pretendard Variable,Pretendard,sans-serif" font-weight="800" font-size="34" letter-spacing="-0.7"><tspan class="ink">CO</tspan><tspan fill="#F0603C">AI</tspan></text></svg></div>
+      <div class="tile light"><div class="sizes"><div><svg width="64" height="64"><use href="#mark-c" width="64" height="64"/></svg><span>앱 아이콘</span></div><div><svg width="32" height="32"><use href="#mark-c" width="32" height="32"/></svg><span>32px</span></div><div><svg width="16" height="16"><use href="#mark-c" width="16" height="16"/></svg><span>파비콘</span></div></div></div>
+    </div>
+    <div class="header"><svg viewBox="0 0 230 56" width="128"><use href="#mark-c" x="0" y="4" width="48" height="48"/><text x="58" y="40" font-family="Pretendard Variable,Pretendard,sans-serif" font-weight="800" font-size="34" letter-spacing="-0.7"><tspan fill="#111114">CO</tspan><tspan fill="#D9411E">AI</tspan></text></svg><small>쉽게 보고, 바로 써보는 AI 커뮤니티</small></div>
+  </section>
+</main>
+</body>
+</html>

@@ -11,7 +11,7 @@ export class IframeSandboxEngine implements IExecutionEngine {
     container.setAttribute('data-playlab-sandbox', artifact.id);
     container.style.width = '100%'; container.style.height = '100%';
     const iframe = document.createElement('iframe');
-    iframe.title = 'PLAYLAB interactive work';
+    iframe.title = 'COAI interactive work';
     iframe.src = artifact.contentUrl;
     iframe.setAttribute('sandbox', 'allow-scripts allow-pointer-lock');
     iframe.setAttribute('referrerpolicy', 'no-referrer');

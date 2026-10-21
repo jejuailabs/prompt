@@ -3,9 +3,10 @@
 import { useTranslations } from 'next-intl';
 import { useSession } from '@/hooks/use-session';
 import ViewRouter from '@/components/views/view-router';
-import Header from './header';
-import { CreationNav } from './creation-nav';
-import MobileTabbar from './mobile-tabbar';
+import CoaiHeader from '@/components/coai/header';
+import CoaiBottomTab from '@/components/coai/bottom-tab';
+import { CoaiLogo } from '@/components/coai/logo';
+import '@/components/coai/coai.css';
 import { StudioSwitcher } from '@/components/experience/studio-switcher';
 import { useAppStore } from '@/lib/store';
 import './poster-shell.css';
@@ -21,27 +22,28 @@ import './poster-pages.css';
  */
 export default function AppShell() {
   useSession(); // boot: fetch session cookie → store (also used by sidebar/header)
-  const t = useTranslations('core');
+  const tc = useTranslations('coai');
   const view = useAppStore(s => s.view);
 
   return (
-    <div className="ribbon-app poster-app flex flex-1" data-view={view}>
+    <div className="coai-shell ribbon-app poster-app flex flex-1" data-view={view}>
 
       <div className="flex min-h-screen w-full min-w-0 flex-1 flex-col">
-        <Header poster />
-        <CreationNav />
-        <main id="main-content" className="w-full min-w-0 flex-1 pb-20 md:pb-0">
-          <StudioSwitcher />
+        <CoaiHeader />
+        <main id="main-content" className="coai-main w-full min-w-0 flex-1">
+          {view !== 'home' && <StudioSwitcher />}
           <ViewRouter />
         </main>
-        <footer className="ribbon-footer mt-auto border-t text-xs text-muted-foreground">
-          <span className="brand-wordmark">PLAYLAB<span>®</span></span>
-          <span>작은 실험이 이어지는 곳.</span>
-          <span>© 2026 PLAYLAB · {t('footerNote')}</span>
+        <footer className="coai-footer">
+          <div className="coai-container">
+            <CoaiLogo height={24} />
+            <span>{tc('footerNote')}</span>
+            <small>© 2026 COAI</small>
+          </div>
         </footer>
       </div>
 
-      <MobileTabbar />
+      <CoaiBottomTab />
     </div>
   );
 }

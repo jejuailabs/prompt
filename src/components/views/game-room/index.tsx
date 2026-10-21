@@ -7,7 +7,6 @@ import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ViewHeader } from '@/components/shared/view-header';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -76,7 +75,7 @@ export default function GameRoomView() {
     <div className="editorial-page arcade-page space-y-7">
       {/* Header */}
       <div>
-        <ViewHeader eyebrow="PLAYLAB ARCADE / PLAY IN YOUR BROWSER" title={t.title} subtitle={t.subtitle} image={games[0]?.fileUrl ?? '/uploads/seed/space-cover-v3.png'} actions={games[0] && <Button onClick={() => navigate('game-play', { id: games[0].id })}><Play className="size-4" />{locale === 'en' ? 'Play now' : '바로 플레이'}</Button>} />
+        <ViewHeader eyebrow="만들어보기 · 게임" title={t.title} subtitle={t.subtitle} actions={games[0] && <Button onClick={() => navigate('game-play', { id: games[0].id })}><Play className="size-4" />{locale === 'en' ? 'Play now' : '바로 플레이'}</Button>} />
         <div className="arcade-toolbar flex flex-wrap gap-2">
           <Button size="sm" onClick={() => setSubmitOpen(true)}><Plus className="mr-1 h-4 w-4" />게임 등록</Button>
           <Button
@@ -114,12 +113,12 @@ export default function GameRoomView() {
               role="button"
               tabIndex={0}
               aria-label={`${game.title} 플레이`}
-              className="gap-0 py-0 overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all group"
+              className="coai-store-card group gap-0 py-0"
               onClick={() => navigate('game-play', { id: game.id })}
               onKeyDown={event => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); navigate('game-play', { id: game.id }); } }}
             >
               {/* Thumbnail */}
-              <div className="relative aspect-[4/3] bg-gradient-to-br from-violet-600/20 to-indigo-600/20 overflow-hidden">
+              <div className="coai-store-thumb relative">
                 {game.fileUrl ? (
                   <img
                     src={game.fileUrl}
@@ -169,29 +168,13 @@ export default function GameRoomView() {
                 )}
               </div>
 
-              {/* Info */}
-              <div className="p-3">
-                <h3 className="font-semibold text-sm truncate">{game.title}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {t.by} @{game.ownerName}
-                </p>
-                {game.previewMode ? <p className="mt-2 text-xs text-primary">바로 플레이</p> : <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Play className="h-3 w-3" /> {game.playCount}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Heart className="h-3 w-3" /> {game.likeCount}
-                  </span>
-                </div>}
-                {game.metadata?.tags && game.metadata.tags.length > 0 && (
-                  <div className="flex gap-1 mt-2 flex-wrap">
-                    {game.metadata.tags.slice(0, 2).map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+              {/* Info — store-card layout (category · title · summary · maker · price/platform) */}
+              <div className="coai-store-info">
+                <span className="coai-store-cat">{game.metadata?.tags?.[0] ?? '게임'}</span>
+                <h3>{game.title}</h3>
+                <p>{game.description || '브라우저에서 바로 즐기는 게임'}</p>
+                <small>만든 사람 · {game.ownerName === 'PLAYLAB' ? 'COAI' : game.ownerName}{!game.previewMode && <> · <Play className="inline h-3 w-3" /> {game.playCount} · <Heart className="inline h-3 w-3" /> {game.likeCount}</>}</small>
+                <div className="coai-store-foot"><b>무료</b><span>웹</span></div>
               </div>
             </Card>
           ))}

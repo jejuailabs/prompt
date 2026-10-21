@@ -210,7 +210,7 @@ export function getItems(db: DbChoice): GuideItem[] {
       links: [],
       widget: 'git-identity',
       steps: [
-        { text: '이 화면의 입력칸에 GitHub 아이디와 이메일을 넣어요. 명령어가 자동으로 만들어져요.', screen: { kind: 'app', app: 'PLAYLAB', heading: 'Git 사용자 등록', fields: [{ label: 'GitHub 아이디', value: 'my-id' }, { label: '이메일', value: 'me@example.com' }] } },
+        { text: '이 화면의 입력칸에 GitHub 아이디와 이메일을 넣어요. 명령어가 자동으로 만들어져요.', screen: { kind: 'app', app: 'COAI', heading: 'Git 사용자 등록', fields: [{ label: 'GitHub 아이디', value: 'my-id' }, { label: '이메일', value: 'me@example.com' }] } },
         { copy: '', text: '"명령어 전체 복사"를 누르고 VS Code 터미널(Ctrl+`)에 붙여넣어 Enter를 눌러요.', screen: { kind: 'terminal', app: 'Visual Studio Code · 터미널', lines: [{ cmd: 'git config --global user.name "my-id"' }, { cmd: 'git config --global user.email "me@example.com"' }] } },
         { text: '같은 VS Code 터미널에서 git config --global --list를 입력해 등록된 값을 확인해요.', screen: { kind: 'terminal', app: 'Visual Studio Code · 터미널', lines: [{ cmd: 'git config --global --list', out: ['user.name=my-id', 'user.email=me@example.com'] }] } },
       ],

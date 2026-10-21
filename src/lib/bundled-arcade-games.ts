@@ -117,7 +117,7 @@ export const LOCAL_ARCADE_GAMES = BUNDLED_ARCADE_GAMES.filter(game=>!PUZZLE_GAME
   id: 'builtin-' + game.contentUrl.split('/').pop()!.replace('.html', ''),
   title: game.title, description: game.description,
   contentUrl: game.contentUrl, fileUrl: game.fileUrl,
-  ownerName: 'PLAYLAB', ownerId: '', playCount: 0, likeCount: 0,
+  ownerName: 'COAI', ownerId: '', playCount: 0, likeCount: 0,
   likedByMe: false, topPlayers: [], createdAt: '2026-10-07T00:00:00.000Z',
   previewMode: true,
   metadata: { tags: [...game.tags], controls: game.controls, emoji: game.emoji, params: { palette: game.palette } },

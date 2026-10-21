@@ -56,17 +56,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   booted: false,
 
   navigate: (view, params) => {
-    // Home is the public poster site, regardless of the active app screen.
-    if (view === 'home' && typeof window !== 'undefined') {
-      window.location.assign('/#home');
-      return;
-    }
     set({ view, params: params ?? {} });
     if (typeof window !== 'undefined') {
-      const destination = encodeHash(view, params);
+      // COAI home is an in-app screen served at the clean root URL.
+      const destination = view === 'home' ? '/' : encodeHash(view, params);
       // This is a single-page app, but its screens still need normal browser
       // history. Using replaceState here made Back jump outside PLAYLAB.
-      if (window.location.hash !== destination) {
+      const current = view === 'home' ? `${window.location.pathname}${window.location.hash}` : window.location.hash;
+      if (current !== destination) {
         history.pushState({ playlab: true }, '', destination);
       }
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -75,10 +72,6 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   hydrateFromHash: () => {
     const { view, params } = parseHash();
-    if (view === 'home' && typeof window !== 'undefined') {
-      window.location.replace('/#home');
-      return;
-    }
     set({ view, params });
   },
 

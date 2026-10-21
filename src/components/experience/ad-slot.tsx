@@ -24,5 +24,5 @@ export function AdSlot() {
     return () => observer.disconnect();
   }, [configured, loaded]);
   if (!configured) return null;
-  return <aside className="gallery-ad" aria-label="광고"><span>ADVERTISEMENT</span><Script id="playlab-adsense" src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`} crossOrigin="anonymous" strategy="afterInteractive" onReady={() => setLoaded(true)} /><ins ref={node} className="adsbygoogle" style={{ display: 'block' }} data-ad-client={client} data-ad-slot={slot} data-ad-format="auto" data-full-width-responsive="true" /></aside>;
+  return <aside className="gallery-ad" aria-label="광고"><span>광고</span><Script id="playlab-adsense" src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}`} crossOrigin="anonymous" strategy="afterInteractive" onReady={() => setLoaded(true)} /><ins ref={node} className="adsbygoogle" style={{ display: 'block' }} data-ad-client={client} data-ad-slot={slot} data-ad-format="auto" data-full-width-responsive="true" /></aside>;
 }

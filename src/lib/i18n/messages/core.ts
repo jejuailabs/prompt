@@ -1,7 +1,7 @@
 // Core namespace: shell, buttons, common UI (owned by orchestrator)
 const messages = {
   ko: {
-    brand: 'PLAYLAB',
+    brand: 'COAI',
     tagline: '프롬프트 한 줄에서 시작해 실제 매출 1원까지',
     searchPlaceholder: '아이디어, 프롬프트, 프로젝트를 검색하세요',
     create: '새로 만들기',
@@ -62,7 +62,7 @@ const messages = {
     demoAccountHint: '데모: admin / demo / 원하는 닉네임으로 로그인하세요',
   },
   en: {
-    brand: 'PLAYLAB',
+    brand: 'COAI',
     tagline: 'From a single prompt to your first revenue',
     searchPlaceholder: 'Search ideas, prompts, projects',
     create: 'Create',

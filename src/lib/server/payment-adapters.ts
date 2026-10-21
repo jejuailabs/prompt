@@ -41,7 +41,7 @@ class StripePaymentProvider implements IPaymentProvider {
           unit_amount: pkg.priceKrw,
           product_data: {
             name: pkg.label,
-            description: `PLAYLAB 크레딧 ${pkg.credits.toLocaleString()}개`,
+            description: `COAI 크레딧 ${pkg.credits.toLocaleString()}개`,
           },
         },
         quantity: 1,

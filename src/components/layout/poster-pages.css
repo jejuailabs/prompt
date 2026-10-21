@@ -80,9 +80,9 @@ html.light[data-playlab-design="poster"] {
 .video-poster-hero>div.absolute { display:none; }
 .video-poster-hero h1 { font:400 clamp(36px,3.8vw,58px)/1.25 Georgia,"Batang",serif; letter-spacing:-.055em; }
 .video-poster-hero .text-sky-200 { color:#f4cdb5; font-size:10px; letter-spacing:.16em; }
-html[data-playlab-design="poster"] :is([data-slot="dropdown-menu-content"],[data-slot="select-content"],[data-slot="dialog-content"],[data-slot="sheet-content"],[data-slot="popover-content"]) { color:var(--popover-foreground); background:var(--popover); border-color:var(--border); border-radius:8px; }
-html[data-playlab-design="poster"] [data-slot="dropdown-menu-item"] { padding:9px 10px; font-size:13px; }
-html[data-playlab-design="poster"] [data-slot="dialog-content"] { max-height:calc(100dvh - 40px); overflow-y:auto; }
+html[data-playlab-design] :is([data-slot="dropdown-menu-content"],[data-slot="select-content"],[data-slot="dialog-content"],[data-slot="sheet-content"],[data-slot="popover-content"]) { color:var(--popover-foreground); background:var(--popover); border-color:var(--border); border-radius:8px; }
+html[data-playlab-design] [data-slot="dropdown-menu-item"] { padding:9px 10px; font-size:13px; }
+html[data-playlab-design] [data-slot="dialog-content"] { max-height:calc(100dvh - 40px); overflow-y:auto; }
 @media(max-width:1100px) { .poster-app .works-grid,.wiki-collection-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }.space-heading-art { flex-wrap:wrap; }.space-heading-art .space-heading-copy { max-width:82%; }.wiki-collection-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:760px) {
   .poster-app #main-content>:is(.editorial-page,.mx-auto) { padding:27px 20px 45px; }
@@ -97,3 +97,54 @@ html[data-playlab-design="poster"] [data-slot="dialog-content"] { max-height:cal
 }
 @media(max-width:480px) { .wiki-collection-grid { grid-template-columns:1fr; }.poster-app .wiki-root-card .wiki-card-image { height:235px; }.poster-app .space-heading-actions { width:100%; }.poster-app .space-heading-actions>button { flex:1; } }
 @media(prefers-reduced-motion:reduce) { .poster-app * { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; } }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   COAI sub-page tone (2026-10-21): every service screen follows the home
+   page — 1200px content width, Pretendard headings, white rounded panels,
+   logo-blue highlights and orange primary actions. Declared last on purpose.
+   ───────────────────────────────────────────────────────────────────────── */
+.poster-app #main-content > :is(.editorial-page,.mx-auto),
+
+.editorial-page { width: 100%; max-width: 1248px !important; padding: 28px 24px 56px; margin-inline: auto; }
+@media (max-width: 767px) { .poster-app #main-content > :is(.editorial-page,.mx-auto), .editorial-page { padding: 18px 16px 40px; } }
+
+/* page header */
+.space-heading { align-items: flex-end; gap: 20px; margin-bottom: 24px; padding: 0 0 20px; border-bottom: 1px solid var(--coai-border); }
+.space-heading h1, .editorial-page-title, .video-poster-hero h1 { font: 700 28px/1.35 var(--coai-font) !important; letter-spacing: -0.02em !important; color: var(--coai-text-strong); margin: 0; }
+.space-eyebrow, .editorial-page-intro .eyebrow { color: var(--coai-blue-strong) !important; font-size: 14px !important; font-weight: 700; letter-spacing: 0 !important; margin-bottom: 6px !important; text-transform: none; }
+.space-subtitle, .editorial-page-intro p { color: var(--coai-text-muted) !important; font-size: 16px !important; line-height: 1.6 !important; margin-top: 8px !important; }
+@media (max-width: 767px) { .space-heading h1, .editorial-page-title, .video-poster-hero h1 { font-size: 22px !important; } .space-heading { flex-direction: column; align-items: flex-start; } }
+
+/* image headers become a soft rounded banner in the home poster style */
+.space-heading-art { min-height: 220px; border: 0; border-radius: var(--coai-radius-xl); padding: 32px; }
+.space-heading-art h1, .video-poster-hero h1 { color: #fff !important; }
+.space-heading-art .space-eyebrow { color: #9FD0FF !important; }
+.space-heading-art .space-subtitle { color: rgba(255,255,255,.85) !important; }
+.video-poster-hero { border-radius: var(--coai-radius-xl); min-height: 240px; }
+.video-poster-hero .text-sky-200 { color: #9FD0FF; font-size: 14px; letter-spacing: 0; font-weight: 700; }
+
+/* surfaces */
+.poster-app [data-slot="card"], .poster-app .space-empty { border: 1px solid var(--coai-border); border-radius: var(--coai-radius-lg); background: var(--coai-bg-surface); box-shadow: var(--coai-shadow-card); }
+.poster-app [data-slot="button"] { border-radius: var(--coai-radius-md); font-weight: 600; min-height: 40px; }
+.poster-app [data-slot="input"], .poster-app [data-slot="textarea"], .poster-app [data-slot="select-trigger"] { border-radius: var(--coai-radius-md); }
+.poster-app :is(input,textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]) { background: var(--coai-bg-surface); }
+.poster-app [data-slot="tabs-list"] { background: var(--coai-bg-subtle); border-radius: 999px; padding: 4px; gap: 2px; }
+.poster-app [data-slot="tabs-trigger"] { border-radius: 999px; font-weight: 600; font-size: 15px; color: var(--coai-text-body); }
+.poster-app [data-slot="tabs-trigger"][data-state="active"] { background: var(--coai-bg-surface); color: var(--coai-blue-strong); box-shadow: var(--coai-shadow-card); }
+.poster-app .gallery-controls { border-block: 0; padding: 0 0 20px; margin-bottom: 8px; }
+
+/* work / game grids: white cards like the home community cards */
+.poster-app .works-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 1023px) { .poster-app .works-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+.poster-app .work-card, .poster-app .arcade-grid > [data-slot="card"] { background: var(--coai-bg-surface); border: 1px solid var(--coai-border); border-radius: var(--coai-radius-lg); overflow: hidden; transition: box-shadow .2s; }
+.poster-app .work-card:hover, .poster-app .arcade-grid > [data-slot="card"]:hover { box-shadow: var(--coai-shadow-hover); }
+.poster-app .work-image, .poster-app .arcade-grid > [data-slot="card"] > :first-child { border-radius: 0; }
+.poster-app .work-card h3 { font-size: 16px; font-weight: 700; color: var(--coai-text-strong); }
+.poster-app .arcade-grid > [data-slot="card"] > :last-child { padding: 14px 16px 16px; }
+.poster-app .wiki-root-card, .poster-app .wiki-collection-grid [data-slot="card"] { border-radius: var(--coai-radius-lg); overflow: hidden; }
+.poster-app .wiki-root-card .wiki-card-content h3 { font-size: 18px; font-weight: 700; }
+.poster-app .vibe-setup-page [aria-label="4단계"]>button { border-radius: var(--coai-radius-lg); }
+.poster-app .vibe-setup-page [aria-label="4단계"]>button>span:nth-child(2) { font: 700 20px/1.35 var(--coai-font); }
+
+/* studio switcher (영상·3D·음악·모델 실험실 tabs inside 만들어보기) */
+.poster-app .studio-switcher > span { color: var(--coai-blue-strong); font-size: 14px; font-weight: 700; letter-spacing: 0; }

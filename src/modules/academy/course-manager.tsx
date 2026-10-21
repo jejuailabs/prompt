@@ -67,7 +67,7 @@ export function CourseManager({ lessons, courses, selected, selectedLesson, prev
         })}>{busy === 'register' ? '영상 등록·학습내용 준비 중…' : '영상 강의 등록'}</Button></div>
       </section>
       {!!lessons.length && <section className={styles.managerSection}>
-        <div><span className={styles.eyebrow}>EDIT / VIDEO & STUDY NOTES</span><h2>영상의 학습내용 다듬기</h2><p>같은 영상을 포함한 모든 강의에 수정 내용이 함께 반영됩니다.</p></div>
+        <div><span className={styles.eyebrow}>영상 · 학습노트 편집</span><h2>영상의 학습내용 다듬기</h2><p>같은 영상을 포함한 모든 강의에 수정 내용이 함께 반영됩니다.</p></div>
         <label>편집할 영상<select value={editingId} disabled={!!busy} onChange={e => setEditingId(e.target.value)}><option value="">영상 선택</option>{lessons.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}</select></label>
         {editing && <>
           <div className={styles.formGrid}><label>영상 제목<Input value={editTitle} maxLength={160} onChange={e => setEditTitle(e.target.value)} /></label><label>영상 소개<Input value={editDescription} maxLength={500} onChange={e => setEditDescription(e.target.value)} /></label></div>

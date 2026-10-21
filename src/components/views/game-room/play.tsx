@@ -197,7 +197,7 @@ export default function GamePlayView() {
           onOpenAutoFocus={event=>{event.preventDefault();closeRef.current?.focus();}}
           onInteractOutside={event=>event.preventDefault()}>
           <header className={styles.header}>
-            <div className={styles.heading}><small>PLAYLAB / ARCADE</small><DialogTitle>{game?.title??'게임'}</DialogTitle></div>
+            <div className={styles.heading}><small>만들어보기 · 게임</small><DialogTitle>{game?.title??'게임'}</DialogTitle></div>
             <div className={styles.toolbar}>
               <Button variant="ghost" size="icon" data-game-info aria-label={infoOpen?'게임 화면으로':'게임 정보와 랭킹'} aria-pressed={infoOpen} onClick={showInfo}><Trophy className="h-4 w-4"/></Button>
               <Button variant="ghost" size="icon" data-game-fullscreen aria-label={isFullscreen?t.exitFullscreen:t.fullscreen} onClick={toggleFullscreen}>{isFullscreen?<Minimize2 className="h-4 w-4"/>:<Maximize2 className="h-4 w-4"/>}</Button>

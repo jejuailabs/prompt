@@ -339,12 +339,12 @@ async function runDetailpagePipeline(
         bullets: [],
       })),
       faq: [],
-      footer: `© PLAYLAB DEMO · ${productName}`,
+      footer: `© COAI DEMO · ${productName}`,
     };
   }
   if (!content.hero) content.hero = { title: productName, subtitle: '', cta: '구매하기' };
   if (!Array.isArray(content.sections)) content.sections = [];
-  if (!content.footer) content.footer = `© PLAYLAB DEMO · ${productName}`;
+  if (!content.footer) content.footer = `© COAI DEMO · ${productName}`;
   await setProgress(90);
 
   return {

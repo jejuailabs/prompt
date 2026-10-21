@@ -76,7 +76,7 @@ export function getLocalLittleWorld(id: string | undefined) {
   return item ? {
     id: `builtin-${item.slug}`, title: item.title, description: item.description,
     contentUrl: item.contentUrl, fileUrl: item.fileUrl,
-    ownerName: 'PLAYLAB', ownerId: '', playCount: 0, likeCount: 0, likedByMe: false,
+    ownerName: 'COAI', ownerId: '', playCount: 0, likeCount: 0, likedByMe: false,
     createdAt: item.publishedAt,
     metadata: { collection: 'little-worlds', controls: item.controls, builtin: true, portable: item.contentUrl.endsWith('/index.html') },
   } : undefined;

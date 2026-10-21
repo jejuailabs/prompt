@@ -58,7 +58,7 @@ function ForkNode({ node, depth, navigate }: { node: TreeNode; depth: number; na
               />
             ) : (
               <div className="wiki-card-image wiki-card-placeholder" aria-hidden="true">
-                <span>PLAYLAB / PROMPT</span><strong>{node.category}</strong>
+                <span>프롬프트</span><strong>{node.category}</strong>
               </div>
             )}
             <div className="wiki-card-content">

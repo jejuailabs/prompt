@@ -58,7 +58,7 @@ export default function LoginDialog() {
               <Icon name="zap" className="size-5" />
             </span>
             <div className="text-left">
-              <DialogTitle className="text-lg font-extrabold tracking-tight">{mode === 'signup' ? (locale === 'en' ? 'Join PLAYLAB' : 'PLAYLAB 회원가입') : (locale === 'en' ? 'Sign in to PLAYLAB' : 'PLAYLAB 로그인')}</DialogTitle>
+              <DialogTitle className="text-lg font-extrabold tracking-tight">{mode === 'signup' ? (locale === 'en' ? 'Join COAI' : 'COAI 회원가입') : (locale === 'en' ? 'Sign in to COAI' : 'COAI 로그인')}</DialogTitle>
               <DialogDescription className="text-xs">{locale === 'en' ? 'Continue with your Google account.' : 'Google 계정으로 간편하게 시작하세요.'}</DialogDescription>
             </div>
           </div>
@@ -101,7 +101,7 @@ export default function LoginDialog() {
               : '처음이라면 Google 인증 후 계정이 만들어져요.'}
           </p>
           <p className="text-xs text-center text-muted-foreground">
-            {mode === 'signup' ? (locale === 'en' ? 'Already a member? ' : '이미 계정이 있나요? ') : (locale === 'en' ? 'New to PLAYLAB? ' : 'PLAYLAB이 처음인가요? ')}
+            {mode === 'signup' ? (locale === 'en' ? 'Already a member? ' : '이미 계정이 있나요? ') : (locale === 'en' ? 'New to COAI? ' : 'COAI가 처음인가요? ')}
             <button className="font-semibold text-primary underline underline-offset-4" onClick={() => setOpen(true, mode === 'signup' ? 'login' : 'signup')}>
               {mode === 'signup' ? (locale === 'en' ? 'Sign in' : '로그인') : (locale === 'en' ? 'Sign up' : '회원가입')}
             </button>

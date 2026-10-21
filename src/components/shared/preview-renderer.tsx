@@ -159,7 +159,7 @@ function LandingPageRenderer({ artifact, expanded = false }: { artifact: Artifac
   if (!expanded) {
     return (
       <div className="h-full w-full overflow-hidden bg-card p-4 text-left">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-primary">{content.hero.cta || 'PLAYLAB'}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-primary">{content.hero.cta || 'COAI'}</p>
         <p className="mt-1.5 line-clamp-1 font-bold">{content.hero.title}</p>
         {content.hero.subtitle && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{content.hero.subtitle}</p>}
         <div className="mt-2 border-t pt-2">

@@ -1,15 +1,21 @@
 'use client';
-import { useModules } from '@/hooks/use-session';
 import { useAppStore } from '@/lib/store';
-import type { ViewKey } from '@/lib/types';
+import { COAI_MAKE_SECTIONS, activeCoaiMenu } from '@/lib/coai-navigation';
 
+/** 만들어보기 section tabs: games, web, motion and the creative studios live under one menu. */
 export function StudioSwitcher() {
   const view = useAppStore(s => s.view);
   const slug = useAppStore(s => s.params.slug);
   const navigate = useAppStore(s => s.navigate);
   const en = useAppStore(s => s.locale) === 'en';
-  const { data: modules = [] } = useModules();
-  if (!['lab', 'video-studio', '3d-studio'].includes(view) && !(view === 'tool' && slug === 'ace-music')) return null;
-  const targets = modules.filter(m => ['model-lab', 'video-studio', '3d-studio', 'tool-ace-music'].includes(m.id));
-  return <nav className="studio-switcher" aria-label={en ? 'Creative labs' : '실험실 선택'}><span>THE EXPERIMENT ROOM</span>{targets.map(m => <button key={m.id} aria-current={(m.id === 'tool-ace-music' ? slug === 'ace-music' : view === m.entryView) ? 'page' : undefined} onClick={() => m.id === 'tool-ace-music' ? navigate('tool', { slug: 'ace-music' }) : navigate(m.entryView as ViewKey)}>{({ 'model-lab': en ? 'Image' : '이미지', 'video-studio': en ? 'Video' : '영상', '3d-studio': '3D', 'tool-ace-music': en ? 'Music' : '음악' } as Record<string,string>)[m.id]}</button>)}</nav>;
+  const music = view === 'tool' && slug === 'ace-music';
+  if (activeCoaiMenu(view) !== 'make' && !music) return null;
+  return <nav className="coai-make-tabs" aria-label={en ? 'Make sections' : '만들어보기 메뉴'}>
+    <div className="coai-container">
+      {COAI_MAKE_SECTIONS.map(section => {
+        const current = section.id === 'music' ? music : section.views.includes(view);
+        return <button key={section.id} type="button" aria-current={current ? 'page' : undefined} onClick={() => navigate(section.target.view, section.target.params)}>{en ? section.labelEn : section.label}</button>;
+      })}
+    </div>
+  </nav>;
 }

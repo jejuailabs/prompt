@@ -126,7 +126,7 @@ export default function MyProjectsView() {
   if (!session) {
     return (
       <div className={styles.page}>
-        <div className={styles.heading}><div><p className={styles.eyebrow}>YOUR SPACE / PLAYLAB</p><h1>{locale === 'en' ? 'My account' : '내 계정'}<span>.</span></h1></div></div>
+        <div className={styles.heading}><div><p className={styles.eyebrow}>내 공간</p><h1>{locale === 'en' ? 'My account' : '내 계정'}<span>.</span></h1></div></div>
         <EmptyState
           icon={<User className="size-5" aria-hidden="true" />}
           title={t('needLoginTitle')}
@@ -144,7 +144,7 @@ export default function MyProjectsView() {
   return (
     <div className={styles.page}>
       <div className={styles.heading}>
-        <div><p className={styles.eyebrow}>YOUR SPACE / PLAYLAB</p><h1>{locale === 'en' ? 'My account' : '내 계정'}<span>.</span></h1><p className={styles.description}>{locale === 'en' ? 'Your profile, creative fuel, and everything you make.' : '내 정보와 크레딧, 만들어둔 작업을 한곳에서.'}</p></div>
+        <div><p className={styles.eyebrow}>내 공간</p><h1>{locale === 'en' ? 'My account' : '내 계정'}<span>.</span></h1><p className={styles.description}>{locale === 'en' ? 'Your profile, creative fuel, and everything you make.' : '내 정보와 크레딧, 만들어둔 작업을 한곳에서.'}</p></div>
         <button className={styles.logout} onClick={() => void logout()} disabled={loggingOut}><LogOut size={14} />{loggingOut ? tc('loading') : tc('logout')}</button>
       </div>
 
@@ -154,14 +154,14 @@ export default function MyProjectsView() {
             {session.avatarUrl && <AvatarImage src={session.avatarUrl} alt="" />}
             <AvatarFallback>{session.username.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
-          <div className={styles.profileInfo}><p className={styles.eyebrow}>{session.role === 'admin' ? 'PLAYLAB ADMIN' : 'PLAYLAB CREATOR'}</p><h2>{session.username}</h2><p>{session.title || (locale === 'en' ? 'Creator' : '크리에이터')}</p><button onClick={() => navigate('ai-tools')}>{locale === 'en' ? 'Create with AI Tools' : 'AI Tools로 새 작업 시작'}<ArrowUpRight size={14} /></button></div>
+          <div className={styles.profileInfo}><p className={styles.eyebrow}>{session.role === 'admin' ? 'COAI 관리자' : 'COAI 회원'}</p><h2>{session.username}</h2><p>{session.title || (locale === 'en' ? 'Creator' : '크리에이터')}</p><button onClick={() => navigate('ai-tools')}>{locale === 'en' ? 'Create with AI Tools' : 'AI Tools로 새 작업 시작'}<ArrowUpRight size={14} /></button></div>
         </div>
         <div className={styles.creditPanel}><p className={styles.eyebrow}>YOUR CREATIVE FUEL</p><CreditsWidget className={styles.credits} dark /><p className={styles.creditNote}>{locale === 'en' ? 'Use credits in AI Tools and the creative studios.' : 'AI 도구와 실험실에서 사용할 수 있어요.'}</p></div>
       </section>
 
       <section className={styles.collection} aria-labelledby="account-work-heading">
         <div className={styles.collectionHeading}>
-          <div><p className={styles.eyebrow}>MADE BY YOU</p><h2 id="account-work-heading">{locale === 'en' ? 'My work' : '내 작업'}</h2></div>
+          <div><p className={styles.eyebrow}>회원 작품</p><h2 id="account-work-heading">{locale === 'en' ? 'My work' : '내 작업'}</h2></div>
           <Button size="sm" className={styles.uploadButton} onClick={() => setUploadOpen(true)}>
             <Upload className="size-4" aria-hidden="true" />
             {t('upload')}
