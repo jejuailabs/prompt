@@ -8,12 +8,14 @@ existing PLAYLAB voice-clone route keeps working unchanged.
 import base64
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import threading
 import time
 from typing import Any
 
+import numpy as np
 import runpod
 import soundfile as sf
 import torch
@@ -21,8 +23,14 @@ from qwen_tts import Qwen3TTSModel
 
 MAX_REFERENCE_BYTES = 25 * 1024 * 1024
 MAX_OUTPUT_BYTES = 50 * 1024 * 1024
-MAX_TEXT_CHARS = 6_000
+MAX_TEXT_CHARS = 10_000
 MAX_INSTRUCT_CHARS = 500
+# One generate call is bounded by the model's token budget (~2-3 minutes of
+# speech). Long scripts are split at sentence boundaries, generated in small
+# batches and joined with a short pause so a 10,000-character script works.
+CHUNK_CHARS = 220
+BATCH_SIZE = 4
+PAUSE_SECONDS = 0.25
 LANGUAGES = {"Korean", "Auto", "English", "Japanese", "Chinese"}
 MODEL_PATHS = {
     "tts": os.environ.get("QWEN3_TTS_CUSTOM_VOICE_MODEL", "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"),
@@ -74,6 +82,43 @@ def resolve_speaker(model: Qwen3TTSModel, requested: str) -> str:
     raise ValueError(f"speaker must be one of: {', '.join(supported)}")
 
 
+def split_text(text: str) -> list[str]:
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?。！？…])\s+|\n+", text) if part.strip()]
+    pieces: list[str] = []
+    for sentence in sentences:
+        while len(sentence) > CHUNK_CHARS:
+            cut = max(sentence.rfind(mark, 0, CHUNK_CHARS) for mark in (",", "，", "、", " "))
+            cut = cut + 1 if cut > CHUNK_CHARS // 3 else CHUNK_CHARS
+            pieces.append(sentence[:cut].strip())
+            sentence = sentence[cut:].strip()
+        if sentence:
+            pieces.append(sentence)
+    chunks: list[str] = []
+    for piece in pieces:
+        if chunks and len(chunks[-1]) + 1 + len(piece) <= CHUNK_CHARS:
+            chunks[-1] = f"{chunks[-1]} {piece}"
+        else:
+            chunks.append(piece)
+    return chunks
+
+
+def generate_chunked(generate, chunks: list[str], output: Path, **common: Any) -> int:
+    """Run generate() over batches of chunks and write one joined PCM_16 WAV."""
+    parts: list[np.ndarray] = []
+    sample_rate = 24000
+    with _generation_lock, torch.inference_mode():
+        for start in range(0, len(chunks), BATCH_SIZE):
+            batch = chunks[start:start + BATCH_SIZE]
+            extra = {key: [value] * len(batch) for key, value in common.items() if not key.startswith("_")}
+            extra.update({key[1:]: value for key, value in common.items() if key.startswith("_")})
+            wavs, sample_rate = generate(text=batch, **extra)
+            parts.extend(np.asarray(wav, dtype=np.float32).reshape(-1) for wav in wavs)
+    pause = np.zeros(int(sample_rate * PAUSE_SECONDS), dtype=np.float32)
+    joined = np.concatenate([segment for part in parts for segment in (part, pause)][:-1])
+    sf.write(output, joined, sample_rate, subtype="PCM_16")
+    return int(sample_rate)
+
+
 def normalize_reference(source: Path, target: Path) -> None:
     completed = subprocess.run(
         ["ffmpeg", "-y", "-v", "error", "-i", str(source), "-ac", "1", "-ar", "24000", "-t", "45", str(target)],
@@ -87,13 +132,10 @@ def synthesize_tts(payload: dict[str, Any], text: str, language: str, output: Pa
     model = get_model("tts")
     speaker = resolve_speaker(model, required_string(payload.get("speaker"), "speaker", 64))
     instruct = payload.get("instruct")
-    kwargs: dict[str, Any] = {"text": text, "language": language, "speaker": speaker}
+    common: dict[str, Any] = {"language": language, "speaker": speaker}
     if isinstance(instruct, str) and instruct.strip():
-        kwargs["instruct"] = instruct.strip()[:MAX_INSTRUCT_CHARS]
-    with _generation_lock, torch.inference_mode():
-        wavs, sample_rate = model.generate_custom_voice(**kwargs)
-        sf.write(output, wavs[0], sample_rate, subtype="PCM_16")
-    return int(sample_rate)
+        common["instruct"] = instruct.strip()[:MAX_INSTRUCT_CHARS]
+    return generate_chunked(model.generate_custom_voice, split_text(text), output, **common)
 
 
 def synthesize_clone(payload: dict[str, Any], text: str, language: str, folder: Path, output: Path) -> int:
@@ -103,12 +145,9 @@ def synthesize_clone(payload: dict[str, Any], text: str, language: str, folder: 
     raw.write_bytes(reference)
     normalize_reference(raw, wav_reference)
     model = get_model("clone")
-    with _generation_lock, torch.inference_mode():
-        wavs, sample_rate = model.generate_voice_clone(
-            text=text, language=language, ref_audio=str(wav_reference), ref_text=reference_text,
-        )
-        sf.write(output, wavs[0], sample_rate, subtype="PCM_16")
-    return int(sample_rate)
+    # Build the speaker prompt once; every chunk reuses it ("_" = not per-item).
+    prompt = model.create_voice_clone_prompt(ref_audio=str(wav_reference), ref_text=reference_text, x_vector_only_mode=False)
+    return generate_chunked(model.generate_voice_clone, split_text(text), output, language=language, _voice_clone_prompt=prompt)
 
 
 def handler(event: dict[str, Any]) -> dict[str, Any]:
