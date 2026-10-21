@@ -13,7 +13,8 @@ export default function CoaiBottomTab() {
   const t = useTranslations('coai');
   const view = useAppStore((s) => s.view);
   const go = useMenuNavigate();
-  const active = activeCoaiMenu(view);
+  const params = useAppStore((s) => s.params);
+  const active = activeCoaiMenu(view, params);
   const tabs = COAI_BOTTOM_TABS.map((id) => COAI_MENUS.find((menu) => menu.id === id)!);
   return (
     <nav className="coai-bottom-tab" aria-label={t('navAria')}>

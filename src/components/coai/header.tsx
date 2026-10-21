@@ -78,7 +78,8 @@ export default function CoaiHeader() {
   const setLocale = useAppStore((s) => s.setLocale);
   const { resolvedTheme, setTheme } = useTheme();
   const go = useMenuNavigate();
-  const active = activeCoaiMenu(view);
+  const params = useAppStore((s) => s.params);
+  const active = activeCoaiMenu(view, params);
   const [scrolled, setScrolled] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);

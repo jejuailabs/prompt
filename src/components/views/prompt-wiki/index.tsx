@@ -130,7 +130,7 @@ export default function PromptWikiView() {
   return (
     <div className="wiki-page editorial-page space-y-6">
       <div>
-        <ViewHeader eyebrow="THE PROMPT COLLECTION" title={locale === 'en' ? 'Prompt Wiki' : '프롬프트 위키'} subtitle={locale === 'en' ? 'See the result. Make the prompt your own.' : '마음에 드는 결과물에서 시작해, 프롬프트를 내 것으로.'} actions={<Button onClick={() => navigate('gallery', { tab: 'prompts' })}>{locale === 'en' ? 'Find a prompt' : '프롬프트 검색'} ↗</Button>} />
+        <ViewHeader eyebrow="THE PROMPT COLLECTION" title={locale === 'en' ? 'Prompt Wiki' : '프롬프트 위키'} subtitle={locale === 'en' ? 'See the result. Make the prompt your own.' : '마음에 드는 결과물에서 시작해, 프롬프트를 내 것으로.'} actions={<Button onClick={() => navigate('gallery', { tab: 'prompts' })}>{locale === 'en' ? 'All prompts' : '프롬프트 목록'} ↗</Button>} />
         <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <span className="inline-block size-2 rounded-full bg-primary" />

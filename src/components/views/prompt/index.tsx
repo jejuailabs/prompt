@@ -163,7 +163,7 @@ export default function PromptDetailView() {
       await api.del(`/api/prompts/${promptId}`);
       toast({ title: '삭제 완료' });
       qc.invalidateQueries({ queryKey: ['prompts'] });
-      navigate('gallery');
+      navigate('gallery', { tab: 'prompts' });
     } catch (err) {
       toast({ title: '오류', description: err instanceof ApiError ? err.message : '삭제에 실패했습니다', variant: 'destructive' });
     } finally {
@@ -183,7 +183,7 @@ export default function PromptDetailView() {
   return (
     <div className="space-y-6 w-full max-w-6xl mx-auto px-5 py-8 md:px-8">
       {/* Back */}
-      <Button variant="ghost" size="sm" onClick={() => navigate('gallery')}>
+      <Button variant="ghost" size="sm" onClick={() => navigate('gallery', { tab: 'prompts' })}>
         <ArrowLeft className="mr-1 h-4 w-4" /> {t('back')}
       </Button>
 

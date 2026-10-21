@@ -127,7 +127,9 @@ export default function GalleryView() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [qInput, setQInput] = useState<string | null>(null);
-  const [tab, setTab] = useState<'prompts' | 'artifacts'>(params.tab === 'prompts' ? 'prompts' : 'artifacts');
+  const tab: 'prompts' | 'artifacts' = params.tab === 'prompts' ? 'prompts' : 'artifacts';
+  // The tab lives in the URL so the header highlights 프롬프트 or 커뮤니티 to match.
+  const setTab = (next: 'prompts' | 'artifacts') => navigate('gallery', { tab: next, ...(q ? { q } : {}), ...(params.type && next === 'artifacts' ? { type: params.type } : {}) });
   const [artifactType, setArtifactType] = useState(params.type ?? '');
   const [sort, setSort] = useState<SortKey>('new');
   const [category, setCategory] = useState<string>('');
@@ -174,7 +176,9 @@ export default function GalleryView() {
 
   return (
     <div className="editorial-page">
-      <ViewHeader eyebrow="커뮤니티 · 갤러리" title={locale === 'en' ? 'A little out of the ordinary.' : '조금 다른 상상들이 모이는 곳.'} subtitle={locale === 'en' ? 'Watch it. Play it. Find out how it was made.' : '감상하고, 직접 써보고, 어떻게 만들었는지 이야기해요.'} actions={<Button onClick={() => setCreateOpen(true)}>{t('writePrompt')} ↗</Button>} />
+      {tab === 'prompts'
+        ? <ViewHeader eyebrow={locale === 'en' ? 'Prompts' : '프롬프트'} title={locale === 'en' ? 'Prompt Wiki' : '프롬프트 위키'} subtitle={locale === 'en' ? 'See the result. Make the prompt your own.' : '마음에 드는 결과물에서 시작해, 프롬프트를 내 것으로.'} actions={<><Button variant="outline" onClick={() => navigate('prompt-wiki')}>{locale === 'en' ? 'Fork tree' : '포크 계보 보기'}</Button><Button onClick={() => setCreateOpen(true)}>{t('writePrompt')} ↗</Button></>} />
+        : <ViewHeader eyebrow="커뮤니티 · 갤러리" title={locale === 'en' ? 'A little out of the ordinary.' : '조금 다른 상상들이 모이는 곳.'} subtitle={locale === 'en' ? 'Watch it. Play it. Find out how it was made.' : '감상하고, 직접 써보고, 어떻게 만들었는지 이야기해요.'} actions={<Button onClick={() => setCreateOpen(true)}>{t('writePrompt')} ↗</Button>} />}
       {/* controls + tab panels share one Tabs root (Radix requires TabsContent inside Tabs) */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as 'prompts' | 'artifacts')}>
         <div className="gallery-controls flex flex-wrap items-center gap-3">

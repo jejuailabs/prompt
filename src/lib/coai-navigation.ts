@@ -20,7 +20,8 @@ export type CoaiMenu = {
 export const COAI_MENUS: CoaiMenu[] = [
   { id: 'home', labelKey: 'navHome', icon: 'home', target: { view: 'home' }, views: ['home'] },
   { id: 'news', labelKey: 'navNews', icon: 'newspaper', target: { view: 'news' }, views: ['news', 'ai-events'] },
-  { id: 'prompts', labelKey: 'navPrompts', icon: 'sparkles', target: { view: 'prompt-wiki' }, views: ['prompt-wiki', 'prompt'] },
+  // Prompts open the searchable prompt gallery (docs/coai/04 §3); the fork tree (prompt-wiki) is linked from there.
+  { id: 'prompts', labelKey: 'navPrompts', icon: 'sparkles', target: { view: 'gallery', params: { tab: 'prompts' } }, views: ['prompt-wiki', 'prompt'] },
   { id: 'make', labelKey: 'navMake', icon: 'play-square', target: { view: 'game-room' }, views: ['game-room', 'game-play', 'landing-pages', 'motion-library', 'project', 'lab', 'video-studio', '3d-studio'] },
   { id: 'tools', labelKey: 'navTools', icon: 'wrench', target: { view: 'ai-tools' }, views: ['ai-tools', 'tool'] },
   // Until the guide menu ships (S3) it opens the existing vibe-coding starter guide.
@@ -32,7 +33,9 @@ export const COAI_MENUS: CoaiMenu[] = [
 /** Mobile bottom tab bar: five fixed slots (docs/coai/02 §2). */
 export const COAI_BOTTOM_TABS: CoaiMenuId[] = ['home', 'learn', 'prompts', 'make', 'community'];
 
-export function activeCoaiMenu(view: ViewKey): CoaiMenuId | null {
+export function activeCoaiMenu(view: ViewKey, params?: Record<string, string>): CoaiMenuId | null {
+  // One gallery view serves two menus: its prompts tab belongs to 프롬프트, its works tab to 커뮤니티.
+  if (view === 'gallery' && params?.tab === 'prompts') return 'prompts';
   return COAI_MENUS.find((menu) => menu.views.includes(view))?.id ?? null;
 }
 
