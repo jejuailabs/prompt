@@ -1,7 +1,7 @@
-// GET /api/community/posts?board=all|free|qna|study|notice&q=&sort=new|popular&page=
+// GET /api/community/posts?board=all|free|qna|study|notice&q=&sort=new|popular&page=&mine=1
 // POST /api/community/posts { board, title, body }
 import { db } from '@/lib/db';
-import { getSessionUserFast, requireUser } from '@/lib/auth';
+import { HttpError, getSessionUserFast, requireUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { isBoardId } from '@/modules/community-board/boards';
 import { BOARD_MODULE, parsePostInput, serializePost } from '@/modules/community-board/server';
@@ -18,8 +18,11 @@ export async function GET(req: Request) {
     const limit = Math.min(Math.max(Number(params.get('limit')) || PAGE_SIZE, 1), 50);
     const page = Math.max(Number(params.get('page')) || 1, 1);
     const user = await getSessionUserFast();
+    const mine = params.get('mine') === '1';
+    if (mine && !user) throw new HttpError('로그인이 필요합니다', 401);
 
     const where = {
+      ...(mine && user ? { ownerId: user.id } : {}),
       sourceModule: BOARD_MODULE, type: 'text', status: 'published', visibility: 'public',
       ...(isBoardId(board) ? { metadata: { contains: `"board":"${board}"` } } : {}),
       ...(q ? { OR: [{ title: { contains: q, mode: 'insensitive' as const } }, { description: { contains: q, mode: 'insensitive' as const } }] } : {}),

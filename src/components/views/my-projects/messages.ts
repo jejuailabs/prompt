@@ -6,7 +6,7 @@ const messages = {
     upload: '결과물 업로드',
     needLoginTitle: '로그인이 필요합니다',
     needLoginDesc: '로그인하면 내 결과물과 프롬프트를 관리할 수 있습니다',
-    tabPublished: '게시됨',
+    tabPublished: '공개 작품',
     tabDrafts: '초안',
     tabPrompts: '내 프롬프트',
     tabVideoStudio: '영상 스튜디오',

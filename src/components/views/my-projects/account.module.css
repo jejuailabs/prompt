@@ -17,3 +17,51 @@
 .loading{min-height:180px;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--muted-foreground);font-size:13px}
 @media(max-width:900px){.page{padding-top:30px}.profile{padding:26px 22px;gap:18px}.avatar{width:66px;height:66px}.profileInfo h2{font-size:25px}.creditPanel{padding:23px}.overview{grid-template-columns:minmax(0,1fr) minmax(240px,.7fr)}}
 @media(max-width:600px){.page{padding:25px 20px 36px}.heading{align-items:flex-start;gap:10px;margin-bottom:22px}.heading h1{font-size:36px}.description{max-width:230px;font-size:12px}.heading .eyebrow{font-size:8px}.logout{font-size:11px;margin-top:23px}.overview{grid-template-columns:1fr;margin-bottom:30px}.profile{padding:24px 21px;gap:19px}.avatar{width:58px;height:58px}.profileInfo h2{font-size:23px}.creditPanel{border-left:0;border-top:1px solid var(--border);padding:20px 22px}.creditPanel .eyebrow{font-size:9px;margin-bottom:8px}.credits{gap:10px}.credits>div:first-child>span:last-child{font-size:29px}.credits>button{min-height:34px}.creditNote{font-size:10px;margin-top:9px}.collectionHeading h2{font-size:21px}.uploadButton{font-size:11px;padding-inline:11px}.tabList{gap:23px}.tabList>[role=tab]{font-size:12px;min-height:45px}.tabs{gap:21px}.collection :global(.work-image){aspect-ratio:16/10}}
+
+/* COAI tone (2026-10-21): page header, three white summary cards, store-like work grid. */
+.page{max-width:1248px;padding:28px 24px 56px}
+.heading{margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--coai-border)}
+.eyebrow{font:700 14px/1.4 var(--coai-font);letter-spacing:0;color:var(--coai-blue-strong);margin:0 0 6px}
+.heading h1{font:700 28px/1.35 var(--coai-font);letter-spacing:-.02em;color:var(--coai-text-strong);margin:0 0 8px}
+.description{font-size:16px;line-height:1.6;color:var(--coai-text-muted)}
+.logout{gap:6px;height:40px;padding:0 14px;border:1px solid var(--coai-border-strong);border-radius:var(--coai-radius-md);font-size:14px;font-weight:600;color:var(--coai-text-body);background:var(--coai-bg-surface)}
+.overview{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:16px;border:0;border-radius:0;overflow:visible;background:none;margin-bottom:32px}
+.profile,.creditPanel,.stats{background:var(--coai-bg-surface);border-radius:var(--coai-radius-xl);padding:24px;border:0;min-width:0}
+.profile{gap:20px}
+.avatar{width:72px;height:72px;border:0;box-shadow:none;font-size:24px;background:var(--coai-blue-soft);color:var(--coai-blue-strong)}
+.role{display:inline-flex;height:24px;align-items:center;padding:0 9px;border-radius:999px;background:var(--coai-blue-soft);color:var(--coai-blue-strong);font-size:12px;font-weight:700}
+.profileInfo h2{font:800 24px/1.35 var(--coai-font);letter-spacing:-.02em;color:var(--coai-text-strong);margin-top:6px}
+.profileInfo>p{font-size:15px!important;color:var(--coai-text-muted);margin-top:2px!important}
+.profileActions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.profileActions button{display:inline-flex;align-items:center;height:38px;margin:0;padding:0 14px;gap:0;border-radius:var(--coai-radius-md);border:1px solid var(--coai-border-strong);font-size:14px;font-weight:600;color:var(--coai-text-body);background:var(--coai-bg-surface)}
+.profileActions button:first-child{background:var(--coai-brand);border-color:var(--coai-brand);color:#fff}
+.creditPanel{border-left:0;background:var(--coai-bg-surface)}
+.creditPanel h3,.stats h3{font:700 16px/1.4 var(--coai-font);color:var(--coai-text-strong);margin:0 0 12px}
+.credits{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+.credits>div:first-child>span:last-child{font-size:30px;font-weight:800;color:var(--coai-text-strong)}
+.credits>button{border:1px solid var(--coai-border-strong)!important;border-radius:var(--coai-radius-md)!important;color:var(--coai-text-body);font-size:14px!important;font-weight:600}
+.creditNote{font-size:13px;color:var(--coai-text-muted)}
+.stats dl{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0}
+.stats dl>div{padding:12px 14px;border-radius:var(--coai-radius-md);background:var(--coai-bg-subtle)}
+.stats dt{font-size:13px;color:var(--coai-text-muted)}
+.stats dd{margin:2px 0 0;font:800 22px/1.2 var(--coai-font);color:var(--coai-text-strong)}
+.collectionHeading h2{font:700 22px/1.4 var(--coai-font);letter-spacing:-.02em;color:var(--coai-text-strong)}
+.uploadButton{border-radius:var(--coai-radius-md);font-size:14px;font-weight:700}
+.tabList{border-bottom:1px solid var(--coai-border-strong)!important;background:transparent!important;border-radius:0!important;padding:0!important;gap:4px!important}
+.tabList>[role=tab]{min-height:48px;padding:0 14px!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;font-size:16px!important;font-weight:600;color:var(--coai-text-muted)!important}
+.tabList>[role=tab][data-state=active]{color:var(--coai-blue-strong)!important;box-shadow:inset 0 -3px var(--coai-blue)!important}
+.collection :global(.work-image){background:var(--coai-bg-subtle);border-radius:0}
+.collection :global(.work-card) h3{font-size:16px}
+.collection :global(.work-card):hover h3{color:var(--coai-blue-strong)}
+.collection audio{color-scheme:light}
+.loading{font-size:15px}
+.postList{list-style:none;margin:0;padding:0;background:var(--coai-bg-surface);border-radius:var(--coai-radius-xl);overflow:hidden}
+.postList li+li{border-top:1px solid var(--coai-border)}
+.postList button{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"board title" "board meta";gap:2px 12px;width:100%;padding:16px 20px;text-align:left}
+.postList button:hover strong{color:var(--coai-blue-strong)}
+.postBoard{grid-area:board;align-self:center;display:inline-flex;height:26px;align-items:center;padding:0 9px;border-radius:var(--coai-radius-sm);background:var(--coai-blue-soft);color:var(--coai-blue-strong);font-size:12px;font-weight:700}
+.postList strong{grid-area:title;font-size:16px;font-weight:700;color:var(--coai-text-strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.postList small{grid-area:meta;font-size:13px;color:var(--coai-text-muted)}
+@media (max-width:1023px){.overview{grid-template-columns:1fr 1fr}.profile{grid-column:1/-1}}
+@media (max-width:767px){.page{padding:18px 16px 40px}.heading h1{font-size:22px}.overview{grid-template-columns:1fr}.profile{padding:20px;gap:14px}.avatar{width:60px;height:60px}}
+.description{max-width:none}

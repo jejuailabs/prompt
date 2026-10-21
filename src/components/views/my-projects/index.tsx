@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import styles from './account.module.css';
+import { boardDef, type BoardPostDTO } from '@/modules/community-board/boards';
 
 const CATEGORY_EN: Record<string, string> = {
   이미지: 'Image',
@@ -64,6 +65,12 @@ export default function MyProjectsView() {
   const savedYoutube = useQuery({
     queryKey: ['youtube', 'saved'],
     queryFn: () => api.get<YoutubeAnalysisDTO[]>('/api/youtube/saved'),
+    enabled: !!session,
+  });
+
+  const myPosts = useQuery({
+    queryKey: ['board', 'mine'],
+    queryFn: () => api.get<{ posts: BoardPostDTO[]; total: number }>('/api/community/posts?mine=1&limit=50'),
     enabled: !!session,
   });
 
@@ -126,7 +133,7 @@ export default function MyProjectsView() {
   if (!session) {
     return (
       <div className={styles.page}>
-        <div className={styles.heading}><div><p className={styles.eyebrow}>내 공간</p><h1>{locale === 'en' ? 'My account' : '내 계정'}<span>.</span></h1></div></div>
+        <div className={styles.heading}><div><p className={styles.eyebrow}>내 공간</p><h1>{locale === 'en' ? 'My page' : '마이페이지'}</h1></div></div>
         <EmptyState
           icon={<User className="size-5" aria-hidden="true" />}
           title={t('needLoginTitle')}
@@ -144,8 +151,8 @@ export default function MyProjectsView() {
   return (
     <div className={styles.page}>
       <div className={styles.heading}>
-        <div><p className={styles.eyebrow}>내 공간</p><h1>{locale === 'en' ? 'My account' : '내 계정'}<span>.</span></h1><p className={styles.description}>{locale === 'en' ? 'Your profile, creative fuel, and everything you make.' : '내 정보와 크레딧, 만들어둔 작업을 한곳에서.'}</p></div>
-        <button className={styles.logout} onClick={() => void logout()} disabled={loggingOut}><LogOut size={14} />{loggingOut ? tc('loading') : tc('logout')}</button>
+        <div><p className={styles.eyebrow}>내 공간</p><h1>{locale === 'en' ? 'My page' : '마이페이지'}</h1><p className={styles.description}>{locale === 'en' ? 'Your profile, credits, posts and everything you make.' : '내 정보와 크레딧, 올린 글과 만든 작업을 한곳에서 관리해요.'}</p></div>
+        <button className={styles.logout} onClick={() => void logout()} disabled={loggingOut}><LogOut size={16} />{loggingOut ? tc('loading') : tc('logout')}</button>
       </div>
 
       <section className={styles.overview} aria-label={locale === 'en' ? 'Account overview' : '내 계정 정보'}>
@@ -154,14 +161,31 @@ export default function MyProjectsView() {
             {session.avatarUrl && <AvatarImage src={session.avatarUrl} alt="" />}
             <AvatarFallback>{session.username.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
-          <div className={styles.profileInfo}><p className={styles.eyebrow}>{session.role === 'admin' ? 'COAI 관리자' : 'COAI 회원'}</p><h2>{session.username}</h2><p>{session.title || (locale === 'en' ? 'Creator' : '크리에이터')}</p><button onClick={() => navigate('ai-tools')}>{locale === 'en' ? 'Create with AI Tools' : 'AI Tools로 새 작업 시작'}<ArrowUpRight size={14} /></button></div>
+          <div className={styles.profileInfo}>
+            <span className={styles.role}>{session.role === 'admin' ? (locale === 'en' ? 'Staff' : '운영진') : (locale === 'en' ? 'Member' : '회원')}</span>
+            <h2>{session.username}</h2>
+            <p>{session.title || (locale === 'en' ? 'Creator' : '크리에이터')}</p>
+            <div className={styles.profileActions}>
+              <button type="button" onClick={() => navigate('community', { write: '1' })}>{locale === 'en' ? 'Write a post' : '글쓰기'}</button>
+              <button type="button" onClick={() => navigate('ai-tools')}>{locale === 'en' ? 'Open tools' : '바로쓰기'}</button>
+            </div>
+          </div>
         </div>
-        <div className={styles.creditPanel}><p className={styles.eyebrow}>YOUR CREATIVE FUEL</p><CreditsWidget className={styles.credits} dark /><p className={styles.creditNote}>{locale === 'en' ? 'Use credits in AI Tools and the creative studios.' : 'AI 도구와 실험실에서 사용할 수 있어요.'}</p></div>
+        <div className={styles.creditPanel}><h3>{locale === 'en' ? 'Credits' : '크레딧'}</h3><CreditsWidget className={styles.credits} /><p className={styles.creditNote}>{locale === 'en' ? 'Use credits in Tools and the creative studios.' : '바로쓰기와 만들어보기의 AI 생성에 사용해요.'}</p></div>
+        <div className={styles.stats}>
+          <h3>{locale === 'en' ? 'My activity' : '내 활동'}</h3>
+          <dl>
+            <div><dt>{t('tabPublished')}</dt><dd>{published.length}</dd></div>
+            <div><dt>{t('tabDrafts')}</dt><dd>{drafts.length}</dd></div>
+            <div><dt>{t('tabPrompts')}</dt><dd>{prompts.data?.length ?? 0}</dd></div>
+            <div><dt>{locale === 'en' ? 'Posts' : '게시판 글'}</dt><dd>{myPosts.data?.total ?? 0}</dd></div>
+          </dl>
+        </div>
       </section>
 
       <section className={styles.collection} aria-labelledby="account-work-heading">
         <div className={styles.collectionHeading}>
-          <div><p className={styles.eyebrow}>회원 작품</p><h2 id="account-work-heading">{locale === 'en' ? 'My work' : '내 작업'}</h2></div>
+          <div><h2 id="account-work-heading">{locale === 'en' ? 'My work' : '내 작업'}</h2></div>
           <Button size="sm" className={styles.uploadButton} onClick={() => setUploadOpen(true)}>
             <Upload className="size-4" aria-hidden="true" />
             {t('upload')}
@@ -173,6 +197,7 @@ export default function MyProjectsView() {
           <TabsTrigger value="published">{t('tabPublished')}</TabsTrigger>
           <TabsTrigger value="drafts">{t('tabDrafts')}</TabsTrigger>
           <TabsTrigger value="prompts">{t('tabPrompts')}</TabsTrigger>
+          <TabsTrigger value="posts">{locale === 'en' ? 'Posts' : '게시판 글'}</TabsTrigger>
           <TabsTrigger value="video-studio">{t('tabVideoStudio')}</TabsTrigger>
           <TabsTrigger value="youtube">영상 요약</TabsTrigger>
         </TabsList>
@@ -298,6 +323,27 @@ export default function MyProjectsView() {
                 </Card>
               ))}
             </div>
+          )}
+        </TabsContent>
+
+        {/* my board posts */}
+        <TabsContent value="posts" className="mt-0">
+          {myPosts.isLoading && <div className={styles.loading}><Loader2 className="size-5 animate-spin" /></div>}
+          {!myPosts.isLoading && (myPosts.data?.posts.length ?? 0) === 0 && (
+            <EmptyState title={locale === 'en' ? 'No posts yet' : '아직 쓴 글이 없어요'} description={locale === 'en' ? 'Ask a question or share what you learned.' : '질문하거나 오늘 배운 것을 학습일지로 남겨 보세요.'} action={<Button size="sm" onClick={() => navigate('community', { write: '1' })}>{locale === 'en' ? 'Write' : '글쓰기'}</Button>} />
+          )}
+          {!!myPosts.data?.posts.length && (
+            <ul className={styles.postList}>
+              {myPosts.data.posts.map((post) => (
+                <li key={post.id}>
+                  <button type="button" onClick={() => navigate('community', { id: post.id })}>
+                    <span className={styles.postBoard}>{boardDef(post.board)?.label}</span>
+                    <strong>{post.title}</strong>
+                    <small>{new Date(post.createdAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'ko-KR')} · {locale === 'en' ? 'views' : '조회'} {post.views} · {locale === 'en' ? 'likes' : '추천'} {post.likeCount} · {locale === 'en' ? 'comments' : '댓글'} {post.commentCount}</small>
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </TabsContent>
 
