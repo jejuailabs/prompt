@@ -1,8 +1,10 @@
 import { PUZZLE_GAMES } from '@/lib/puzzle-games.generated';
 import { PORTABLE_GAMES } from '@/lib/portable-games.generated';
+import { GODOT_GAMES } from '@/lib/godot-games';
 /** Shipped games stay playable before an administrator registers them in the database. */
 const SHIPPED_GAMES = [
   ...PORTABLE_GAMES,
+  ...GODOT_GAMES,
   ...PUZZLE_GAMES,
   {
     slug: 'skybloom-pinball', title: '스카이블룸 핀볼', englishTitle: 'Sky Bloom', publishedAt: '2026-10-08T01:42:40.000Z',

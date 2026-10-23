@@ -1,6 +1,7 @@
 const fs=require('node:fs'),path=require('node:path');
 const {zipSync}=require('fflate');
-const games=fs.readdirSync('public/games',{withFileTypes:true}).filter(d=>d.isDirectory()&&fs.existsSync(path.join('public/games',d.name,'game.manifest.json'))).map(d=>JSON.parse(fs.readFileSync(path.join('public/games',d.name,'game.manifest.json'),'utf8'))).filter(m=>m.schemaVersion===1&&m.presentation&&m.presentation.engine!=='dom').map(m=>m.presentation).sort((a,b)=>a.id==='prism-stack'?-1:b.id==='prism-stack'?1:a.id.localeCompare(b.id));
+const games=fs.readdirSync('public/games',{withFileTypes:true}).filter(d=>d.isDirectory()&&fs.existsSync(path.join('public/games',d.name,'game.manifest.json'))).map(d=>JSON.parse(fs.readFileSync(path.join('public/games',d.name,'game.manifest.json'),'utf8'))).filter(m=>m.schemaVersion===1&&m.presentation&&!['dom','godot'].includes(m.presentation.engine)).map(m=>m.presentation).sort((a,b)=>a.id==='prism-stack'?-1:b.id==='prism-stack'?1:a.id.localeCompare(b.id));
+if(process.argv.includes('--list')){console.log(JSON.stringify(games.map(game=>game.id)));process.exit(0);}
 const kit=path.resolve('scripts/game-module-kit');
 const fonts=require('./game-fonts/package.cjs');const rows=[];fs.mkdirSync('exports/games',{recursive:true});
 for(const game of games){

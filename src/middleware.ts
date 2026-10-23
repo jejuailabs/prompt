@@ -9,6 +9,8 @@ export async function middleware(request: NextRequest) {
   if (previewHost) return previewPath ? NextResponse.next() : new NextResponse('미리보기 출처에서는 앱에 접근할 수 없습니다.', {status:403,headers:{'Timing-Allow-Origin':'*','Access-Control-Allow-Origin':'*'}});
   if (/^\/_next\/(?:static|image)(?:\/|$)|^\/favicon\.ico$|\.(?:svg|png|jpg|jpeg|gif|webp)$/i.test(request.nextUrl.pathname) && !previewPath) return NextResponse.next();
   if (previewPath) return new NextResponse('분리된 미리보기 출처가 필요합니다.', {status:403});
+  // Shipped Godot HTML/JS/WASM/PCK is public static content with no auth dependency.
+  if (request.nextUrl.pathname.startsWith('/games/endless-ward/')) return NextResponse.next();
   if(process.env.NODE_ENV==='development' && process.env.LANDING_LOCAL_TEST_MODE==='1' && (request.nextUrl.pathname.startsWith('/api/landing-pages') || request.nextUrl.pathname==='/api/auth/session')) return NextResponse.next();
   if (process.env.NODE_ENV === 'development' && process.env.PLAYLAB_DESIGN_PREVIEW === '1') {
     const { previewResponse } = await import('@/lib/preview');

@@ -182,9 +182,26 @@ export default function GamePlayView() {
       closeTimer.current=setTimeout(()=>navigate('game-room'),150);
     }else navigate('game-room');
   };
+  const resumeAfterInfo = useRef(false);
+  useEffect(()=>{
+    const listen=(event:MessageEvent)=>{
+      if(event.source!==iframeRef.current?.contentWindow||event.origin!==window.location.origin||event.data?.gameId!==slug||event.data?.contractVersion!==1)return;
+      if(event.data.type==='game-start'||event.data.type==='game-resumed')resumeAfterInfo.current=true;
+      if((event.data.type==='game-paused'&&event.data.reason!=='focus')||event.data.type==='game-finished')resumeAfterInfo.current=false;
+    };
+    window.addEventListener('message',listen);return()=>window.removeEventListener('message',listen);
+  },[slug]);
+  const infoWasPlaying = useRef(false);
+  const closeInfo = () => {
+    setInfoOpen(false);
+    if(infoWasPlaying.current&&isPortableGame)iframeRef.current?.contentWindow?.postMessage({type:'game-command',contractVersion:1,gameId:slug,command:'resume'},window.location.origin);
+    infoWasPlaying.current=false;
+  };
   const showInfo = () => {
-    if (!infoOpen && isPortableGame) iframeRef.current?.contentWindow?.postMessage({type:'game-command',contractVersion:1,gameId:slug,command:'pause'},window.location.origin);
-    setInfoOpen(value=>!value);
+    if(infoOpen){closeInfo();return;}
+    infoWasPlaying.current=resumeAfterInfo.current;
+    if(isPortableGame)iframeRef.current?.contentWindow?.postMessage({type:'game-command',contractVersion:1,gameId:slug,command:'pause'},window.location.origin);
+    setInfoOpen(true);
   };
 
   return (
@@ -211,7 +228,7 @@ export default function GamePlayView() {
               gameSrcdoc?<iframe ref={iframeRef} srcDoc={gameSrcdoc} sandbox="allow-scripts" className={styles.frame} title={game.title} allow="autoplay; fullscreen"/>:<div className={styles.loading}><Loader2 className="h-7 w-7 animate-spin"/></div>
             ):<div className={styles.loading}>게임 콘텐츠를 불러올 수 없습니다</div>}
             <section className={styles.details} hidden={!infoOpen} aria-label="게임 정보와 랭킹">
-              <div className={styles.detailsHeader}><h2 className="text-sm font-semibold">게임 정보와 랭킹</h2><Button variant="outline" size="sm" onClick={()=>setInfoOpen(false)}>게임으로 돌아가기</Button></div>
+              <div className={styles.detailsHeader}><h2 className="text-sm font-semibold">게임 정보와 랭킹</h2><Button variant="outline" size="sm" onClick={closeInfo}>게임으로 돌아가기</Button></div>
               {game?.description&&<p className="mt-4 whitespace-pre-wrap">{game.description}</p>}
               <GameScorePanel key={gameId} gameId={gameId} portable={isPortableGame} slug={slug} iframeRef={iframeRef} previewMode={previewMode||Boolean(game?.previewMode)} localGame={isLocalGame}/>
               <div className={styles.detailsActions}>

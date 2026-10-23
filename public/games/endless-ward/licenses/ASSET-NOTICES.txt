@@ -1,0 +1,9 @@
+Endless Ward 1.0.0
+
+Engine: Godot 4.7.2, MIT. See GODOT-LICENSE.txt and GODOT-COPYRIGHT.txt.
+Font: Pretendard Regular 1.3.9, SIL Open Font License 1.1.
+Source: https://github.com/orioncactus/pretendard (installed npm package 1.3.9).
+Hospital and character art: generated for this project with the user's approved OpenAI image-generation calls. Directional animation assembled locally. Provenance is retained in the source project's asset manifests.
+Sound effects: synthesized locally by tools/make-hospital-sfx.py (no third-party samples).
+Music: The_Final_Perimeter.mp3 supplied by the user, copied unchanged as default.mp3. No music license or supplier document was supplied. Before public redistribution, the owner must confirm that the supplied track permits game distribution; this notice does not grant music rights.
+Sprite-gen 2.45.3 was used as an offline development tool under Apache-2.0; it and its Python dependencies are not included in the runtime package.
