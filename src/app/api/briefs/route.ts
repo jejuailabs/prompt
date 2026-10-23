@@ -3,7 +3,7 @@
 import { NextRequest } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
-import { HttpError, requireUser } from '@/lib/auth';
+import { HttpError, requireUser, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { serializeBrief } from '@/lib/server/serialize';
 import { chatJson } from '@/lib/server/ai';
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireUser();
+    const user = await requireApiUser();
     const body = await readJson<{ rawText?: string; community?: boolean }>(req);
     const rawText = (body.rawText ?? '').trim();
     if (rawText.length < 10) {

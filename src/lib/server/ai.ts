@@ -1,5 +1,6 @@
 // Server-only AI helpers over Google Gemini (BACKEND ONLY — never import from client code)
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { requireApiUser } from '@/lib/auth';
 
 let cached: GoogleGenerativeAI | null = null;
 
@@ -16,6 +17,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Plain LLM text completion. */
 export async function chatText(system: string, user: string): Promise<string> {
+  await requireApiUser();
   const genAI = getGenAI();
   const model = genAI.getGenerativeModel({
     model: 'gemini-3.6-flash',
@@ -63,6 +65,7 @@ export async function generateImage(
   prompt: string,
   size: '1024x1024' | '864x1536' | '1536x864' = '1024x1024',
 ): Promise<{ base64: string; buffer: Buffer }> {
+  await requireApiUser();
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('OPENAI_API_KEY 환경변수가 설정되지 않았습니다');
 

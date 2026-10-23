@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { HttpError, requireUser } from '@/lib/auth';
+import { HttpError, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { initialWorkflowStages, parseMeta, toProject } from '@/lib/server/asset3d-project';
 import { queueCharacterPreparation, queueSkinTokensRigging, updateWorkflowStage } from '@/lib/server/asset3d-character';
@@ -15,7 +15,7 @@ interface AdvanceBody {
 /** Starts the next paid stage only after the creator explicitly requests it. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireUser();
+    const user = await requireApiUser();
     const { id } = await params;
     const project = await db.artifact.findFirst({ where: { id, ownerId: user.id, type: '3d_asset', sourceModule: '3d-studio' } });
     if (!project) throw new HttpError('3D 프로젝트를 찾을 수 없습니다', 404);

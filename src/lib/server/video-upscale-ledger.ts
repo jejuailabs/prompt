@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { logEvent } from '@/lib/events';
 import { chargeCredits, refundCredits } from '@/lib/server/credits';
+import { assertApiAccessForUserId } from '@/lib/auth';
 
 const ENGINE = 'upscale';
 const PROVIDER_ID = 'runpod-seedvr2';
@@ -15,6 +16,7 @@ async function provider() {
 }
 
 export async function beginVideoUpscaleOperation(input: { userId: string; prompt: string; aspect: string; style: string | null; creditCharge: number }) {
+  await assertApiAccessForUserId(input.userId);
   const modelProvider = await provider();
   const operation = await db.generationJob.create({ data: { userId: input.userId, providerId: modelProvider.id, promptText: input.prompt.slice(0, 4000), aspect: input.aspect, style: input.style, status: 'queued', creditCharged: 0 } });
   try {

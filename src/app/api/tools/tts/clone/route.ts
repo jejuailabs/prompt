@@ -1,4 +1,4 @@
-import { HttpError, requireUser } from '@/lib/auth';
+import { HttpError, requireUser, requireApiUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { cancelRunpodJob, getRunpodJobStatus, queueRunpodJob } from '@/lib/server/runpod';
 import { fail, ok, readJson } from '@/lib/server/handler';
@@ -45,17 +45,9 @@ function outputBytes(output: unknown) {
   const bytes = Buffer.from(encoded, 'base64');
   return bytes.length > 0 && bytes.length <= MAX_OUTPUT_BYTES ? bytes : null;
 }
-async function requireCloneAccess(user: { role: string }) {
-  // Voice cloning is intentionally held to administrator validation until a
-  // public price/refund policy is set. The RunPod worker itself is reusable for
-  // users once this explicit gate is enabled.
-  if (user.role !== 'admin' && process.env.RUNPOD_QWEN3_TTS_USER_ENABLED !== 'true') throw new HttpError('내 목소리 TTS는 현재 관리자 검증 단계입니다.', 403);
-}
-
 export async function POST(req: Request) {
   try {
     const user = await requireUser();
-    await requireCloneAccess(user);
     const body = await readJson<Record<string, unknown>>(req);
     if (body.action === 'cancel') {
       const artifactId = text(body.artifactId, '작업 ID', 100);
@@ -67,6 +59,7 @@ export async function POST(req: Request) {
       return ok(responseFor(updated));
     }
 
+    await requireApiUser();
     const content = text(body.text, '읽을 대본', 6_000);
     const referenceText = text(body.referenceText, '참조 음성 대본', 6_000);
     const referencePath = text(body.referencePath, '참조 음성', 500);
@@ -96,7 +89,6 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const user = await requireUser();
-    await requireCloneAccess(user);
     const artifactId = new URL(req.url).searchParams.get('id');
     if (!artifactId) throw new HttpError('작업 ID가 필요합니다.', 400);
     let artifact = await db.artifact.findFirst({ where: { id: artifactId, ownerId: user.id, sourceModule: 'tool-tts-voice-clone' } });

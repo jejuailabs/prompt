@@ -166,6 +166,14 @@ export async function assertRunpodEngineEnabled(engine: ManagedRunpodEngine) {
   if (setting.enabled === false) throw new Error(`${ENGINE_LABELS[engine]} 워커가 관리자에 의해 중지되었습니다.`);
 }
 
+/** Refuse TTS submissions if an external change re-enables always-on GPU billing. */
+export async function assertRunpodOnDemand(endpointId: string) {
+  const endpoint = await controlFetch<RawEndpoint>(`/endpoints/${encodeURIComponent(endpointId)}`);
+  if (endpoint.workersMin !== 0 || !endpoint.workersMax) {
+    throw new Error('TTS 워커는 최소 0개·요청 시 실행 설정으로만 사용할 수 있습니다.');
+  }
+}
+
 export async function getRunpodInventory() {
   const [raw, settings] = await Promise.all([
     controlFetch<unknown>('/endpoints'),
@@ -216,7 +224,7 @@ export async function setRunpodEndpointCapacity(input: { endpointId: string; wor
   // omit workersMin/workersMax when disabling an endpoint.
   await controlFetch<unknown>(`/endpoints/${encodeURIComponent(input.endpointId)}`, {
     method: 'PATCH',
-    body: JSON.stringify({ workersMin: 0, workersMax: desired }),
+    body: JSON.stringify({ workersMin: 0, workersMax: desired, ...(input.engine === 'qwen3_tts' || endpoint.engine === 'qwen3_tts' ? { idleTimeout: 5, executionTimeoutMs: 600_000 } : {}) }),
   });
   const engine = input.engine || endpoint.engine;
   if (engine) {

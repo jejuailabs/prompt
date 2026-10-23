@@ -4,11 +4,14 @@ import { db } from '@/lib/db';
 import { HttpError, requireAdmin } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { serializeAdminUsers } from '@/lib/server/serialize';
+import { API_ACCESS_PREFIX } from '@/lib/server/api-access';
+import { logEvent } from '@/lib/events';
 
 interface UserPatchBody {
   id?: string;
   role?: 'user' | 'admin';
   banned?: boolean;
+  apiAccessAllowed?: boolean;
 }
 
 export async function PATCH(req: NextRequest) {
@@ -28,7 +31,8 @@ export async function PATCH(req: NextRequest) {
       data.role = body.role;
     }
     if (body.banned !== undefined) data.banned = Boolean(body.banned);
-    if (!Object.keys(data).length) throw new HttpError('변경할 내용이 없습니다', 400);
+    if (body.apiAccessAllowed !== undefined && typeof body.apiAccessAllowed !== 'boolean') throw new HttpError('API 허용 여부는 true 또는 false여야 합니다', 400);
+    if (!Object.keys(data).length && body.apiAccessAllowed === undefined) throw new HttpError('변경할 내용이 없습니다', 400);
 
     // Any admin may appoint admins. Guard against locking the site out:
     // no one removes or bans themselves, and the last active admin always stays.
@@ -38,7 +42,16 @@ export async function PATCH(req: NextRequest) {
       throw new HttpError('마지막 관리자는 해제할 수 없습니다', 400);
     }
 
-    const updated = await db.profile.update({ where: { id: profile.id }, data });
+    const updated = await db.$transaction(async (tx) => {
+      const next = await tx.profile.update({ where: { id: profile.id }, data });
+      if (body.apiAccessAllowed !== undefined) {
+        const key = `${API_ACCESS_PREFIX}${profile.id}`;
+        const value = JSON.stringify({ enabled: body.apiAccessAllowed, grantedBy: me.id, updatedAt: new Date().toISOString() });
+        await tx.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
+      }
+      return next;
+    });
+    if (body.apiAccessAllowed !== undefined) await logEvent('ai.api.access.changed', { userId: profile.id, adminId: me.id, allowed: body.apiAccessAllowed });
     const [dto] = await serializeAdminUsers([updated]);
     return ok(dto);
   } catch (e) {

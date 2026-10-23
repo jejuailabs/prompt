@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { HttpError, requireUser } from '@/lib/auth';
+import { HttpError, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { beginVideoUpscaleOperation, finishVideoUpscaleOperation } from '@/lib/server/video-upscale-ledger';
 import { createVideoUpscaleUpload, videoUpscalePublicUrl } from '@/lib/server/video-upscale-storage';
@@ -18,7 +18,7 @@ const ACTIVE = new Set(['IN_QUEUE', 'IN_PROGRESS', 'QUEUED', 'RUNNING']);
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireUser();
+    const user = await requireApiUser();
     const { id } = await params;
     const body = await readJson<{ tier?: unknown; shotId?: unknown }>(req);
     if (!isVideoUpscaleTier(body.tier)) throw new HttpError('업스케일 단계를 선택해주세요', 400);

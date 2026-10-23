@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { logEvent } from '@/lib/events';
-import { chargeCredits, refundCredits } from '@/lib/server/credits';
+import { chargeCredits } from '@/lib/server/credits';
+import { assertApiAccessForUserId } from '@/lib/auth';
 
 export type MeteredEngine = 'h3' | 'wan' | 'ltx' | 'flux' | 'blender' | 'whisper' | 'trellis' | 'ace_music' | 'qwen3_tts';
 
@@ -49,6 +50,7 @@ export async function beginMeteredOperation(input: {
   preview?: boolean;
   creditCharge?: number;
 }) {
+  await assertApiAccessForUserId(input.userId);
   const item = CATALOG[input.engine];
   const creditCharge = input.creditCharge ?? (input.engine === 'h3' && input.preview ? Math.ceil(item.creditCharge / 2) : item.creditCharge);
   const provider = await providerFor(input.engine);
@@ -77,11 +79,18 @@ export async function beginMeteredOperation(input: {
 }
 
 export async function failMeteredOperation(operationId: string, error: string) {
-  const operation = await db.generationJob.findUnique({ where: { id: operationId } });
-  if (!operation || operation.status === 'failed' || operation.status === 'done') return;
-  await db.generationJob.update({ where: { id: operation.id }, data: { status: 'failed', error: error.slice(0, 500), completedAt: new Date() } });
-  await refundCredits(operation.userId, operation.creditCharged, operation.id);
-  await logEvent('ai.operation.failed', { operationId: operation.id, userId: operation.userId, error: error.slice(0, 500), refunded: operation.creditCharged });
+  const refunded = await db.$transaction(async (tx) => {
+    const operation = await tx.generationJob.findUnique({ where: { id: operationId } });
+    if (!operation || operation.status === 'failed' || operation.status === 'done') return null;
+    const claim = await tx.generationJob.updateMany({ where: { id: operation.id, status: { in: ['queued', 'running'] } }, data: { status: 'failed', error: error.slice(0, 500), completedAt: new Date() } });
+    if (!claim.count) return null;
+    if (operation.creditCharged > 0) {
+      await tx.creditTransaction.create({ data: { userId: operation.userId, amount: operation.creditCharged, reason: 'refund', relatedId: operation.id } });
+      await tx.credits.upsert({ where: { userId: operation.userId }, create: { userId: operation.userId, balance: operation.creditCharged }, update: { balance: { increment: operation.creditCharged } } });
+    }
+    return operation;
+  });
+  if (refunded) await logEvent('ai.operation.failed', { operationId: refunded.id, userId: refunded.userId, error: error.slice(0, 500), refunded: refunded.creditCharged });
 }
 
 export async function finishMeteredOperation(input: {

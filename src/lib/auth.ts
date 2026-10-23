@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { db } from '@/lib/db';
 import { headers } from 'next/headers';
 import { createHash } from 'node:crypto';
+import { API_ACCESS_DENIED, canUsePaidApi } from '@/lib/server/api-access';
 
 export interface DbSessionUser {
   id: string;
@@ -77,6 +78,18 @@ export async function requireAdmin(): Promise<DbSessionUser> {
   const user = await requireUser();
   if (user.role !== 'admin') throw new HttpError('관리자 권한이 필요합니다', 403);
   return user;
+}
+
+export async function requireApiUser(): Promise<DbSessionUser> {
+  const user = await requireUser();
+  if (!(await canUsePaidApi(user))) throw new HttpError(API_ACCESS_DENIED, 403);
+  return user;
+}
+
+/** Background runners must re-check the current DB role and approval before spending. */
+export async function assertApiAccessForUserId(userId: string): Promise<void> {
+  const user = await db.profile.findUnique({ where: { id: userId } });
+  if (!user || !(await canUsePaidApi(user))) throw new HttpError(API_ACCESS_DENIED, 403);
 }
 
 export class HttpError extends Error {

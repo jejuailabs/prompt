@@ -1,6 +1,7 @@
 // DTO mappers per CONTRACTS §4 — dates → ISO, JSON columns → parsed, batched social counts
 import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
+import { apiAccessByUser } from '@/lib/server/api-access';
 import type {
   ArtifactDTO,
   ArtifactMetadata,
@@ -455,10 +456,11 @@ export function serializeBrief(b: BriefWithRelations): BriefDTO {
 export async function serializeAdminUsers(profiles: ProfileRow[]): Promise<AdminUserDTO[]> {
   if (!profiles.length) return [];
   const ids = profiles.map((p) => p.id);
-  const [artifactGroups, promptGroups, creditRows] = await Promise.all([
+  const [artifactGroups, promptGroups, creditRows, apiAccess] = await Promise.all([
     db.artifact.groupBy({ by: ['ownerId'], where: { ownerId: { in: ids } }, _count: { ownerId: true } }),
     db.prompt.groupBy({ by: ['ownerId'], where: { ownerId: { in: ids } }, _count: { ownerId: true } }),
     db.credits.findMany({ where: { userId: { in: ids } } }),
+    apiAccessByUser(profiles),
   ]);
   const artifactCounts = new Map(artifactGroups.map((g) => [g.ownerId, g._count.ownerId]));
   const promptCounts = new Map(promptGroups.map((g) => [g.ownerId, g._count.ownerId]));
@@ -469,6 +471,7 @@ export async function serializeAdminUsers(profiles: ProfileRow[]): Promise<Admin
     avatarUrl: p.avatarUrl,
     role: p.role as AdminUserDTO['role'],
     banned: p.banned,
+    apiAccessAllowed: apiAccess.get(p.id) === true,
     credits: creditByUser.get(p.id) ?? 0,
     createdAt: p.createdAt.toISOString(),
     artifactCount: artifactCounts.get(p.id) ?? 0,

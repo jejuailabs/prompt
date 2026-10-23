@@ -1,7 +1,7 @@
 // POST /api/pipelines/[id]/run — charge credits upfront, create run, process async (§7 runners)
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { HttpError, requireUser } from '@/lib/auth';
+import { HttpError, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { chargeCredits } from '@/lib/server/credits';
 import { startPipelineRun } from '@/lib/server/runners';
@@ -12,7 +12,7 @@ type RouteParams = { params: Promise<{ id: string }> };
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const user = await requireUser();
+    const user = await requireApiUser();
 
     const pipeline = await db.pipeline.findUnique({ where: { id } });
     if (!pipeline) throw new HttpError('파이프라인을 찾을 수 없습니다', 404);

@@ -8,6 +8,7 @@ import { getImageAdapter, parseAdapterConfig } from '@/lib/server/image-adapters
 import { gameCoverUrl, isHexColor, renderGameHtml, writeGameBundle } from '@/lib/server/game-template';
 import { uploadBuffer } from '@/lib/server/storage';
 import type { LandingContent } from '@/lib/types';
+import { assertApiAccessForUserId } from '@/lib/auth';
 
 const SIZE_BY_ASPECT: Record<string, string> = {
   '1:1': '1024x1024',
@@ -57,6 +58,7 @@ export async function processOneGenerationJob(jobId: string): Promise<void> {
   });
   if (!job) return;
   try {
+    await assertApiAccessForUserId(job.userId);
     await db.generationJob.update({ where: { id: job.id }, data: { status: 'running' } });
 
     const promptParts = [job.promptText];

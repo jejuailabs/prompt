@@ -1,12 +1,12 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { requireUser, HttpError } from '@/lib/auth';
+import { HttpError, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { parseYoutubeVideoId, toYoutubeAnalysisDTO } from '@/lib/server/youtube-analysis';
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireUser();
+    const user = await requireApiUser();
     const { url } = await readJson<{ url?: string }>(req);
     const videoId = url ? parseYoutubeVideoId(url) : null;
     if (!url || !videoId) throw new HttpError('유효한 YouTube URL을 입력해주세요');

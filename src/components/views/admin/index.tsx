@@ -546,10 +546,12 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
   const myId = useAppStore((s) => s.session?.id);
 
   const patchM = useMutation({
-    mutationFn: (body: { id: string; role?: 'user' | 'admin'; banned?: boolean }) =>
+    mutationFn: (body: { id: string; role?: 'user' | 'admin'; banned?: boolean; apiAccessAllowed?: boolean }) =>
       api.patch<AdminUserDTO>('/api/admin/users', body),
     onSuccess: (_data, variables) => {
-      if (typeof variables.banned === 'boolean') {
+      if (typeof variables.apiAccessAllowed === 'boolean') {
+        toast({ title: variables.apiAccessAllowed ? 'AI API 사용을 허용했습니다' : 'AI API 사용 허용을 해제했습니다' });
+      } else if (typeof variables.banned === 'boolean') {
         toast({ title: variables.banned ? t('bannedOnToast') : t('bannedOffToast') });
       } else {
         toast({ title: t('roleToast') });
@@ -585,6 +587,7 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
             <TableHead>{t('thWorks')}</TableHead>
             <TableHead className="text-right">{t('thCredits')}</TableHead>
             <TableHead>{t('thRole')}</TableHead>
+            <TableHead>AI API 사용</TableHead>
             <TableHead>{t('thBanned')}</TableHead>
             <TableHead>크레딧 조정</TableHead>
           </TableRow>
@@ -611,6 +614,12 @@ function UsersTab({ users }: { users: AdminUserDTO[] }) {
                 {u.role === 'admin'
                   ? <Button size="sm" variant="outline" className="h-8 gap-1 px-2 text-xs" disabled={patchM.isPending || u.id === myId} title={u.id === myId ? '내 권한은 다른 관리자가 해제할 수 있어요' : undefined} onClick={() => setRole(u, 'user')}><ShieldOff className="size-3.5" />관리자 해제</Button>
                   : <Button size="sm" className="h-8 gap-1 px-2 text-xs" disabled={patchM.isPending || u.banned} onClick={() => setRole(u, 'admin')}><ShieldCheck className="size-3.5" />관리자 지정</Button>}
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2 whitespace-nowrap">
+                  <Switch aria-label={`${u.username} AI API 사용 허용`} checked={!u.banned && (u.role === 'admin' || u.apiAccessAllowed === true)} disabled={patchM.isPending || u.banned || u.role === 'admin'} onCheckedChange={(apiAccessAllowed) => patchM.mutate({ id: u.id, apiAccessAllowed })} />
+                  <span className="text-xs text-muted-foreground">{u.role === 'admin' ? '관리자 자동 허용' : u.apiAccessAllowed ? '허용' : '차단'}</span>
+                </div>
               </TableCell>
               <TableCell>
                 <div className="flex min-w-44 gap-1.5">

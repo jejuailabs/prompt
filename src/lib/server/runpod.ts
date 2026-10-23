@@ -1,5 +1,8 @@
 // Server-side Runpod Serverless client for ComfyUI video workflows.
 // API keys stay in RUNPOD_API_KEY and must never be exposed to the browser.
+import { requireApiUser } from '@/lib/auth';
+
+export const TTS_JOB_POLICY = { executionTimeout: 600_000, ttl: 900_000 };
 
 export type RunpodVideoEngine = 'h3' | 'wan' | 'ltx';
 export type RunpodEngine = RunpodVideoEngine | 'flux' | 'qwen_image' | 'blender' | 'character_blender' | 'rigging' | 'whisper' | 'trellis' | 'ace_music' | 'qwen3_tts';
@@ -99,6 +102,7 @@ export async function queueRunpodWorkflow(
   images?: RunpodInputImage[],
   h3Gpu?: H3Gpu,
 ): Promise<RunpodQueuedJob> {
+  await requireApiUser();
   // Apply the same admin enablement and endpoint mapping policy to ComfyUI
   // workflows as custom handlers. Without this, an "off" worker could still
   // accept new jobs and leave users waiting in an unserviceable queue.
@@ -121,6 +125,7 @@ export async function queueRunpodJob(
   input: Record<string, unknown>,
   options?: { webhook?: string; policy?: { executionTimeout?: number; ttl?: number } },
 ): Promise<RunpodQueuedJob> {
+  await requireApiUser();
   // User-controlled endpoint assignments live in the protected Setting table.
   // This is necessary for workers selected from the admin RunPod dashboard,
   // notably Qwen3-TTS, whose endpoint ID is not a deploy-time constant.
@@ -128,9 +133,16 @@ export async function queueRunpodJob(
   await assertRunpodEngineEnabled(engine);
   const endpointId = (await resolveManagedRunpodEndpointId(engine)) || getRunpodEndpointId(engine);
   if (!endpointId) throw new Error(`${endpointEnv[engine]} is not configured`);
+  if (engine === 'qwen3_tts') {
+    await (await import('@/lib/server/runpod-admin')).assertRunpodOnDemand(endpointId);
+  }
+  const policy = engine === 'qwen3_tts' ? {
+    executionTimeout: Math.min(options?.policy?.executionTimeout ?? TTS_JOB_POLICY.executionTimeout, TTS_JOB_POLICY.executionTimeout),
+    ttl: Math.min(options?.policy?.ttl ?? TTS_JOB_POLICY.ttl, TTS_JOB_POLICY.ttl),
+  } : options?.policy;
   return runpodFetch<RunpodQueuedJob>(`/v2/${endpointId}/run`, {
     method: 'POST',
-    body: JSON.stringify({ input, ...options }),
+    body: JSON.stringify({ input, ...options, ...(policy ? { policy } : {}) }),
   });
 }
 

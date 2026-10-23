@@ -1,4 +1,4 @@
-import { HttpError, requireUser } from '@/lib/auth';
+import { HttpError, requireUser, requireApiUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { beginMeteredOperation, failMeteredOperation, finishMeteredOperation } from '@/lib/server/operation-ledger';
@@ -77,6 +77,7 @@ export async function POST(req: Request) {
       return respond(artifact);
     }
 
+    await requireApiUser();
     const text = typeof body.text === 'string' ? body.text.trim() : '';
     if (!text) throw new HttpError('읽을 텍스트를 입력해 주세요.', 400);
     if (text.length > TTS_MAX_CHARS) throw new HttpError(`텍스트는 ${TTS_MAX_CHARS.toLocaleString()}자까지 입력할 수 있어요.`, 400);
@@ -139,9 +140,23 @@ export async function GET(req: Request) {
     const provider = ttsProvider(current.provider);
     if (!provider || !current.jobId || (current.status !== 'QUEUED' && current.status !== 'RUNNING')) return respond(artifact);
 
-    const result = await provider.check(current.jobId);
+    const expired = !!current.queuedAt && Date.now() - Date.parse(current.queuedAt) >= 900_000;
+    let result;
+    try {
+      result = await provider.check(current.jobId);
+    } catch (error) {
+      // RunPod may remove the status record after its TTL. Do not leave such
+      // requests queued forever or retain their user's credits.
+      if (!expired) throw error;
+      await provider.cancel(current.jobId).catch(() => undefined);
+      return respond(await markFailed(artifact.id, current, 'TIMED_OUT'));
+    }
     if (result.status === 'done') artifact = await complete(artifact.id, current, user.id, result.wav, result.executionTimeMs);
     else if (result.status === 'failed') artifact = await markFailed(artifact.id, current, result.providerStatus, result.executionTimeMs);
+    else if (expired) {
+      await provider.cancel(current.jobId);
+      artifact = await markFailed(artifact.id, current, 'TIMED_OUT');
+    }
     else if (result.providerStatus === 'IN_PROGRESS' && current.status !== 'RUNNING') {
       if (current.operationId) await finishMeteredOperation({ operationId: current.operationId, engine: 'qwen3_tts', status: 'IN_PROGRESS' });
       artifact = await update(artifact.id, current, { status: 'RUNNING' });

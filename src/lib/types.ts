@@ -622,6 +622,7 @@ export interface AdminUserDTO {
   avatarUrl?: string | null;
   role: 'user' | 'admin';
   banned: boolean;
+  apiAccessAllowed?: boolean;
   credits: number;
   createdAt: string;
   artifactCount: number;

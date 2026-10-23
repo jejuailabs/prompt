@@ -1,12 +1,12 @@
 // POST /api/lab/improve-prompt — LLM rewrite of a user prompt (keeps input language)
 import { NextRequest } from 'next/server';
-import { HttpError, requireUser } from '@/lib/auth';
+import { HttpError, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { chatText } from '@/lib/server/ai';
 
 export async function POST(req: NextRequest) {
   try {
-    await requireUser();
+    await requireApiUser();
     const body = await readJson<{ text?: string }>(req);
     const text = (body.text ?? '').trim();
     if (!text) throw new HttpError('개선할 프롬프트를 입력해주세요', 400);

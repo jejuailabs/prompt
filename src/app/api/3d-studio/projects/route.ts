@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { getSessionUserFast, HttpError, requireUser } from '@/lib/auth';
+import { getSessionUserFast, HttpError, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { queueRunpodJob } from '@/lib/server/runpod';
 import { beginMeteredOperation, failMeteredOperation } from '@/lib/server/operation-ledger';
@@ -34,7 +34,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireUser();
+    const user = await requireApiUser();
     // Keep public generation gated until broader quality validation completes,
     // while allowing administrators to run the verified A100 pipeline and review outputs.
     if (process.env.TRELLIS_GENERATION_VERIFIED !== 'true' && user.role !== 'admin') {

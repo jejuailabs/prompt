@@ -2,7 +2,7 @@
 // Called by client polling; each invocation handles ONE job.
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireApiUser } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
 import { processOneGenerationJob } from '@/lib/server/runners';
 
@@ -10,7 +10,7 @@ export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireUser();
+    const user = await requireApiUser();
     const { jobId } = (await req.json()) as { jobId?: string };
     if (!jobId) return ok({ processed: false, reason: 'no jobId' });
 

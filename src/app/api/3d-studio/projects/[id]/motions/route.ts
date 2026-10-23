@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { HttpError, requireUser } from '@/lib/auth';
+import { HttpError, requireUser, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { loadMotionLibrary } from '@/lib/server/motion-library';
 import { queueRunpodJob, getRunpodJobStatus, cancelRunpodJob } from '@/lib/server/runpod';
@@ -23,7 +23,7 @@ interface MotionJob { projectId: string; motionId: string; jobId?: string; queue
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireUser();
+    const user = await requireApiUser();
     const { id } = await params;
     const body = requestSchema.safeParse(await readJson(req));
     if (!body.success) throw new HttpError('모션과 몸통·팔·다리의 핵심 관절 매핑을 확인해주세요.', 400);

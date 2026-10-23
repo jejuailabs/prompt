@@ -2,7 +2,7 @@ import { getH3Config } from '@/lib/server/h3-config';
 import { isH3Preset } from '@/lib/h3-presets';
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { HttpError, requireUser } from '@/lib/auth';
+import { HttpError, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { getRunpodJobStatus, queueRunpodWorkflow, type RunpodInputImage, type RunpodVideoEngine } from '@/lib/server/runpod';
 import { buildH3TextToVideoWorkflow, getEngineForFirstShot, type VideoAspectRatio } from '@/lib/server/video-workflows';
@@ -33,7 +33,7 @@ async function getRunpodFirstFrame(url: string): Promise<RunpodInputImage> {
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireUser();
+    const user = await requireApiUser();
     const { id } = await params;
     const body = await readJson<{ shotId?: string; engine?: string; h3Gpu?: '5090' | 'blackwell'; h3Preset?: string; seed?: number }>(req);
     const project = await db.artifact.findFirst({ where: { id, ownerId: user.id, sourceModule: 'video-studio' } });

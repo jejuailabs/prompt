@@ -2,7 +2,7 @@
 // Jobs are NOT processed here — client polls /api/lab/jobs and triggers /api/lab/jobs/process per job.
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { HttpError, requireUser } from '@/lib/auth';
+import { HttpError, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { chargeCredits } from '@/lib/server/credits';
 import { serializeJobs } from '@/lib/server/serialize';
@@ -19,7 +19,7 @@ const VALID_ASPECTS = ['1:1', '3:4', '4:3', '16:9', '9:16'];
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireUser();
+    const user = await requireApiUser();
     const body = await readJson<GenerateBody>(req);
 
     const promptText = (body.promptText ?? '').trim();

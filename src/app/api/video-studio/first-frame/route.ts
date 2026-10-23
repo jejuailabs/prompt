@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { HttpError, requireUser } from '@/lib/auth';
+import { HttpError, requireUser, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { buildFluxWorkflow } from '@/lib/server/flux-workflow';
 import { getRunpodJobStatus, queueRunpodWorkflow } from '@/lib/server/runpod';
@@ -9,7 +9,7 @@ import { uploadBuffer } from '@/lib/server/storage';
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireUser();
+    const user = await requireApiUser();
     const body = await readJson<{ prompt?: string; aspect?: string }>(req);
     const prompt = body.prompt?.trim() ?? '';
     if (prompt.length < 3 || prompt.length > 4000) throw new HttpError('이미지 설명을 3~4000자로 입력해주세요', 400);
