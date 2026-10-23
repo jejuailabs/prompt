@@ -1,4 +1,4 @@
-ENDLESS WARD / 끝없는 병원 1.0.0 — portable Web
+ENDLESS WARD / 끝없는 병원 1.0.1 — portable Web
 
 폴더 전체를 HTTP(S) 정적 서버에 올리고 index.html을 여세요.
 HTML 파일 더블클릭(file://) 실행은 지원하지 않습니다.

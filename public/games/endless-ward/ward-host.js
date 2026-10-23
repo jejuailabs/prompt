@@ -21,6 +21,9 @@
   function releaseStick() { stickPointer=null; stickCenter=null; move(); if(ui)ui.querySelector('.knob').style.transform='translate(0,0)'; }
   function command(value) {
     if(disposed)return;
+    if(value==='pause')window.wardAudio?.hold();
+    if(['start','resume','restart'].includes(value))window.wardAudio?.intent();
+    if(value==='dispose')window.wardAudio?.dispose();
     if(value==='resize'){ window.dispatchEvent(new Event('resize')); return; }
     if(value==='pause'||value==='restart'||value==='dispose')releaseStick();
     queue.push({command:value});
@@ -29,13 +32,23 @@
     if (!embedded || event.source !== parent || event.origin !== origin || !event.data) return;
     const data=event.data;
     if(data.gameId!==gameId || data.contractVersion!==contractVersion)return;
-    if(data.type==='game-command' && allowed.has(data.command))command(data.command);
+    if(data.type==='game-command' && allowed.has(data.command)){
+      if(data.command==='pause'&&data.reason==='focus')onBlur();else command(data.command);
+    }
     if(data.type==='game-score-saved' && typeof data.roundId==='string'){
       const p=readPending(); if(p?.roundId===data.roundId){try{localStorage.removeItem(pendingKey);}catch{}}
     }
   }
-  function onVisibility(){if(document.hidden){releaseStick();queue.push({command:'pause',reason:'focus'});}}
-  function onBlur(){releaseStick();queue.push({command:'pause',reason:'focus'});}
+  function onVisibility(){if(document.hidden){window.wardAudio?.hold();releaseStick();queue.push({command:'pause',reason:'focus'});}}
+  function onBlur(){window.wardAudio?.hold();releaseStick();queue.push({command:'pause',reason:'focus'});}
+  function onFocus(){window.wardAudio?.sync(state);}
+  function onPageHide(){window.wardAudio?.dispose();}
+  function onKeyDown(event){
+    if(event.repeat)return;
+    if(['Enter','Space'].includes(event.code)&&['ready','paused','won','lost'].includes(state.mode))window.wardAudio?.intent();
+    if(event.code==='Escape'&&state.mode==='paused')window.wardAudio?.intent();
+    else if(event.code==='Escape')window.wardAudio?.hold();
+  }
   function paint(){
     if(!ui)return;
     ui.dataset.mode=state.mode;
@@ -79,7 +92,9 @@
     ready(){send('game-ready');replayPending();},
     drain(){const result=JSON.stringify(queue);queue=[];return result;},
     update(next){
+      if(disposed)return;
       const old=state.mode;state={...next};
+      window.wardAudio?.sync(state);
       if(old!==state.mode){
         if(state.mode==='paused'){releaseStick();send('game-paused',{reason:state.pauseReason});}
         else if(old==='paused')send('game-resumed');
@@ -87,16 +102,16 @@
       paint();
     },
     event(type){
-      if(type==='game-start'){roundId=crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`;finished=false;send(type,{roundId});}
+      if(type==='game-start'){window.wardAudio?.intent();roundId=crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`;finished=false;send(type,{roundId});}
       if(type==='game-finished'&&!finished){
         finished=true;const result={gameId,contractVersion,roundId,score:state.score,durationMs:Math.min(86400000,state.durationMs)};
         if(!preview&&result.score>0){try{localStorage.setItem(pendingKey,JSON.stringify(result));}catch{}send('game-score',result);}
         send(type,{...result,won:state.mode==='won',clearedStages:state.clearedStages});
       }
     },
-    dispose(){if(disposed)return;releaseStick();disposed=true;queue=[];window.removeEventListener('message',onMessage);window.removeEventListener('blur',onBlur);document.removeEventListener('visibilitychange',onVisibility);ui?.remove();},
+    dispose(){if(disposed)return;window.wardAudio?.dispose();releaseStick();disposed=true;state={...state,mode:'disposed'};queue=[];window.removeEventListener('message',onMessage);window.removeEventListener('blur',onBlur);window.removeEventListener('focus',onFocus);window.removeEventListener('pagehide',onPageHide);window.removeEventListener('keydown',onKeyDown);document.removeEventListener('visibilitychange',onVisibility);ui?.remove();},
   };
-  window.gameModule={...Object.fromEntries([...allowed].map(name=>[name,()=>command(name)])),snapshot:()=>({...state,roundId})};
-  window.addEventListener('message',onMessage);window.addEventListener('blur',onBlur);document.addEventListener('visibilitychange',onVisibility);
+  window.gameModule={...Object.fromEntries([...allowed].map(name=>[name,()=>command(name)])),snapshot:()=>({...state,roundId,audio:window.wardAudio?.snapshot()})};
+  window.addEventListener('message',onMessage);window.addEventListener('blur',onBlur);window.addEventListener('focus',onFocus);window.addEventListener('pagehide',onPageHide);window.addEventListener('keydown',onKeyDown);document.addEventListener('visibilitychange',onVisibility);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();

@@ -19,6 +19,6 @@ export const GODOT_GAMES = [
     "artUrl": "/games/endless-ward/cover.png",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.0.0"
+    "moduleVersion": "1.0.1"
   }
 ] as const;

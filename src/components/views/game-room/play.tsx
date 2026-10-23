@@ -25,6 +25,7 @@ import { PORTABLE_GAMES } from '@/lib/portable-games.generated';
 import { GameAdSpace } from './game-ad-space';
 import { useGameAds } from './use-game-ads';
 import styles from './play-modal.module.css';
+import { pauseGodotFrame, disposeGodotFrame } from '@/lib/godot-frame-lifecycle';
 
 interface GameDetailDTO {
   id: string;
@@ -60,6 +61,7 @@ export default function GamePlayView() {
   const closeRef = useRef<HTMLButtonElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
   const closing = useRef(false);
+  const godotAudioSession = useRef(0);
   useEffect(()=>()=>{if(closeTimer.current)clearTimeout(closeTimer.current);},[]);
   const [infoOpen,setInfoOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -88,6 +90,26 @@ export default function GamePlayView() {
   const supportsRewardedContinuation = isPortableGame&&Boolean(PORTABLE_GAMES.find(item=>item.slug===slug)?.rewardedContinue);
   const adBusy = useGameAds({iframeRef,slug,enabled:supportsRewardedContinuation});
   const parentOrigin = typeof window === 'undefined' ? '' : encodeURIComponent(window.location.origin);
+  const isGodotGame = slug === 'endless-ward';
+  useEffect(()=>{
+    const frame=iframeRef.current;
+    if(!isGodotGame||!frame||!slug)return;
+    const source=frame.getAttribute('src'), origin=window.location.origin, target=frame.contentWindow;
+    const session=++godotAudioSession.current;
+    const pause=()=>pauseGodotFrame(frame,slug,origin,target);
+    const visibility=()=>{if(document.hidden)pause();};
+    const dispose=()=>disposeGodotFrame(frame,slug,origin,source,target);
+    window.addEventListener('blur',pause);
+    window.addEventListener('pagehide',dispose);
+    document.addEventListener('visibilitychange',visibility);
+    return()=>{
+      window.removeEventListener('blur',pause);window.removeEventListener('pagehide',dispose);
+      document.removeEventListener('visibilitychange',visibility);
+      pause();
+      // React Strict Mode replays effects on the same frame; only the final cleanup unloads it.
+      queueMicrotask(()=>{if(godotAudioSession.current===session)dispose();});
+    };
+  },[isGodotGame,gameId,game?.contentUrl,slug]);
 
   const canManage = !isLocalPreview && session && game && game.ownerId && (session.role === 'admin' || session.id === game.ownerId);
 
@@ -177,6 +199,7 @@ export default function GamePlayView() {
 
   const closeGame = () => {
     if(closing.current)return;closing.current=true;
+    if(isGodotGame&&slug)disposeGodotFrame(iframeRef.current,slug,window.location.origin);
     if(supportsRewardedContinuation&&iframeRef.current?.contentWindow){
       iframeRef.current.contentWindow.postMessage({type:'game-command',gameId:slug,contractVersion:1,command:'finalize'},window.location.origin);
       closeTimer.current=setTimeout(()=>navigate('game-room'),150);
@@ -194,7 +217,10 @@ export default function GamePlayView() {
   const infoWasPlaying = useRef(false);
   const closeInfo = () => {
     setInfoOpen(false);
-    if(infoWasPlaying.current&&isPortableGame)iframeRef.current?.contentWindow?.postMessage({type:'game-command',contractVersion:1,gameId:slug,command:'resume'},window.location.origin);
+    if(infoWasPlaying.current&&isPortableGame){
+      iframeRef.current?.contentWindow?.postMessage({type:'game-command',contractVersion:1,gameId:slug,command:'resume'},window.location.origin);
+      iframeRef.current?.focus();
+    }
     infoWasPlaying.current=false;
   };
   const showInfo = () => {

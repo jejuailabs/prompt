@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "endless-ward",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "title": "끝없는 병원",
   "englishTitle": "Endless Ward",
   "entry": "index.html",
@@ -25,6 +25,7 @@
     "licenses/GODOT-COPYRIGHT.txt",
     "licenses/GODOT-LICENSE.txt",
     "licenses/Pretendard-LICENSE.txt",
+    "ward-audio.js",
     "ward-host.js"
   ],
   "assets": [
@@ -90,7 +91,7 @@
   "presentation": {
     "id": "endless-ward",
     "engine": "godot",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "title": "끝없는 병원",
     "englishTitle": "Endless Ward",
     "publishedAt": "2026-10-23T08:00:00.000Z",
@@ -106,21 +107,22 @@
     "rewardedContinue": false
   },
   "checksums": {
-    "README.txt": "a1ab6787e496cdefaace823e12553a4955f00daa07da3cb59b671816435661b2",
+    "README.txt": "143c794c28f792bca7eb9e3d8afd8196f5b948d783a1bcb2ae713d749b8060a1",
     "cover.png": "30a80d7631399ae24bd7b5e4f860a0f4d2039a2378a3d2b3c6a6dd34e1de4f61",
     "index.apple-touch-icon.png": "59ade2061604fd65d5e406893d100a1a20437d2111a0578f3babb8bb938b566f",
     "index.audio.position.worklet.js": "be33985bc7160d6bf9646f259cd86b259cd67b02ccb297ee5c44f8ac84327bc8",
     "index.audio.worklet.js": "5b476a9c9ce642c0ee4256436d1bc31d9c38f868aca0f9a8e2a57c18d2dec2a3",
-    "index.html": "3599d1195d57a0d9a0a36f908953f6fb367e3ba7baf40c6e8eade32d76099734",
+    "index.html": "1e1ed820f81c7cf246b6723b3c269b1c9b811e297a4b1a839e8eb053e5419dd1",
     "index.icon.png": "db709d8afa249dafe65229ced2422866188d9b9997820fe7b41febfc337ac529",
     "index.js": "33c94cb3175f3333b82e2a3be5e8e86f77986f0aa2042b1631f6367a4e5bb6ba",
-    "index.pck": "9083a70f5b713dffdf39281198e8d8a36bce02093ac5f29ab17c79221819bd67",
+    "index.pck": "69c692ef85cbe913e25b1239dd2c03ff00282506492feb4dff4f68197dac578a",
     "index.png": "3cb4495c0b98dfbe4b663cbf2b6836473572339beb66d902367893162a70be0e",
     "index.wasm": "fc74679e3b97f76878947fcd4fbe1268cbfa6188182a2e33bbc3f5dc9bfa57d0",
-    "licenses/ASSET-NOTICES.txt": "38105f91e9582f1dafaa723553e3d2f2fbdfaf8e10dd3aa5541f9114dd0fc388",
+    "licenses/ASSET-NOTICES.txt": "6d639e62f1310f35a6acbd340315683c2ed71dd164fef5c442511a42eb3406d2",
     "licenses/GODOT-COPYRIGHT.txt": "cb1980c88089573bcacd7221d777c689bb8bbd778799f24c27fca0fe5f774d6d",
     "licenses/GODOT-LICENSE.txt": "b0435e3b3e4e55238f05f4b306f30524a1b2e20147810d436eaa554fa6855c80",
     "licenses/Pretendard-LICENSE.txt": "b04538c9abec39a3db75108cf0af0fd9c77032fe8aa2cf38345b4d250e98e38e",
-    "ward-host.js": "c939f33d49d2b3978f36f92a7c72079b7122ccfe1affc9abbc81b1ed9ab9f746"
+    "ward-audio.js": "2fb05f56bf38433b357fafbd210fad548ef2bdd6b269a6c5576223e460f250bc",
+    "ward-host.js": "aa057f396524d052d4c8718f79771dff8f9b2dad5047b9fc8754fe36b657350f"
   }
 }

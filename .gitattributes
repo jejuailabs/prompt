@@ -2,3 +2,7 @@
 # Preserve upstream font license files verbatim.
 public/games/**/fonts/*-OFL.txt -whitespace
 public/games/**/fonts/*-LICENSE.txt -whitespace
+
+# Exported module checksums cover exact bytes, including HTML and license line endings.
+public/games/endless-ward/** -text
+public/games/endless-ward/licenses/*-LICENSE.txt -whitespace
