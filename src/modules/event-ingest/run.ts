@@ -8,6 +8,7 @@ import { pageText, posterCandidates } from './html';
 import { decodeBody, fetchLimited, robotsAllowed, sleep } from './net';
 import { pickPoster, uploadPoster } from './poster';
 import { SOURCES } from './sources';
+import type { EventInput } from '@/modules/ai-events/input';
 
 export const LEDGER_MODULE = 'event-ingest';
 const MAX_ATTEMPTS = 3;
@@ -20,6 +21,17 @@ export type RunReport = { dryRun: boolean; sources: Record<string, { found: numb
 const SKIP_TITLE = /채용|스태프|알바|입찰|용역|낙찰|사칭|휴관|업무협약|MOU|주거래금고|개인정보|안전 ?점검|휴무/i;
 export const TITLE_ONLY = '(상세 본문을 읽지 못했습니다. 제목에 적힌 정보만 사용하고, 제목에 없는 일정·장소·비용·대상은 비워 두세요.)';
 const norm = (title: string) => title.toLowerCase().replace(/[^0-9a-z가-힣]/g, '');
+const normOrg = (name = '') => norm(name.replace(/재단법인|사단법인|주식회사|\(재\)|\(사\)|\(주\)/g, ''));
+const normUrl = (url = '') => { try { const u = new URL(url); return u.hostname.replace(/^www\./, '') + u.pathname.replace(/\/$/, '') + u.search; } catch { return ''; } };
+
+type Seen = { title: string; organizer?: string; applyUntil?: string; sourceUrl?: string };
+/** Same event posted by the organizer and re-posted by an aggregator: same link, same/contained title, or same organizer + deadline. */
+function sameEvent(a: Seen, b: Seen) {
+  if (a.sourceUrl && normUrl(a.sourceUrl) === normUrl(b.sourceUrl)) return true;
+  const [x, y] = [norm(a.title), norm(b.title)];
+  if (x === y || (Math.min(x.length, y.length) >= 8 && (x.includes(y) || y.includes(x)))) return true;
+  return Boolean(a.applyUntil && a.applyUntil === b.applyUntil && normOrg(a.organizer) && normOrg(a.organizer) === normOrg(b.organizer));
+}
 
 async function ownerId() {
   const fixed = process.env.INGEST_OWNER_ID?.trim();
@@ -81,9 +93,9 @@ async function collect(options: RunOptions): Promise<RunReport> {
     report.sources[item.stub.sourceId].fresh++;
   }
 
-  // 3) titles already on the board (cross-source duplicates, e.g. 잇지제주 re-posting 제주TP)
-  const recent = await db.artifact.findMany({ where: { sourceModule: EVENT_MODULE, type: 'text', status: 'published', createdAt: { gte: new Date(Date.now() - 120 * 86400_000) } }, select: { title: true } });
-  const titles = new Set(recent.map((row) => norm(row.title)));
+  // 3) what is already on the board (cross-source duplicates, e.g. 잇지제주 re-posting 제주콘진원 notices)
+  const recent = await db.artifact.findMany({ where: { sourceModule: EVENT_MODULE, type: 'text', status: 'published', createdAt: { gte: new Date(Date.now() - 120 * 86400_000) } }, select: { title: true, metadata: true } });
+  const seen = recent.map((row) => { const e = (JSON.parse(row.metadata) as { aiEvent?: Partial<EventInput> }).aiEvent ?? {}; return { title: row.title, organizer: e.organizer, applyUntil: e.applyUntil, sourceUrl: e.sourceUrl }; });
 
   const remember = async (stub: Stub, result: string, extra: Record<string, unknown> = {}) => {
     if (dryRun) return;
@@ -111,7 +123,7 @@ async function collect(options: RunOptions): Promise<RunReport> {
       const extracted = await extractEvent({ sourceName: stub.sourceName, title: stub.title, url: stub.url, text });
       if (!extracted.ok) { await remember(stub, extracted.reason, { detail: extracted.detail }); row(extracted.reason, { detail: extracted.detail }); continue; }
       const { input } = extracted;
-      if (titles.has(norm(input.title))) { await remember(stub, 'duplicate'); row('duplicate', { detail: input.title }); continue; }
+      if (seen.some((other) => sameEvent(input, other))) { await remember(stub, 'duplicate'); row('duplicate', { detail: input.title }); continue; }
 
       const poster = await pickPoster([...(stub.imageUrl ? [stub.imageUrl] : []), ...posterCandidates(html, stub.url)]);
       if (dryRun) { row('preview', { poster: Boolean(poster), preview: { ...input, posterFrom: poster?.sourceUrl } }); continue; }
@@ -122,7 +134,7 @@ async function collect(options: RunOptions): Promise<RunReport> {
         data: { ownerId: owner, type: 'text', sourceModule: EVENT_MODULE, status: 'published', visibility: 'unlisted', ...data,
           metadata: JSON.stringify({ ...JSON.parse(data.metadata), ingest: { source: stub.sourceId, key: stub.key, url: stub.url, posterFrom: poster?.sourceUrl ?? null, at: new Date().toISOString() } }) },
       });
-      titles.add(norm(input.title));
+      seen.push({ title: input.title, organizer: input.organizer, applyUntil: input.applyUntil, sourceUrl: input.sourceUrl });
       await remember(stub, 'published');
       report.published++;
       row('published', { poster: Boolean(poster) });
