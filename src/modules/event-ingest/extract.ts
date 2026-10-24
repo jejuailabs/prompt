@@ -50,7 +50,8 @@ async function callOpenAI(user: string, key: string) {
 }
 
 async function completeJson(user: string) {
-  const preferred = (process.env.INGEST_AI_PROVIDER === 'openai' ? ['openai', 'gemini'] : ['gemini', 'openai']) as Provider[];
+  // OpenAI is the default; Gemini is only tried first when INGEST_AI_PROVIDER=gemini. Either one falls back to the other.
+  const preferred = (process.env.INGEST_AI_PROVIDER === 'gemini' ? ['gemini', 'openai'] : ['openai', 'gemini']) as Provider[];
   for (const provider of preferred) {
     const key = PROVIDERS[provider]();
     if (!key || deadProviders.has(provider)) continue;
