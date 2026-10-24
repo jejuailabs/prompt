@@ -18,6 +18,7 @@ const SYSTEM = `너는 COAI(AI 스터디·커뮤니티)의 일정 에디터다. 
 7. kind: course(강의·교육·부트캠프), contest(공모전·해커톤·대회·지원사업 공모), event(행사·세미나·포럼·박람회).
 8. officialUrl: 본문에 신청/안내 주소가 https:// 로 그대로 적혀 있을 때만 그 주소. 없으면 빈 문자열.
 9. tags는 3~5개, 각 12자 이내.
+10. 본문이 "상세 본문을 읽지 못했습니다"라고 되어 있으면 제목에 있는 사실만 쓴다. summary는 제목 내용을 한 문장으로 풀고 "자세한 일정과 신청 방법은 원문에서 확인해 주세요."로 끝낸다. "본문 정보가 없다" 같은 내부 사정은 쓰지 않는다.
 출력은 JSON 하나만: {"relevant":bool,"reason":"짧게","kind":"","title":"","subtitle":"","organizer":"","summary":"","schedule":"","application":"","audience":"","location":"","cost":"","tags":[],"applyFrom":"","applyUntil":"","applyTime":"","startsAt":"","endsAt":"","officialUrl":""}`;
 
 type Raw = Record<string, unknown> & { relevant?: boolean; reason?: string; tags?: unknown; officialUrl?: string };

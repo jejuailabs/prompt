@@ -18,6 +18,7 @@ export type RunReport = { dryRun: boolean; sources: Record<string, { found: numb
 
 // Titles that are never an event/course/contest — skipped before any page fetch or AI call.
 const SKIP_TITLE = /채용|스태프|알바|입찰|용역|낙찰|사칭|휴관|업무협약|MOU|주거래금고|개인정보|안전 ?점검|휴무/i;
+export const TITLE_ONLY = '(상세 본문을 읽지 못했습니다. 제목에 적힌 정보만 사용하고, 제목에 없는 일정·장소·비용·대상은 비워 두세요.)';
 const norm = (title: string) => title.toLowerCase().replace(/[^0-9a-z가-힣]/g, '');
 
 async function ownerId() {
@@ -98,11 +99,13 @@ async function collect(options: RunOptions): Promise<RunReport> {
     if (SKIP_TITLE.test(stub.title)) { await remember(stub, 'irrelevant', { detail: 'title filter' }); row('irrelevant', { detail: 'title filter' }); continue; }
     if (report.aiCalls >= maxAi) { row('blocked', { detail: 'daily AI cap' }); continue; }
     try {
-      let html = '', text = stub.snippet ?? '';
+      let html = '', text = stub.snippet ?? '', titleOnly = false;
       if (await robotsAllowed(stub.url)) {
-        try { html = decodeBody(await fetchLimited(stub.url)); text = pageText(html) || text; await sleep(800); } catch (error) { if (!text) throw error; }
+        try { html = decodeBody(await fetchLimited(stub.url)); text = pageText(html) || text; await sleep(800); }
+        // Some sites (잇지제주) refuse cloud-server IPs on detail pages. The list entry still has a title (with dates) and a poster thumbnail.
+        catch (error) { if (!text && !stub.imageUrl) throw error; titleOnly = !text; text ||= TITLE_ONLY; }
       } else if (!text) { await remember(stub, 'blocked'); row('blocked', { detail: 'robots.txt' }); continue; }
-      if (text.length < 60) { await remember(stub, 'invalid', { detail: 'empty page' }); row('invalid', { detail: 'empty page' }); continue; }
+      if (text.length < 60 && !titleOnly) { await remember(stub, 'invalid', { detail: 'empty page' }); row('invalid', { detail: 'empty page' }); continue; }
 
       report.aiCalls++;
       const extracted = await extractEvent({ sourceName: stub.sourceName, title: stub.title, url: stub.url, text });
