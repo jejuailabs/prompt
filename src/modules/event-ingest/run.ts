@@ -28,7 +28,28 @@ async function ownerId() {
   return admin.id;
 }
 
+// Two overlapping runs (e.g. the cron "Run" button pressed twice) would publish the same event twice.
+const LOCK_MODULE = 'event-ingest-lock';
+const LOCK_TTL_MS = 6 * 60_000;
+
+async function takeLock(owner: string) {
+  const held = await db.artifact.findFirst({ where: { sourceModule: LOCK_MODULE }, select: { id: true, metadata: true } });
+  const since = held ? Number((JSON.parse(held.metadata) as { at?: number }).at ?? 0) : 0;
+  if (held && Date.now() - since < LOCK_TTL_MS) return null;
+  const metadata = JSON.stringify({ at: Date.now() });
+  if (held) { await db.artifact.update({ where: { id: held.id }, data: { metadata } }); return held.id; }
+  return (await db.artifact.create({ data: { ownerId: owner, type: 'text', sourceModule: LOCK_MODULE, title: 'lock', status: 'hidden', visibility: 'unlisted', metadata } })).id;
+}
+
 export async function runIngest(options: RunOptions = {}): Promise<RunReport> {
+  if (options.dryRun) return collect(options);
+  const lock = await takeLock(await ownerId());
+  if (!lock) return { dryRun: false, sources: {}, aiCalls: 0, published: 0, aborted: '이미 다른 수집이 실행 중입니다', items: [] };
+  try { return await collect(options); }
+  finally { await db.artifact.update({ where: { id: lock }, data: { metadata: JSON.stringify({ at: 0 }) } }).catch(() => undefined); }
+}
+
+async function collect(options: RunOptions): Promise<RunReport> {
   const dryRun = Boolean(options.dryRun);
   const maxAi = options.maxAi ?? (Number(process.env.INGEST_MAX_AI) || 40);
   const report: RunReport = { dryRun, sources: {}, aiCalls: 0, published: 0, items: [] };
