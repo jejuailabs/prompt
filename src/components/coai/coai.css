@@ -121,6 +121,9 @@
 .coai-poster[data-style="photo"]::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(10,10,14,.72) 0%, rgba(10,10,14,.25) 34%, rgba(10,10,14,.04) 48%, rgba(10,10,14,.45) 64%, rgba(10,10,14,.88) 100%); }
 .coai-poster[data-style="photo"]:hover img { transform: scale(1.04); }
 @media (prefers-reduced-motion: reduce) { .coai-poster[data-style="photo"]:hover img { transform: none; } }
+/* Organizer's own poster already carries the title: draw it full-bleed, keep the headline for screen readers only. */
+.coai-poster[data-style="photo"][data-own] h3 { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.coai-poster[data-style="photo"][data-own]::before { background: linear-gradient(180deg, rgba(10,10,14,.5) 0%, rgba(10,10,14,0) 22%, rgba(10,10,14,0) 58%, rgba(10,10,14,.92) 100%); }
 .coai-poster[data-kind="event"] { --accent: #E5482A; }
 .coai-poster[data-kind="course"] { --accent: #2F5BEA; }
 .coai-poster[data-kind="contest"] { --accent: #B8862B; }

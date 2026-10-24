@@ -11,7 +11,9 @@ import { useAppStore } from '@/lib/store';
 import { toast } from '@/hooks/use-toast';
 import type { ArtifactDTO, PromptDTO, ViewKey } from '@/lib/types';
 import type { AiEvent } from '@/modules/ai-events/catalogue';
-import { HOME_PHOTO_POSTERS, HOME_POSTERS } from './home-content';
+import { HOME_POSTERS } from './home-content';
+import { buildHeroSlides } from './home-posters';
+import { AI_EVENTS } from '@/modules/ai-events/catalogue';
 import { GUIDE_SERVICES, HOME_GUIDE_IDS } from '@/modules/ai-guide/catalogue';
 import { boardDef, type BoardPostDTO } from '@/modules/community-board/boards';
 import type { NewsDTO } from '@/modules/coai-news/news';
@@ -64,7 +66,10 @@ function HeroCarousel() {
   const t = useTranslations('coai');
   const go = useGo();
   const posterStyle = usePosterStyle();
-  const slideCount = posterStyle === 'clay' ? HOME_POSTERS.length : HOME_PHOTO_POSTERS.length;
+  // Seeds render instantly; the live list (admin-added + auto-collected events) replaces them once loaded.
+  const events = useQuery({ queryKey: ['coai-home', 'events'], queryFn: () => api.get<AiEvent[]>('/api/ai-events'), staleTime: 60_000, placeholderData: AI_EVENTS });
+  const slides = buildHeroSlides(events.data);
+  const slideCount = posterStyle === 'clay' ? HOME_POSTERS.length : slides.length;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [perView, setPerView] = useState(4);
@@ -105,10 +110,11 @@ function HeroCarousel() {
       onTouchEnd={(event) => { if (touch.current !== null) { const dx = event.changedTouches[0].clientX - touch.current; if (Math.abs(dx) > 40) move(dx < 0 ? 1 : -1); } touch.current = null; setPaused(false); }}>
       <div className="coai-carousel-viewport" ref={viewport}>
         <div className="coai-carousel-track" style={{ transform: `translateX(-${current * step}px)` }}>
-          {posterStyle === 'photo' && HOME_PHOTO_POSTERS.map((poster, i) => (
-            <a key={poster.id} className="coai-poster" data-style="photo" data-kind={poster.kind} href={hrefFor('ai-events', { id: poster.eventId })} onClick={(event) => go(event, 'ai-events', { id: poster.eventId })}
+          {posterStyle === 'photo' && slides.map((poster, i) => (
+            <a key={poster.id} className="coai-poster" data-style="photo" data-kind={poster.kind} data-own={poster.ownPoster || undefined} href={hrefFor('ai-events', { id: poster.eventId })} onClick={(event) => go(event, 'ai-events', { id: poster.eventId })}
+              style={!poster.image && poster.surface ? { background: `linear-gradient(160deg, ${poster.surface}, #111114)` } : undefined}
               aria-roledescription="slide" aria-label={t('slide', { index: i + 1 })} tabIndex={i >= current && i < current + perView ? 0 : -1}>
-              <img src={poster.image} alt="" loading={i < 4 ? 'eager' : 'lazy'} />
+              {poster.image && <img src={poster.image} alt="" loading={i < 4 ? 'eager' : 'lazy'} />}
               <span className="coai-poster-badge">{poster.badge}</span>
               <h3 style={{ '--title-chars': titleWidth(poster.title) } as CSSProperties}>{poster.title}</h3>
               <span className="coai-poster-info"><span><CalendarDays size={15} />{poster.when}</span><span><MapPin size={15} />{poster.where}</span></span>
