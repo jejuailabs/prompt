@@ -1,6 +1,6 @@
 [
   {
-    "version": "1.2.0",
+    "version": "1.2.1",
     "publishedAt": "2026-10-11T09:20:00.000Z",
     "engine": "dom",
     "id": "code-ball",
@@ -18,7 +18,7 @@
     "rankingKey": "arcade-number-ladder"
   },
   {
-    "version": "1.1.0",
+    "version": "1.1.1",
     "publishedAt": "2026-10-11T09:20:00.000Z",
     "engine": "dom",
     "id": "velvet-21",
@@ -36,7 +36,7 @@
     "rankingKey": "target"
   },
   {
-    "version": "1.0.1",
+    "version": "1.0.2",
     "publishedAt": "2026-10-07T01:23:45.000Z",
     "engine": "dom",
     "id": "hidden-paws",
@@ -55,7 +55,7 @@
     "rankingKey": "journey"
   },
   {
-    "version": "1.1.0",
+    "version": "1.1.1",
     "publishedAt": "2026-10-11T09:20:00.000Z",
     "engine": "dom",
     "id": "minesweeper",

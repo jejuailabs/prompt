@@ -294,8 +294,8 @@ export function PreviewRenderer({
       {artifact.type === 'landing_page' && <LandingPageRenderer artifact={artifact} expanded={expanded} />}
 
       {artifact.type === 'text' && (
-        <div className="h-full w-full overflow-hidden bg-muted/40 p-4 text-left">
-          <p className="line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+        <div className={cn('h-full w-full bg-muted/40 p-4 text-left', expanded ? 'overflow-y-auto' : 'overflow-hidden')}>
+          <p className={cn('whitespace-pre-line text-sm leading-relaxed text-muted-foreground', !expanded && 'line-clamp-3')}>
             {meta.content?.sections?.[0]?.body || artifact.description || artifact.title}
           </p>
         </div>

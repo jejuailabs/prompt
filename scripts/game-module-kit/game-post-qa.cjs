@@ -1,0 +1,84 @@
+const { chromium, options } = require('./browser.cjs');
+const assert = require('node:assert/strict'), fs = require('node:fs');
+const base = process.env.GAME_POST_TEST_URL || 'http://127.0.0.1:4177';
+let browser;
+(async () => {
+  browser = await chromium.launch(options());
+  fs.mkdirSync('tmp/game-post-qa', { recursive: true });
+  for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 780 }, { width: 320, height: 568 }]) {
+    const context = await browser.newContext({ viewport, isMobile: viewport.width < 500, hasTouch: viewport.width < 500 });
+    const page = await context.newPage(), errors = [], executableRequests = [], writes = [];
+    page.setDefaultTimeout(90000);
+    page.setDefaultNavigationTimeout(300000);
+    page.on('pageerror', error => errors.push(error.message));
+    page.on('request', request => {
+      if (/\/games\/.*\.(?:m?js|wasm|pck)(?:\?|$)/.test(request.url())) executableRequests.push(request.url());
+      if (request.method() !== 'GET' && new URL(request.url()).pathname.startsWith('/api/')) writes.push(request.url());
+    });
+    await page.route('**/*', route => new URL(route.request().url()).origin === base ? route.continue() : route.abort());
+    if (viewport.width > 500) {
+      await page.goto(base + '/app#game-room', { waitUntil: 'domcontentloaded' });
+      await page.getByRole('heading', { name: '프리즘 타워', exact: true }).first().click();
+    } else await page.goto(base + '/app#game-play?id=builtin-prism-stack', { waitUntil: 'domcontentloaded' });
+    await page.locator('[data-game-post]').waitFor();
+    await page.getByRole('heading', { name: '프리즘 타워', level: 1 }).waitFor();
+    await page.getByRole('heading', { name: '조작 방법', exact: true }).waitFor();
+    assert.equal(await page.locator('iframe').count(), 0, 'reading a post never creates the game iframe');
+    assert.deepEqual(executableRequests, [], 'reading a post never loads game code or audio');
+    assert.deepEqual(writes, [], 'reading a post never tracks a play or ad');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.screenshot({ path: `tmp/game-post-qa/post-${viewport.width}.png`, fullPage: true });
+    await page.getByRole('button', { name: '공유 · 퍼가기', exact: true }).click();
+    await page.getByLabel('퍼가기 HTML 코드').waitFor();
+    assert.equal(await page.locator('iframe').count(), 0, 'sharing does not launch the game');
+    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+    await page.locator('[data-game-launch]').click();
+    const frame = page.frameLocator('iframe');
+    await frame.locator('[data-primary]').click({ timeout: 90000, noWaitAfter: true });
+    await frame.locator('[data-mute]').click({ noWaitAfter: true });
+    assert.equal(await frame.locator('[data-mute]').getAttribute('aria-pressed'), 'true');
+    await frame.locator('[data-pause]').click({ noWaitAfter: true });
+    await frame.locator('.game[data-state="paused"]').waitFor();
+    await page.locator('[data-game-close]').click({ noWaitAfter: true });
+    await page.waitForFunction(() => !document.querySelector('iframe'));
+    assert.ok(page.url().includes('#game-play?'), 'closing returns to the same game post');
+    assert.equal(await page.locator('[data-game-launch]').evaluate(element => document.activeElement === element), true);
+    await page.locator('[data-game-launch]').click();
+    await page.frameLocator('iframe').locator('[data-primary]').waitFor({ timeout: 90000 });
+    await page.evaluate(() => { location.hash = 'game-play?id=builtin-fruit-atelier'; });
+    await page.getByRole('heading', { name: '과일 아틀리에', level: 1 }).waitFor();
+    assert.equal(await page.locator('iframe').count(), 0, 'switching posts closes the old game');
+    await page.evaluate(() => { location.hash = 'game-play?id=builtin-prism-stack'; });
+    await page.getByRole('heading', { name: '프리즘 타워', level: 1 }).waitFor();
+    assert.equal(await page.locator('iframe').count(), 0, 'returning to a previously played post still requires Play');
+    await page.locator('[data-game-launch]').click();
+    await page.frameLocator('iframe').locator('[data-primary]').waitFor({ timeout: 90000 });
+    await page.locator('[data-game-close]').click();
+    await page.waitForFunction(() => !document.querySelector('iframe'));
+    await page.getByRole('button', { name: '게임 목록', exact: true }).click();
+    await page.waitForURL('**#game-room');
+
+    let proxies = 0;
+    const external = { id: 'qa-post-external', title: '외부 게임 검증', description: '실행 전 설명을 읽을 수 있어요.', contentUrl: 'https://game-test.invalid/index.html', fileUrl: '/coai/brand/icon.png', ownerName: 'QA', ownerId: '', metadata: { controls: '버튼 클릭' }, previewMode: true, likeCount: 0, likedByMe: false, playCount: 0, createdAt: '2026-10-25T00:00:00Z' };
+    await page.route('**/api/game-room/qa-post-external', route => route.fulfill({ json: { ok: true, data: external } }));
+    await page.route('**/api/game-room/proxy?*', route => {
+      proxies++;
+      return route.fulfill({ contentType: 'text/html; charset=utf-8', body: '<button onclick="this.textContent=\'실행 완료\'">게임 실행 확인</button>' });
+    });
+    await page.goto(base + '/app#game-play?id=qa-post-external', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('heading', { name: external.title, level: 1 }).waitFor();
+    assert.equal(proxies, 0, 'external HTML is not fetched before Play');
+    assert.equal(await page.locator('iframe').count(), 0);
+    await page.locator('[data-game-launch]').click();
+    await page.frameLocator('iframe').getByRole('button', { name: '게임 실행 확인' }).click();
+    await page.frameLocator('iframe').getByRole('button', { name: '실행 완료' }).waitFor();
+    assert.equal(proxies, 1);
+    await page.locator('[data-game-close]').click();
+    await page.waitForFunction(() => !document.querySelector('iframe'));
+    assert.deepEqual(errors, []);
+    assert.deepEqual(writes, []);
+    console.log(`PASS ${viewport.width}: post/card/deep link, preview/details, deferred code/proxy, share, launch, controls, close/reopen`);
+    await context.close();
+  }
+  await browser.close();
+})().catch(async error => { console.error(error); await browser?.close(); process.exitCode = 1; });

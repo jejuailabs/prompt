@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "cat-seesaw",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "title": "냥이 시소",
   "entry": "index.html",
   "thumbnail": "cover.png",
@@ -142,7 +142,7 @@
       "3D 물리"
     ],
     "emoji": "🐾",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "publishedAt": "2026-10-12T00:10:01.000Z",
     "playHint": "냥이 시소 · 통통한 3D 냥이 클럽",
     "hint": "좌우에 골고루 놓아요 · 기울면 냥이들이 발로 버텨요!"

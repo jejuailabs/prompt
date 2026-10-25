@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  distDir: process.env.COAI_QA_DIST_DIR || '.next',
   devIndicators: false,
   async headers() {
     return [{ source: '/games/endless-ward/:file*.wasm', headers: [{ key: 'Content-Type', value: 'application/wasm' }] }];

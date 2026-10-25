@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "prism-stack",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "title": "프리즘 타워",
   "englishTitle": "Prism Stack",
   "entry": "index.html",
@@ -136,7 +136,7 @@
     "emoji": "🐱",
     "playHint": "통통 냥이 탑, 다 같이 야호!",
     "publishedAt": "2026-10-11T01:32:10.000Z",
-    "version": "1.3.1",
+    "version": "1.3.2",
     "styles": [
       "cats.css",
       "breeds.css"

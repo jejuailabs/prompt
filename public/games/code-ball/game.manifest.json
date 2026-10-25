@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "code-ball",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "title": "코드볼 · 숫자영문 야구",
   "entry": "index.html",
   "thumbnail": "cover.png",
@@ -96,7 +96,7 @@
     ]
   },
   "presentation": {
-    "version": "1.2.0",
+    "version": "1.2.1",
     "publishedAt": "2026-10-11T09:20:00.000Z",
     "engine": "dom",
     "id": "code-ball",

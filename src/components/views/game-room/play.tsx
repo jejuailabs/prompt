@@ -3,14 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Edit2, Heart, Loader2, Maximize2, Minimize2, Share2, Trash2, Trophy, X,
+  Edit2, Heart, Loader2, Maximize2, Minimize2, Trash2, Trophy, X,
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,13 +18,14 @@ import { useRuntime } from '@/components/runtime-context';
 import { GameScorePanel } from './game-score-panel';
 import { getLocalLittleWorld, LITTLE_WORLDS } from '@/lib/little-worlds';
 import { getLocalArcadeGame } from '@/lib/bundled-arcade-games';
-import GameRoomView from './index';
+import { GamePost } from './game-post';
 import { PUZZLE_GAMES } from '@/lib/puzzle-games.generated';
 import { PORTABLE_GAMES } from '@/lib/portable-games.generated';
 import { GameAdSpace } from './game-ad-space';
 import { useGameAds } from './use-game-ads';
 import styles from './play-modal.module.css';
 import { pauseGodotFrame, disposeGodotFrame } from '@/lib/godot-frame-lifecycle';
+import { ArtifactShare } from '@/components/shared/artifact-share';
 
 interface GameDetailDTO {
   id: string;
@@ -44,6 +44,11 @@ interface GameDetailDTO {
 }
 
 export default function GamePlayView() {
+  const gameId = useAppStore((s) => s.params.id);
+  return <GamePlayPost key={gameId ?? 'missing-game'} />;
+}
+
+function GamePlayPost() {
   const locale = useAppStore((s) => s.locale);
   const navigate = useAppStore((s) => s.navigate);
   const params = useAppStore((s) => s.params);
@@ -59,13 +64,16 @@ export default function GamePlayView() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const playButtonRef = useRef<HTMLButtonElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
   const closing = useRef(false);
   const godotAudioSession = useRef(0);
   useEffect(()=>()=>{if(closeTimer.current)clearTimeout(closeTimer.current);},[]);
   const [infoOpen,setInfoOpen] = useState(false);
+  const [playingGameId, setPlayingGameId] = useState<string | null>(null);
+  const isPlaying = Boolean(gameId && playingGameId === gameId);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [gameSrcdoc, setGameSrcdoc] = useState<string | null>(null);
+  const [gameDocument, setGameDocument] = useState<{ url: string; html: string } | null>(null);
   const startTime = useRef(Date.now());
 
   const [editOpen, setEditOpen] = useState(false);
@@ -83,17 +91,18 @@ export default function GamePlayView() {
   const puzzle = PUZZLE_GAMES.find(item=>item.contentUrl===baseGame?.contentUrl);
   const game = baseGame&&puzzle?{...baseGame,title:puzzle.title,description:puzzle.description,fileUrl:puzzle.fileUrl}:baseGame;
   const isLocalGame = game?.contentUrl?.startsWith('/') ?? false;
-  const trackingEnabled = Boolean(game && !game.previewMode && !isLocalPreview);
+  const trackingEnabled = Boolean(isPlaying && game && !game.previewMode && !isLocalPreview);
+  const gameSrcdoc = gameDocument?.url === game?.contentUrl ? gameDocument?.html : null;
   const isLittleWorld = LITTLE_WORLDS.some((item) => item.contentUrl === game?.contentUrl);
   const isPortableGame = isLittleWorld && Boolean(game?.contentUrl?.endsWith('/index.html')||PUZZLE_GAMES.some(p=>p.contentUrl===game?.contentUrl));
   const slug = LITTLE_WORLDS.find(item=>item.contentUrl===game?.contentUrl)?.slug;
   const supportsRewardedContinuation = isPortableGame&&Boolean(PORTABLE_GAMES.find(item=>item.slug===slug)?.rewardedContinue);
-  const adBusy = useGameAds({iframeRef,slug,enabled:supportsRewardedContinuation});
+  const adBusy = useGameAds({iframeRef,slug,enabled:isPlaying&&supportsRewardedContinuation});
   const parentOrigin = typeof window === 'undefined' ? '' : encodeURIComponent(window.location.origin);
   const isGodotGame = slug === 'endless-ward';
   useEffect(()=>{
     const frame=iframeRef.current;
-    if(!isGodotGame||!frame||!slug)return;
+    if(!isPlaying||!isGodotGame||!frame||!slug)return;
     const source=frame.getAttribute('src'), origin=window.location.origin, target=frame.contentWindow;
     const session=++godotAudioSession.current;
     const pause=()=>pauseGodotFrame(frame,slug,origin,target);
@@ -109,18 +118,21 @@ export default function GamePlayView() {
       // React Strict Mode replays effects on the same frame; only the final cleanup unloads it.
       queueMicrotask(()=>{if(godotAudioSession.current===session)dispose();});
     };
-  },[isGodotGame,gameId,game?.contentUrl,slug]);
+  },[isPlaying,isGodotGame,gameId,game?.contentUrl,slug]);
 
   const canManage = !isLocalPreview && session && game && game.ownerId && (session.role === 'admin' || session.id === game.ownerId);
 
   // For external games, fetch HTML via proxy for srcdoc rendering
   useEffect(() => {
-    if (!game?.contentUrl || isLocalGame) return;
-    fetch(`/api/game-room/proxy?url=${encodeURIComponent(game.contentUrl)}`)
+    if (!isPlaying || !game?.contentUrl || isLocalGame) return;
+    const url = game.contentUrl;
+    const controller = new AbortController();
+    fetch(`/api/game-room/proxy?url=${encodeURIComponent(url)}`, { signal: controller.signal })
       .then((r) => r.ok ? r.text() : null)
-      .then((html) => { if (html) setGameSrcdoc(html); })
+      .then((html) => { if (html && !controller.signal.aborted) setGameDocument({ url, html }); })
       .catch(() => undefined);
-  }, [game?.contentUrl, isLocalGame]);
+    return () => controller.abort();
+  }, [isPlaying, game?.contentUrl, isLocalGame]);
 
   useEffect(() => {
     if (!gameId || !trackingEnabled || isLittleWorld) return;
@@ -197,13 +209,27 @@ export default function GamePlayView() {
     setDeleteConfirm(false);
   };
 
+  const launchGame = () => {
+    if (!gameId || !game?.contentUrl) return;
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closing.current = false;
+    resumeAfterInfo.current = false;
+    infoWasPlaying.current = false;
+    setInfoOpen(false);
+    setPlayingGameId(gameId);
+  };
+  const finishClosing = () => {
+    setPlayingGameId(null);
+    setInfoOpen(false);
+    closing.current = false;
+  };
   const closeGame = () => {
     if(closing.current)return;closing.current=true;
     if(isGodotGame&&slug)disposeGodotFrame(iframeRef.current,slug,window.location.origin);
     if(supportsRewardedContinuation&&iframeRef.current?.contentWindow){
       iframeRef.current.contentWindow.postMessage({type:'game-command',gameId:slug,contractVersion:1,command:'finalize'},window.location.origin);
-      closeTimer.current=setTimeout(()=>navigate('game-room'),150);
-    }else navigate('game-room');
+      closeTimer.current=setTimeout(finishClosing,150);
+    }else finishClosing();
   };
   const resumeAfterInfo = useRef(false);
   useEffect(()=>{
@@ -232,16 +258,23 @@ export default function GamePlayView() {
 
   return (
     <>
-      <GameRoomView />
-      <Dialog open onOpenChange={open=>{if(!open)closeGame();}}>
+      {isLoading&&!localGame ? <div className="flex min-h-[50vh] items-center justify-center" role="status" aria-label="게임 게시물 불러오는 중"><Loader2 className="size-7 animate-spin" /></div> : isError&&!localGame ? <EmptyState title="게임을 불러오지 못했어요." action={<Button variant="outline" onClick={()=>void refetch()}>다시 불러오기</Button>} /> : game ? <GamePost game={game} onPlay={launchGame} onBack={()=>navigate('game-room')} playButtonRef={playButtonRef}
+        actions={<>
+          <ArtifactShare id={game.id} title={game.title} game />
+          {!isLocalPreview&&<Button variant="outline" size="sm" onClick={handleLike}><Heart className={`mr-1 size-4 ${game.likedByMe?'fill-primary text-primary':''}`} />{game.likeCount}</Button>}
+          {canManage&&<><Button variant="outline" size="sm" onClick={handleEdit}><Edit2 className="mr-1 size-4" />수정</Button><Button variant="destructive" size="sm" onClick={()=>setDeleteConfirm(true)}><Trash2 className="mr-1 size-4" />삭제</Button></>}
+        </>} /> : <EmptyState title="게임을 찾을 수 없습니다." action={<Button variant="outline" onClick={()=>navigate('game-room')}>게임 목록</Button>} />}
+      <Dialog open={isPlaying} onOpenChange={open=>{if(!open)closeGame();}}>
         <DialogContent ref={modalRef} showCloseButton={false} aria-describedby={undefined}
           data-game-layout={['velvet-21','minesweeper','code-ball'].includes(slug||'')?'scroll':'stage'}
           className={styles.shell+' flex h-[100dvh] max-h-[100dvh] w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none border-white/15 bg-[#101010] p-0 sm:h-[calc(100dvh-48px)] sm:w-[calc(100vw-48px)] sm:max-w-[1200px] sm:rounded-2xl'}
           onOpenAutoFocus={event=>{event.preventDefault();closeRef.current?.focus();}}
+          onCloseAutoFocus={event=>{event.preventDefault();playButtonRef.current?.focus();}}
           onInteractOutside={event=>event.preventDefault()}>
           <header className={styles.header}>
             <div className={styles.heading}><small>만들어보기 · 게임</small><DialogTitle>{game?.title??'게임'}</DialogTitle></div>
             <div className={styles.toolbar}>
+              {game && <ArtifactShare id={game.id} title={game.title} game onOpen={() => { if (!infoOpen) showInfo(); if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined); }} />}
               <Button variant="ghost" size="icon" data-game-info aria-label={infoOpen?'게임 화면으로':'게임 정보와 랭킹'} aria-pressed={infoOpen} onClick={showInfo}><Trophy className="h-4 w-4"/></Button>
               <Button variant="ghost" size="icon" data-game-fullscreen aria-label={isFullscreen?t.exitFullscreen:t.fullscreen} onClick={toggleFullscreen}>{isFullscreen?<Minimize2 className="h-4 w-4"/>:<Maximize2 className="h-4 w-4"/>}</Button>
               <Button ref={closeRef} variant="ghost" size="icon" data-game-close aria-label="게임 닫기" onClick={closeGame}><X className="h-5 w-5"/></Button>
@@ -259,7 +292,6 @@ export default function GamePlayView() {
               <GameScorePanel key={gameId} gameId={gameId} portable={isPortableGame} slug={slug} iframeRef={iframeRef} previewMode={previewMode||Boolean(game?.previewMode)} localGame={isLocalGame}/>
               <div className={styles.detailsActions}>
                 {!isLocalPreview&&game&&<Button variant="outline" size="sm" onClick={handleLike}><Heart className={`mr-1 h-4 w-4 ${game.likedByMe?'fill-primary text-primary':''}`}/>{game.likeCount}</Button>}
-                <Button variant="outline" size="sm" onClick={()=>{navigator.clipboard.writeText(window.location.href);toast({title:'링크가 복사되었습니다'});}}><Share2 className="mr-1 h-4 w-4"/>{t.shareBtn}</Button>
                 {canManage&&<><Button variant="outline" size="sm" onClick={handleEdit}><Edit2 className="mr-1 h-4 w-4"/>수정</Button><Button variant="destructive" size="sm" onClick={()=>setDeleteConfirm(true)}><Trash2 className="mr-1 h-4 w-4"/>삭제</Button></>}
               </div>
             </section>

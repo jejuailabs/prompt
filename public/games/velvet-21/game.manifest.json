@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "velvet-21",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "title": "벨벳 블랙잭",
   "entry": "index.html",
   "thumbnail": "cover.png",
@@ -94,7 +94,7 @@
     ]
   },
   "presentation": {
-    "version": "1.1.0",
+    "version": "1.1.1",
     "publishedAt": "2026-10-11T09:20:00.000Z",
     "engine": "dom",
     "id": "velvet-21",

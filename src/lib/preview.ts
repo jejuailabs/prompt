@@ -7,6 +7,7 @@ import { AI_EVENTS } from '@/modules/ai-events/catalogue';
 import { MODULE_CONFIGS } from './registry/module-configs';
 import { artifactThumbnail } from './artifact-media';
 import { academyPreview, academyLibraryPreview } from '@/modules/academy/preview';
+import { builtinEmbedArtifact, canEmbedArtifact } from '@/lib/artifact-embed';
 
 function previewGame(game: (typeof artifacts.data)[number]) {
   return {
@@ -34,6 +35,11 @@ export function previewResponse(request: NextRequest) {
   const ok = (data: unknown) => NextResponse.json({ ok: true, data });
   if (request.method !== 'GET') return NextResponse.json({ ok: false, error: '디자인 미리보기에서는 저장·생성을 실행하지 않습니다.' }, { status: 503 });
   if (path === '/api/auth/session') return ok(null);
+  if (path.startsWith('/api/embed/')) {
+    const id = decodeURIComponent(path.split('/')[3]);
+    const item = builtinEmbedArtifact(id) ?? artifacts.data.find(a => a.id === id && canEmbedArtifact(a));
+    return item ? ok(item) : NextResponse.json({ ok: false, error: '공개된 작품을 찾을 수 없습니다.' }, { status: 404 });
+  }
   if (path === '/api/ai-events') return ok(AI_EVENTS);
   if (path === '/api/academy/library') return ok(academyLibraryPreview);
   if (path === '/api/academy/playlists') return ok(academyPreview);

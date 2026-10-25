@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "hidden-paws",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "title": "숨은 고양이 찾기",
   "entry": "index.html",
   "thumbnail": "cover.png",
@@ -102,7 +102,7 @@
     ]
   },
   "presentation": {
-    "version": "1.0.1",
+    "version": "1.0.2",
     "publishedAt": "2026-10-07T01:23:45.000Z",
     "engine": "dom",
     "id": "hidden-paws",

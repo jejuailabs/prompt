@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "pocket-crossing",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "title": "포켓 크로싱",
   "englishTitle": "Pocket Crossing",
   "entry": "index.html",
@@ -113,6 +113,6 @@
     "emoji": "🐥",
     "playHint": "작은 발로, 한 칸 더 멀리",
     "publishedAt": "2026-10-11T01:32:10.000Z",
-    "version": "1.0.1"
+    "version": "1.0.2"
   }
 }

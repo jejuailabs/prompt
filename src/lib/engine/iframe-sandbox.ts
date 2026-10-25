@@ -1,5 +1,6 @@
 'use client';
 import type { ExecutableArtifact, ExecutionHandle, IExecutionEngine, RunOptions } from '@/lib/engine/types';
+import { bundledGameForUrl, gameFrameUrl } from '@/lib/artifact-embed';
 
 /** Tier 1 adapter. Each mount owns its frame, including simultaneous previews of one artifact. */
 export class IframeSandboxEngine implements IExecutionEngine {
@@ -12,8 +13,9 @@ export class IframeSandboxEngine implements IExecutionEngine {
     container.style.width = '100%'; container.style.height = '100%';
     const iframe = document.createElement('iframe');
     iframe.title = 'COAI interactive work';
-    iframe.src = artifact.contentUrl;
-    iframe.setAttribute('sandbox', 'allow-scripts allow-pointer-lock');
+    const bundled = artifact.type === 'game' && bundledGameForUrl(artifact.contentUrl, window.location.origin);
+    iframe.src = bundled ? gameFrameUrl(artifact.contentUrl, window.location.origin) : artifact.contentUrl;
+    if (!bundled) iframe.setAttribute('sandbox', 'allow-scripts allow-pointer-lock');
     iframe.setAttribute('referrerpolicy', 'no-referrer');
     iframe.allow = 'autoplay; fullscreen; gamepad';
     iframe.style.width = '100%'; iframe.style.height = '100%'; iframe.style.border = '0';

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "minesweeper",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "title": "메종 마인 · 지뢰찾기",
   "entry": "index.html",
   "thumbnail": "cover.png",
@@ -92,7 +92,7 @@
     ]
   },
   "presentation": {
-    "version": "1.1.0",
+    "version": "1.1.1",
     "publishedAt": "2026-10-11T09:20:00.000Z",
     "engine": "dom",
     "id": "minesweeper",

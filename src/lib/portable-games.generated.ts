@@ -19,7 +19,7 @@ export const PORTABLE_GAMES = [
     "playHint": "통통 냥이 탑, 다 같이 야호!",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.3.1"
+    "moduleVersion": "1.3.2"
   },
   {
     "slug": "cat-bounce",
@@ -41,7 +41,7 @@ export const PORTABLE_GAMES = [
     "playHint": "냥이 충전 점프 · 일곱 냥이 샘플",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.1.0"
+    "moduleVersion": "1.1.1"
   },
   {
     "slug": "cat-flip",
@@ -63,7 +63,7 @@ export const PORTABLE_GAMES = [
     "playHint": "냥이 뒤집기 · 일곱 냥이 샘플",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.1.0"
+    "moduleVersion": "1.1.1"
   },
   {
     "slug": "cat-pack",
@@ -85,7 +85,7 @@ export const PORTABLE_GAMES = [
     "playHint": "냥이 상자 포장 · 일곱 냥이 샘플",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.1.0"
+    "moduleVersion": "1.1.1"
   },
   {
     "slug": "neon-slope",
@@ -106,7 +106,7 @@ export const PORTABLE_GAMES = [
     "playHint": "친구 선택 · LIFE 생명 +1 · 180m부터 점프",
     "portable": true,
     "rewardedContinue": true,
-    "moduleVersion": "1.3.0"
+    "moduleVersion": "1.3.1"
   },
   {
     "slug": "pocket-crossing",
@@ -127,7 +127,7 @@ export const PORTABLE_GAMES = [
     "playHint": "작은 발로, 한 칸 더 멀리",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.0.1"
+    "moduleVersion": "1.0.2"
   },
   {
     "slug": "cat-merge",
@@ -149,7 +149,7 @@ export const PORTABLE_GAMES = [
     "playHint": "냥이 합치기 · 통통한 3D 냥이 클럽",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.0.0"
+    "moduleVersion": "1.0.1"
   },
   {
     "slug": "cat-seesaw",
@@ -171,7 +171,7 @@ export const PORTABLE_GAMES = [
     "playHint": "냥이 시소 · 통통한 3D 냥이 클럽",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.0.0"
+    "moduleVersion": "1.0.1"
   },
   {
     "slug": "cat-sling",
@@ -193,7 +193,7 @@ export const PORTABLE_GAMES = [
     "playHint": "냥이 슬링샷 · 통통한 3D 냥이 클럽",
     "portable": true,
     "rewardedContinue": false,
-    "moduleVersion": "1.0.0"
+    "moduleVersion": "1.0.1"
   },
   {
     "slug": "cat-reaction",

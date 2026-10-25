@@ -75,7 +75,7 @@ export default function GameRoomView() {
     <div className="editorial-page arcade-page space-y-7">
       {/* Header */}
       <div>
-        <ViewHeader eyebrow="만들어보기 · 게임" title={t.title} subtitle={t.subtitle} actions={games[0] && <Button onClick={() => navigate('game-play', { id: games[0].id })}><Play className="size-4" />{locale === 'en' ? 'Play now' : '바로 플레이'}</Button>} />
+        <ViewHeader eyebrow="만들어보기 · 게임" title={t.title} subtitle={t.subtitle} actions={games[0] && <Button onClick={() => navigate('game-play', { id: games[0].id })}><Play className="size-4" />{locale === 'en' ? 'View game' : '게임 살펴보기'}</Button>} />
         <div className="arcade-toolbar flex flex-wrap gap-2">
           <Button size="sm" onClick={() => setSubmitOpen(true)}><Plus className="mr-1 h-4 w-4" />게임 등록</Button>
           <Button

@@ -46,6 +46,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/shared/empty-state';
 import { PreviewRenderer } from '@/components/shared/preview-renderer';
 import { StatCard } from '@/components/shared/stat-card';
+import { ArtifactShare } from '@/components/shared/artifact-share';
+import { canEmbedArtifact } from '@/lib/artifact-embed';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -139,15 +141,6 @@ export default function ProjectView() {
   const shares = (revenueQ.data?.shares ?? []).filter((s) => s.artifactId === a.id);
 
   // ── actions ──
-  const share = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      toast({ title: t('linkCopied') });
-    } catch {
-      toastErr(new Error('clipboard unavailable'));
-    }
-  };
-
   const saveEdit = async () => {
     setBusy('edit');
     try {
@@ -311,9 +304,7 @@ export default function ProjectView() {
                 {tc('edit')}
               </Button>
             )}
-            <Button variant="ghost" onClick={() => void share()}>
-              {tc('share')}
-            </Button>
+            <ArtifactShare id={a.id} title={a.title} game={a.type === 'game'} embeddable={canEmbedArtifact(a)} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label={tc('more')}>

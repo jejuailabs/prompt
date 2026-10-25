@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "cat-sling",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "title": "냥이 슬링샷",
   "entry": "index.html",
   "thumbnail": "cover.png",
@@ -142,7 +142,7 @@
       "3D 착지"
     ],
     "emoji": "🐈",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "publishedAt": "2026-10-12T00:10:02.000Z",
     "playHint": "냥이 슬링샷 · 통통한 3D 냥이 클럽",
     "hint": "화면을 당겼다 놓아 조준해요 · 점선이 착지 길을 알려줘요"

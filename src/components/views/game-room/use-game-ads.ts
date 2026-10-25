@@ -21,7 +21,7 @@ export function useGameAds({iframeRef,slug,enabled}:{iframeRef:RefObject<HTMLIFr
    if(result==='rewarded')used.add(key);active=null;setBusy(false);send({type:'game-reward-result',roundId:m.roundId,requestId:m.requestId,result});
   };
   window.addEventListener('message',listen);window.addEventListener('playlab-game-ads-ready',advertise);advertise();
-  return()=>{disposed=true;clearTimeout(timer);active?.abort();window.removeEventListener('message',listen);window.removeEventListener('playlab-game-ads-ready',advertise);};
+  return()=>{disposed=true;clearTimeout(timer);active?.abort();setBusy(false);window.removeEventListener('message',listen);window.removeEventListener('playlab-game-ads-ready',advertise);};
  },[iframeRef,slug,enabled]);
  return busy;
 }
