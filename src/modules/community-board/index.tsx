@@ -10,6 +10,8 @@ import { toast } from '@/hooks/use-toast';
 import type { ArtifactDTO, CommentDTO } from '@/lib/types';
 import { BOARDS, BOARD_TABS, POST_BODY_MAX, POST_TITLE_MAX, boardDef, isBoardId, type BoardId, type BoardPostDTO, type BoardTab } from './boards';
 import styles from './board.module.css';
+import { ResourceCollection } from './resources';
+import { PostBody } from './post-body';
 
 type ListResponse = { posts: BoardPostDTO[]; total: number; page: number; pageSize: number };
 
@@ -78,9 +80,9 @@ function BoardList({ tab, open, write }: { tab: Exclude<BoardTab, 'gallery'>; op
         {list.isLoading && Array.from({ length: 6 }, (_, i) => <li key={i} className={styles.skeleton} />)}
         <PostRows posts={posts} open={open} />
       </ul>
-      {!list.isLoading && posts.length === 0 && pinned.length === 0 && (
+      {!list.isLoading && !list.isError && posts.length === 0 && pinned.length === 0 && (
         <div className={styles.empty}>
-          <p>{q ? '검색 결과가 없어요.' : '아직 글이 없어요. 첫 글을 남겨 주세요!'}</p>
+          <p>{q ? '검색 결과가 없어요.' : tab === 'resources' ? '회원이 공유한 자료는 여기에 모여요. 유용한 링크를 소개해 주세요!' : '아직 글이 없어요. 첫 글을 남겨 주세요!'}</p>
           {!q && <button type="button" className={styles.primary} onClick={write}><PenLine size={16} />글쓰기</button>}
         </div>
       )}
@@ -194,7 +196,7 @@ function PostDetail({ id, back }: { id: string; back: () => void }) {
         <h1>{data.title}</h1>
         <div className={styles.postMeta}><span>{data.author.username}</span><span>{formatDate(data.createdAt)}</span><span><Eye size={14} />{data.views}</span><span><MessageCircle size={14} />{data.commentCount}</span></div>
       </header>
-      <div className={styles.postBody}>{data.body}</div>
+      <div className={styles.postBody}><PostBody body={data.body ?? ''} /></div>
       <div className={styles.postActions}>
         <button type="button" className={styles.likeButton} aria-pressed={data.likedByMe} onClick={() => void like()}><Heart size={18} fill={data.likedByMe ? 'currentColor' : 'none'} />추천 {data.likeCount}</button>
         {data.canEdit && <button type="button" className={styles.ghost} onClick={() => void remove()}><Trash2 size={16} />삭제</button>}
@@ -238,7 +240,7 @@ function PostEditor({ initialBoard, done, cancel }: { initialBoard: BoardId; don
         {boards.map((item) => <button key={item.id} type="button" role="radio" aria-checked={board === item.id} onClick={() => setBoard(item.id)}><span className={styles.tag} data-tone={item.tone}>{item.label}</span><small>{item.hint}</small></button>)}
       </div>
       <label className={styles.field}>제목<input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={POST_TITLE_MAX} placeholder="제목을 입력해 주세요" required /></label>
-      <label className={styles.field}>내용<textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={POST_BODY_MAX} rows={12} placeholder={board === 'qna' ? '어떤 상황에서 무엇이 막혔는지 적어 주시면 답을 받기 쉬워요.' : board === 'study' ? '오늘 배운 것, 해 본 것, 다음에 해 볼 것을 적어 보세요.' : '자유롭게 이야기해 주세요.'} required /></label>
+      <label className={styles.field}>내용<textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={POST_BODY_MAX} rows={12} placeholder={board === 'qna' ? '어떤 상황에서 무엇이 막혔는지 적어 주시면 답을 받기 쉬워요.' : board === 'study' ? '오늘 배운 것, 해 본 것, 다음에 해 볼 것을 적어 보세요.' : board === 'resources' ? '유튜브 영상이나 웹페이지 주소(https://)와 함께, 어떤 점이 유용한지 적어 주세요. 링크는 본문에서 바로 열 수 있어요.' : '자유롭게 이야기해 주세요.'} required /></label>
       <div className={styles.formActions}>
         <button type="button" className={styles.ghost} onClick={cancel}>취소</button>
         <button type="submit" className={styles.primary} disabled={saving || !title.trim() || !body.trim()}>{saving ? '올리는 중…' : '등록'}</button>
@@ -247,7 +249,7 @@ function PostEditor({ initialBoard, done, cancel }: { initialBoard: BoardId; don
   );
 }
 
-/** COAI 커뮤니티: board tabs (전체·자유·질문·학습일지·공지) + member gallery. */
+/** COAI 커뮤니티: shared resources, member boards and gallery. */
 export default function CommunityBoard() {
   const params = useAppStore((s) => s.params);
   const navigate = useAppStore((s) => s.navigate);
@@ -260,12 +262,13 @@ export default function CommunityBoard() {
   return (
     <div className={styles.page}>
       <header className={styles.hero}>
-        <div><p className={styles.eyebrow}>커뮤니티</p><h1>같이 묻고, 같이 배워요</h1><p>궁금한 건 질문 게시판에, 배운 건 학습일지에. 만든 작품은 갤러리에서 자랑해 주세요.</p></div>
+        <div><p className={styles.eyebrow}>커뮤니티</p><h1>같이 묻고, 같이 배워요</h1><p>궁금한 건 질문에, 배운 건 학습일지에. 유용한 영상과 사이트는 자료공유에 모아 주세요.</p></div>
         {tab !== 'gallery' && !params.write && <button type="button" className={styles.primary} onClick={write}><PenLine size={16} />글쓰기</button>}
       </header>
       <nav className={styles.tabs} aria-label="게시판">
         {BOARD_TABS.map((item) => <button key={item.id} type="button" aria-current={tab === item.id ? 'page' : undefined} onClick={() => go(item.id === 'all' ? {} : { tab: item.id })}>{item.label}</button>)}
       </nav>
+      {tab === 'resources' && !params.write && !params.id && <ResourceCollection />}
       {params.write ? <PostEditor initialBoard={isBoardId(tab) ? tab : 'free'} done={(id) => go({ tab, id })} cancel={() => go(tab === 'all' ? {} : { tab })} />
         : params.id ? <div className={styles.layout}><PostDetail key={params.id} id={params.id} back={() => go(tab === 'all' ? {} : { tab })} /><PopularSide open={open} /></div>
         : tab === 'gallery' ? <Gallery />

@@ -72,7 +72,7 @@ PC 헤더에는 메뉴 8개를 모두 노출합니다. 순서는 아래와 같�
 │   │   └── [studyId]/[sessionNo]
 │   └── watch-party/[roomId] (3단계)
 ├── community
-│   ├── ?board=free|qna|notice&tag=
+│   ├── ?board=free|qna|study|resources|notice&tag=
 │   ├── [postId]
 │   └── new
 ├── search?q=
@@ -92,6 +92,8 @@ PC 헤더에는 메뉴 8개를 모두 노출합니다. 순서는 아래와 같�
 ```
 
 ## 4. 콘텐츠 연결 규칙 (메뉴 간 흐름)
+
+2026-10-25: 커뮤니티에 **자료공유** 말머리 추가. 유튜브 영상·웹페이지·사이트 즐겨찾기를 소개와 함께 공유한다. 현재 앱 주소는 `/app#community?tab=resources`. 사용자 제공 연기(Seedance Emotion Direction)·카메라(AI Camera Movements)·모션(Prompt Motion) 링크는 모듈 내 고정 모음으로 표시한다. 회원 게시글은 기존 커뮤니티 저장 방식을 사용하며 본문의 HTTP(S) 링크를 새 창으로 연다.
 
 | 출발 | 도착 | 연결 방식 |
 |---|---|---|
