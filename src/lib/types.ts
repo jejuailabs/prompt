@@ -264,7 +264,7 @@ export interface JobDTO {
   promptText: string;
   aspect: string;
   style?: string | null;
-  status: 'queued' | 'running' | 'done' | 'failed';
+  status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
   creditCharged: number;
   error?: string | null;
   resultArtifact?: ArtifactDTO | null;

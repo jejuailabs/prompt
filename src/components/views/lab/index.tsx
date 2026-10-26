@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import {
   AlertCircle, Check, ChevronDown, ChevronUp, Download, FlaskConical,
-  ImagePlus, Loader2, RefreshCw, Sparkles, Wallet, X,
+  ImagePlus, Loader2, RefreshCw, Sparkles, Square, Wallet, X,
 } from 'lucide-react';
 import { api, ApiError } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
@@ -43,13 +43,26 @@ function errMsg(e: unknown): string {
   return String(e);
 }
 
-function downloadImage(url: string, filename: string) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+// The image lives on another origin, so <a download> alone just opens it. Fetch it and save the blob.
+async function downloadImage(url: string, filename: string) {
+  const save = (href: string) => {
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(String(res.status));
+    const objectUrl = URL.createObjectURL(await res.blob());
+    save(objectUrl);
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+  } catch {
+    // Fallback: Supabase Storage serves Content-Disposition: attachment when ?download= is present
+    save(`${url}${url.includes('?') ? '&' : '?'}download=${encodeURIComponent(filename)}`);
+  }
 }
 
 export default function LabView() {
@@ -74,6 +87,7 @@ export default function LabView() {
   const [publishing, setPublishing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [refs, setRefs] = useState<RefImage[]>([]);
+  const [cancelling, setCancelling] = useState<string[]>([]);
   const [refUploading, setRefUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -229,6 +243,17 @@ export default function LabView() {
     finally { setGenLoading(false); }
   };
 
+  const cancelJob = async (jobId: string) => {
+    setCancelling((prev) => [...prev, jobId]);
+    try {
+      const { job } = await api.post<{ job: JobDTO }>('/api/lab/jobs/cancel', { jobId });
+      setJobs((prev) => prev.map((j) => (j.id === jobId ? job : j)));
+      refreshSession();
+      void qc.invalidateQueries({ queryKey: ['credits'] });
+    } catch (e) { toastErr(e); }
+    finally { setCancelling((prev) => prev.filter((id) => id !== jobId)); }
+  };
+
   const publishSelected = async () => {
     if (!selectedResults.length) return;
     setPublishing(true);
@@ -357,8 +382,25 @@ export default function LabView() {
                     {g.jobs.map((job) => (
                       <div key={job.id} className={cn('group relative border-t', ASPECT_CSS[aspect])}>
                         {(job.status === 'queued' || job.status === 'running') && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted/50">
                             <Loader2 className="size-6 animate-spin text-primary" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 bg-background text-xs"
+                              disabled={cancelling.includes(job.id)}
+                              onClick={() => void cancelJob(job.id)}
+                            >
+                              {cancelling.includes(job.id) ? <Loader2 className="size-3 animate-spin" /> : <Square className="size-3" />}
+                              {t('stop')}
+                            </Button>
+                          </div>
+                        )}
+                        {job.status === 'cancelled' && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-3 text-center">
+                            <Square className="size-6 text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground">{t('stopped')}</p>
+                            <p className="text-xs text-muted-foreground/70">{t('refunded')}</p>
                           </div>
                         )}
                         {job.status === 'failed' && (
@@ -390,7 +432,7 @@ export default function LabView() {
                                 <button
                                   type="button"
                                   title={t('download')}
-                                  onClick={() => downloadImage(
+                                  onClick={() => void downloadImage(
                                     job.resultArtifact!.fileUrl ?? '',
                                     `${g.name}-${job.id.slice(0, 6)}.png`,
                                   )}

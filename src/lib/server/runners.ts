@@ -59,7 +59,9 @@ export async function processOneGenerationJob(jobId: string): Promise<void> {
   if (!job) return;
   try {
     await assertApiAccessForUserId(job.userId);
-    await db.generationJob.update({ where: { id: job.id }, data: { status: 'running' } });
+    // Only a still-queued job may start; a job cancelled before pickup must not run (and not be charged twice)
+    const started = await db.generationJob.updateMany({ where: { id: job.id, status: 'queued' }, data: { status: 'running' } });
+    if (started.count === 0) return;
 
     const promptParts = [job.promptText];
     if (job.style) promptParts.push(job.style);
@@ -86,6 +88,8 @@ export async function processOneGenerationJob(jobId: string): Promise<void> {
       }
     }
     const { buffer } = await adapter.generate(promptParts.join(', '), size, config, refs);
+    const latest = await db.generationJob.findUnique({ where: { id: job.id }, select: { status: true } });
+    if (latest?.status === 'cancelled') return; // user stopped it while the model was working; credits already refunded
     const fileUrl = await savePng(job.id, buffer, 'gen');
 
     const artifact = await db.artifact.create({
@@ -107,24 +111,28 @@ export async function processOneGenerationJob(jobId: string): Promise<void> {
       },
     });
 
-    await db.generationJob.update({
-      where: { id: job.id },
+    const finished = await db.generationJob.updateMany({
+      where: { id: job.id, status: 'running' },
       data: { status: 'done', resultArtifactId: artifact.id, costActual: job.provider.costPerUnit, completedAt: new Date() },
     });
+    if (finished.count === 0) {
+      await db.artifact.delete({ where: { id: artifact.id } }).catch(() => undefined);
+      return;
+    }
     await logEvent('artifact.created', {
       artifactId: artifact.id,
       ownerId: job.userId,
       sourceModule: 'model-lab',
     });
   } catch (e) {
-    await db.generationJob
-      .update({
-        where: { id: job.id },
+    const failed = await db.generationJob
+      .updateMany({
+        where: { id: job.id, status: { in: ['queued', 'running'] } },
         data: { status: 'failed', error: errorMessage(e), completedAt: new Date() },
       })
-      .catch(() => undefined);
-    // Refund this job's charge
-    await refundCredits(job.userId, job.creditCharged, job.id).catch(() => undefined);
+      .catch(() => ({ count: 0 }));
+    // Refund this job's charge — only if it was still live (a cancelled job was already refunded)
+    if (failed.count > 0) await refundCredits(job.userId, job.creditCharged, job.id).catch(() => undefined);
   }
 }
 
