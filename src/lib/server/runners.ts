@@ -4,9 +4,9 @@ import sharp from 'sharp';
 import { logEvent } from '@/lib/events';
 import { refundCredits } from '@/lib/server/credits';
 import { chatJson, generateImage } from '@/lib/server/ai';
-import { getImageAdapter, parseAdapterConfig } from '@/lib/server/image-adapters';
+import { getImageAdapter, parseAdapterConfig, supportsReferenceImages, type ReferenceImage } from '@/lib/server/image-adapters';
 import { gameCoverUrl, isHexColor, renderGameHtml, writeGameBundle } from '@/lib/server/game-template';
-import { uploadBuffer } from '@/lib/server/storage';
+import { downloadBuffer, uploadBuffer } from '@/lib/server/storage';
 import type { LandingContent } from '@/lib/types';
 import { assertApiAccessForUserId } from '@/lib/auth';
 
@@ -72,7 +72,20 @@ export async function processOneGenerationJob(jobId: string): Promise<void> {
     if (!EXPECTED_IMAGE_MODELS[job.providerId] || actualModel !== EXPECTED_IMAGE_MODELS[job.providerId]) {
       throw new Error(`Image provider model mismatch: ${job.providerId} -> ${actualModel ?? 'unset'}`);
     }
-    const { buffer } = await adapter.generate(promptParts.join(', '), size, config);
+    let refPaths: unknown = [];
+    try { refPaths = JSON.parse(job.referencePaths ?? '[]'); } catch { /* treated as no references */ }
+    const refs: ReferenceImage[] = [];
+    if (Array.isArray(refPaths) && refPaths.length) {
+      if (!supportsReferenceImages((job.provider as Record<string, unknown>).adapterType as string ?? 'default')) {
+        throw new Error('이 모델은 참조 이미지를 지원하지 않습니다');
+      }
+      const prefix = `lab-ref/${job.userId}/`;
+      for (const p of refPaths) {
+        if (typeof p !== 'string' || !p.startsWith(prefix) || p.includes('..')) throw new Error('유효하지 않은 참조 이미지입니다');
+        refs.push({ buffer: await downloadBuffer(p), mimeType: 'image/jpeg' });
+      }
+    }
+    const { buffer } = await adapter.generate(promptParts.join(', '), size, config, refs);
     const fileUrl = await savePng(job.id, buffer, 'gen');
 
     const artifact = await db.artifact.create({
@@ -86,7 +99,7 @@ export async function processOneGenerationJob(jobId: string): Promise<void> {
         fileUrl,
         metadata: JSON.stringify({
           model: job.provider.displayName,
-          params: { aspect: job.aspect, style: job.style ?? undefined, modelId: actualModel, quality: config.quality ?? undefined },
+          params: { aspect: job.aspect, referenceCount: refs.length || undefined, style: job.style ?? undefined, modelId: actualModel, quality: config.quality ?? undefined },
           tags: [],
         }),
         status: 'draft',

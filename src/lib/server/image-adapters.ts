@@ -15,13 +15,25 @@ export interface AdapterConfig {
   [key: string]: unknown;
 }
 
+export interface ReferenceImage {
+  buffer: Buffer;
+  mimeType: string;
+}
+
 export interface IImageAdapter {
-  generate(prompt: string, size: string, config: AdapterConfig): Promise<ImageResult>;
+  generate(prompt: string, size: string, config: AdapterConfig, refs?: ReferenceImage[]): Promise<ImageResult>;
+}
+
+export const MAX_REFERENCE_IMAGES = 3;
+
+/** Adapters that can condition on user-supplied reference images. Others must be disabled in the UI when refs are attached. */
+export function supportsReferenceImages(adapterType: string): boolean {
+  return adapterType === 'openai' || adapterType === 'gemini' || adapterType === 'imagen';
 }
 
 // ── OpenAI adapter (GPT Image 2 / 2.5) ──
 class OpenAIAdapter implements IImageAdapter {
-  async generate(prompt: string, size: string, config: AdapterConfig): Promise<ImageResult> {
+  async generate(prompt: string, size: string, config: AdapterConfig, refs: ReferenceImage[] = []): Promise<ImageResult> {
     const apiKey = config.apiKey || process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error('OpenAI API key not configured');
 
@@ -36,14 +48,27 @@ class OpenAIAdapter implements IImageAdapter {
     };
     if (config.quality) body.quality = config.quality;
 
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
+    let res: Response;
+    if (refs.length) {
+      // Reference images go through the edits endpoint (multipart, image[] parts).
+      const form = new FormData();
+      for (const [k, v] of Object.entries(body)) form.append(k, String(v));
+      refs.forEach((r, i) => form.append('image[]', new Blob([new Uint8Array(r.buffer)], { type: r.mimeType }), `reference-${i}.jpg`));
+      res = await fetch('https://api.openai.com/v1/images/edits', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+        body: form,
+      });
+    } else {
+      res = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+    }
 
     if (!res.ok) {
       const err = await res.text().catch(() => '');
@@ -66,7 +91,7 @@ class OpenAIAdapter implements IImageAdapter {
 
 // ── Google Gemini image adapter ──
 class GeminiImageAdapter implements IImageAdapter {
-  async generate(prompt: string, size: string, config: AdapterConfig): Promise<ImageResult> {
+  async generate(prompt: string, size: string, config: AdapterConfig, refs: ReferenceImage[] = []): Promise<ImageResult> {
     const apiKey = config.apiKey || process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
@@ -78,7 +103,12 @@ class GeminiImageAdapter implements IImageAdapter {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{
+          parts: [
+            ...refs.map((r) => ({ inlineData: { mimeType: r.mimeType, data: r.buffer.toString('base64') } })),
+            { text: prompt },
+          ],
+        }],
         generationConfig: {
           responseModalities: ['IMAGE'],
           imageConfig: { aspectRatio: aspectFromSize(size) },

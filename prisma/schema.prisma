@@ -280,6 +280,7 @@ model GenerationJob {
   provider         ModelProvider @relation(fields: [providerId], references: [id])
   aspect           String    @default("1:1")
   style            String?
+  referencePaths   String?   // JSON string[] of storage paths (lab-ref/<userId>/...) — reference images for img2img
   status           String    @default("queued") // 'queued' | 'running' | 'done' | 'failed'
   resultArtifactId String?  @unique
   resultArtifact   Artifact? @relation("GenJobResult", fields: [resultArtifactId], references: [id])

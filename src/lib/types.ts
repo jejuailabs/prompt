@@ -254,6 +254,7 @@ export interface ProviderDTO {
   costPerUnit: number;
   marginRate: number;
   active: boolean;
+  supportsReference?: boolean;
 }
 
 export interface JobDTO {

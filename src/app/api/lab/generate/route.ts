@@ -6,6 +6,7 @@ import { HttpError, requireApiUser } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
 import { chargeCredits } from '@/lib/server/credits';
 import { serializeJobs } from '@/lib/server/serialize';
+import { MAX_REFERENCE_IMAGES, supportsReferenceImages } from '@/lib/server/image-adapters';
 
 interface GenerateBody {
   promptText?: string;
@@ -13,6 +14,7 @@ interface GenerateBody {
   aspect?: string;
   style?: string;
   promptId?: string;
+  referencePaths?: string[];
 }
 
 const VALID_ASPECTS = ['1:1', '3:4', '4:3', '16:9', '9:16'];
@@ -28,11 +30,23 @@ export async function POST(req: NextRequest) {
     if (!providerIds.length) throw new HttpError('비교할 모델을 1개 이상 선택해주세요', 400);
     const aspect = body.aspect && VALID_ASPECTS.includes(body.aspect) ? body.aspect : '1:1';
 
+    // Reference images must be this user's own uploads (see /api/lab/reference)
+    const referencePaths = [...new Set((body.referencePaths ?? []).filter((p): p is string => typeof p === 'string'))];
+    if (referencePaths.length > MAX_REFERENCE_IMAGES) throw new HttpError(`참조 이미지는 최대 ${MAX_REFERENCE_IMAGES}장까지 사용할 수 있습니다`, 400);
+    const refPrefix = `lab-ref/${user.id}/`;
+    if (referencePaths.some((p) => !p.startsWith(refPrefix) || p.includes('..') || !p.endsWith('.jpg'))) {
+      throw new HttpError('유효하지 않은 참조 이미지입니다', 400);
+    }
+
     const providers = await db.modelProvider.findMany({
       where: { id: { in: providerIds }, active: true, category: 'image', adapterType: { not: 'runpod' } },
     });
     if (providers.length !== providerIds.length) {
       throw new HttpError('사용할 수 없는 모델이 포함되어 있습니다', 400);
+    }
+
+    if (referencePaths.length && providers.some((p) => !supportsReferenceImages(p.adapterType))) {
+      throw new HttpError('참조 이미지를 지원하지 않는 모델이 포함되어 있습니다', 400);
     }
 
     // charge = Σ provider.costPerUnit × marginRate (per-provider, admin-configurable)
@@ -51,6 +65,7 @@ export async function POST(req: NextRequest) {
           providerId: providers[i].id,
           aspect,
           style: body.style?.trim() || null,
+          referencePaths: referencePaths.length ? JSON.stringify(referencePaths) : null,
           status: 'queued',
           creditCharged: perJobCharges[i],
         },

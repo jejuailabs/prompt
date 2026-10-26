@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import {
   AlertCircle, Check, ChevronDown, ChevronUp, Download, FlaskConical,
-  Loader2, RefreshCw, Sparkles, Wallet,
+  ImagePlus, Loader2, RefreshCw, Sparkles, Wallet, X,
 } from 'lucide-react';
 import { api, ApiError } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
@@ -23,6 +23,10 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { ViewHeader } from '@/components/shared/view-header';
 import { PreviewNotice, useRuntime } from '@/components/runtime-context';
 import { cn } from '@/lib/utils';
+
+const MAX_REFS = 3;
+
+interface RefImage { path: string; preview: string }
 
 type Aspect = '1:1' | '3:4' | '4:3' | '16:9' | '9:16';
 
@@ -69,6 +73,9 @@ export default function LabView() {
   const [selectedResults, setSelectedResults] = useState<string[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(true);
+  const [refs, setRefs] = useState<RefImage[]>([]);
+  const [refUploading, setRefUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const providersQ = useQuery({
     queryKey: ['providers'],
@@ -84,6 +91,9 @@ export default function LabView() {
     staleTime: 10_000,
   });
   const balance = creditsQ.data?.balance ?? 0;
+
+  const hasRefs = refs.length > 0;
+  const refBlocked = (p: ProviderDTO) => hasRefs && !p.supportsReference;
 
   const totalCost = providers
     .filter((p) => selected.includes(p.id))
@@ -147,6 +157,43 @@ export default function LabView() {
 
   const toastErr = (e: unknown) => toast({ title: tc('error'), description: errMsg(e), variant: 'destructive' });
 
+  const addRefs = async (files: FileList | null) => {
+    if (!files?.length || !requireLogin()) return;
+    const room = MAX_REFS - refs.length;
+    setRefUploading(true);
+    try {
+      for (const file of Array.from(files).slice(0, room)) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('/api/lab/reference', { method: 'POST', body: fd });
+        const json = (await res.json().catch(() => null)) as { ok: boolean; data?: { path: string }; error?: string } | null;
+        if (!json?.ok || !json.data?.path) throw new ApiError(json?.error || t('refUploadFailed'), res.status);
+        const path = json.data.path;
+        setRefs((prev) => [...prev, { path, preview: URL.createObjectURL(file) }]);
+      }
+    } catch (e) { toastErr(e); }
+    finally {
+      setRefUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeRef = (path: string) =>
+    setRefs((prev) => {
+      const target = prev.find((r) => r.path === path);
+      if (target) URL.revokeObjectURL(target.preview);
+      return prev.filter((r) => r.path !== path);
+    });
+
+  // Models without reference support cannot stay selected once an image is attached
+  useEffect(() => {
+    if (!hasRefs) return;
+    setSelected((prev) => {
+      const next = prev.filter((id) => providers.find((p) => p.id === id)?.supportsReference);
+      return next.length === prev.length ? prev : next;
+    });
+  }, [hasRefs, providers]);
+
   const toggleProvider = (id: string) =>
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
@@ -173,6 +220,7 @@ export default function LabView() {
       const data = await api.post<{ jobs: JobDTO[] }>('/api/lab/generate', {
         promptText, providerIds: ids, aspect, style: style || undefined,
         promptId: params.promptId || undefined,
+        referencePaths: refs.length ? refs.map((r) => r.path) : undefined,
       });
       setJobs((prev) => [...prev, ...data.jobs]);
       refreshSession();
@@ -229,6 +277,60 @@ export default function LabView() {
             </span>
           </div>
         </div>
+      </Card>
+
+      {/* ━━ Reference images ━━ */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold">{t('refTitle')}</p>
+          <p className="text-xs text-muted-foreground">{t('refHint', { n: MAX_REFS })}</p>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          {refs.map((r) => (
+            <div key={r.path} className="relative size-20 overflow-hidden rounded-lg border">
+              <img src={r.preview} alt="" className="h-full w-full object-cover" draggable={false} />
+              <button
+                type="button"
+                title={t('refRemove')}
+                onClick={() => removeRef(r.path)}
+                className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black/80"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+          ))}
+          {refs.length < MAX_REFS && (
+            <button
+              type="button"
+              disabled={previewMode || refUploading}
+              onClick={() => fileInputRef.current?.click()}
+              className="flex size-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-xs text-muted-foreground transition hover:bg-muted/50 disabled:opacity-50"
+            >
+              {refUploading ? <Loader2 className="size-5 animate-spin" /> : <ImagePlus className="size-5" />}
+              {t('refAdd')}
+            </button>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+            hidden
+            onChange={(e) => void addRefs(e.target.files)}
+          />
+        </div>
+        {hasRefs && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground">{t('refPresetsLabel')}</span>
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setPromptText(t('refPresetIdText'))}>
+              {t('refPresetId')}
+            </Button>
+            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setPromptText(t('refPresetProfileText'))}>
+              {t('refPresetProfile')}
+            </Button>
+            <span className="basis-full text-[11px] text-muted-foreground/70">{t('refPrivacy')}</span>
+          </div>
+        )}
       </Card>
 
       {/* ━━ MAIN: Left image area + Right settings ━━ */}
@@ -344,9 +446,14 @@ export default function LabView() {
             {providers.length ? (
               <div className="flex flex-wrap gap-x-4 gap-y-2">
                 {providers.map((p) => (
-                  <label key={p.id} className="flex cursor-pointer items-center gap-1.5 select-none">
+                  <label
+                    key={p.id}
+                    title={refBlocked(p) ? t('refUnsupported') : undefined}
+                    className={cn('flex cursor-pointer items-center gap-1.5 select-none', refBlocked(p) && 'cursor-not-allowed opacity-40')}
+                  >
                     <Checkbox
                       checked={selected.includes(p.id)}
+                      disabled={refBlocked(p)}
                       onCheckedChange={() => toggleProvider(p.id)}
                       className="size-3.5"
                     />

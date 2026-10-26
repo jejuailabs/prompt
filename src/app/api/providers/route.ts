@@ -1,6 +1,7 @@
 // GET /api/providers — active model providers for the lab
 import { db } from '@/lib/db';
 import { fail, ok } from '@/lib/server/handler';
+import { supportsReferenceImages } from '@/lib/server/image-adapters';
 
 export async function GET() {
   try {
@@ -18,6 +19,7 @@ export async function GET() {
         costPerUnit: p.costPerUnit,
         marginRate: (p as Record<string, unknown>).marginRate as number ?? 1.4,
         active: p.active,
+        supportsReference: supportsReferenceImages(p.adapterType),
       })),
     );
   } catch (e) {
