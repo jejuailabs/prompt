@@ -9,11 +9,18 @@ import { db } from '@/lib/db';
 import { HttpError, assertApiAccessForUserId } from '@/lib/auth';
 import { getImageAdapter, parseAdapterConfig, type ReferenceImage } from '@/lib/server/image-adapters';
 import { downloadBuffer, publicStorageUrl, uploadBuffer } from '@/lib/server/storage';
-import type { ClassGenerationDTO, ClassRoomState } from './types';
+import { CLASS_ASPECTS, type ClassAspect, type ClassGenerationDTO, type ClassRoomState } from './types';
 
 /** The one model classes use for now: the cheaper of the two GPT Image 2.5 variants. */
 export const CLASS_PROVIDER_ID = 'gpt-image-25-flare';
-export const CLASS_IMAGE_SIZE = '1024x1024';
+/** Same pixel sizes the model lab sends; the OpenAI adapter rejects anything else. */
+const SIZE_BY_ASPECT: Record<ClassAspect, string> = {
+  '1:1': '1024x1024',
+  '3:4': '960x1280',
+  '4:3': '1280x960',
+  '9:16': '864x1536',
+  '16:9': '1536x864',
+};
 export const MAX_PROMPT_LENGTH = 1000;
 /** A job that has not finished in this long was lost (function timeout) and must stop blocking the student. */
 const STALE_AFTER_MS = 6 * 60 * 1000;
@@ -107,6 +114,47 @@ export async function expireStaleGenerations(sessionId: string): Promise<void> {
   });
 }
 
+// ─── aspect ratio ───
+
+export function isClassAspect(value: unknown): value is ClassAspect {
+  return typeof value === 'string' && (CLASS_ASPECTS as readonly string[]).includes(value);
+}
+
+/** Closest supported ratio to width:height (compared on a log scale so 2:1 and 1:2 are equally far from 1:1). */
+export function nearestAspect(width: number, height: number): ClassAspect {
+  const target = Math.log(width / height);
+  const distance = (aspect: ClassAspect) => {
+    const [w, h] = aspect.split(':').map(Number);
+    return Math.abs(Math.log(w / h) - target);
+  };
+  return CLASS_ASPECTS.reduce((best, aspect) => (distance(aspect) < distance(best) ? aspect : best));
+}
+
+/** A ratio the student wrote in the prompt: "16:9", "9대16", "세로로", "가로형", "정사각형" … */
+export function aspectFromPrompt(text: string): ClassAspect | null {
+  const numeric = text.match(/(\d{1,2})\s*(?::|：|대|x|×)\s*(\d{1,2})(?!\d)/i);
+  if (numeric) {
+    const [w, h] = [Number(numeric[1]), Number(numeric[2])];
+    if (w > 0 && h > 0 && Math.max(w, h) / Math.min(w, h) <= 4) return nearestAspect(w, h);
+  }
+  if (/정사각|square|프로필\s*사진/i.test(text)) return '1:1';
+  if (/세로\s*(?:로|형|사진|이미지|화면|그림)|세로로|폰\s*배경|배경\s*화면|스토리|릴스|쇼츠|portrait|vertical/i.test(text)) return '9:16';
+  if (/가로\s*(?:로|형|사진|이미지|화면|그림)|가로로|와이드|파노라마|배너|유튜브\s*썸네일|landscape|widescreen|\bwide\b/i.test(text)) return '16:9';
+  return null;
+}
+
+/** 'auto' → the attached photo's own ratio, else a ratio named in the prompt, else square. */
+export async function resolveAspect(choice: unknown, promptText: string, referencePath: string | null): Promise<ClassAspect> {
+  if (isClassAspect(choice)) return choice;
+  if (referencePath) {
+    try {
+      const { width, height } = await sharp(await downloadBuffer(referencePath)).metadata();
+      if (width && height) return nearestAspect(width, height);
+    } catch { /* fall through to the prompt */ }
+  }
+  return aspectFromPrompt(promptText) ?? '1:1';
+}
+
 // ─── DTOs ───
 
 export function referenceUrl(path: string | null): string | null {
@@ -125,6 +173,7 @@ export function toGenerationDTO(gen: ClassGeneration): ClassGenerationDTO {
   return {
     id: gen.id,
     promptText: gen.promptText,
+    aspect: isClassAspect(gen.aspect) ? gen.aspect : '1:1',
     referenceUrl: referenceUrl(gen.referencePath),
     status: gen.status as ClassGenerationDTO['status'],
     resultUrl: gen.resultUrl,
@@ -154,7 +203,8 @@ export async function processClassGeneration(id: string): Promise<void> {
       refs.push({ buffer: await downloadBuffer(gen.referencePath), mimeType: 'image/jpeg' });
     }
     const prompt = [gen.promptText, session.provider.styleHint].filter(Boolean).join(', ');
-    const { buffer, usage } = await adapter.generate(prompt, CLASS_IMAGE_SIZE, config, refs);
+    const size = SIZE_BY_ASPECT[isClassAspect(gen.aspect) ? gen.aspect : '1:1'];
+    const { buffer, usage } = await adapter.generate(prompt, size, config, refs);
     const png = await sharp(buffer).png().toBuffer();
     const resultUrl = await uploadBuffer(`class/${session.id}/${gen.id}.png`, png, 'image/png');
     await db.classGeneration.updateMany({

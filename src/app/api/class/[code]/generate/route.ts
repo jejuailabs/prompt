@@ -7,14 +7,14 @@ import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { HttpError } from '@/lib/auth';
 import { fail, ok, readJson } from '@/lib/server/handler';
-import { MAX_PROMPT_LENGTH, findSessionByCode, requireOpen, requireParticipant, toGenerationDTO } from '@/modules/class-studio/server';
+import { MAX_PROMPT_LENGTH, findSessionByCode, requireOpen, requireParticipant, resolveAspect, toGenerationDTO } from '@/modules/class-studio/server';
 
 export async function POST(req: Request, { params }: { params: Promise<{ code: string }> }) {
   try {
     const session = await findSessionByCode((await params).code);
     requireOpen(session);
     const participant = await requireParticipant(session);
-    const body = await readJson<{ prompt?: string; referencePath?: string | null }>(req);
+    const body = await readJson<{ prompt?: string; referencePath?: string | null; aspect?: string }>(req);
     const promptText = (body.prompt ?? '').trim();
     if (!promptText) throw new HttpError('만들고 싶은 그림을 적어주세요', 400);
     if (promptText.length > MAX_PROMPT_LENGTH) throw new HttpError(`프롬프트는 ${MAX_PROMPT_LENGTH}자까지 쓸 수 있어요`, 400);
@@ -22,6 +22,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ code: s
     if (referencePath && (!referencePath.startsWith(`class-ref/${session.id}/${participant.id}/`) || referencePath.includes('..') || !referencePath.endsWith('.jpg'))) {
       throw new HttpError('첨부 사진을 다시 올려주세요', 400);
     }
+    const aspect = await resolveAspect(body.aspect, promptText, referencePath);
 
     const unitCost = session.provider.costPerUnit;
     const gen = await db.$transaction(async (tx) => {
@@ -37,7 +38,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ code: s
         throw new HttpError('이번 수업 예산을 모두 사용했어요. 선생님께 알려주세요', 403);
       }
       return tx.classGeneration.create({
-        data: { id: randomUUID(), sessionId: session.id, participantId: participant.id, promptText, referencePath },
+        data: { id: randomUUID(), sessionId: session.id, participantId: participant.id, promptText, referencePath, aspect },
       });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 

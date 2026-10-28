@@ -6,7 +6,28 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUp, Download, ImagePlus, LayoutGrid, Loader2, Plus, RotateCcw, X } from 'lucide-react';
 import { api, ApiError } from '@/lib/api-client';
-import type { ClassGenerationDTO, ClassRoomDTO } from './types';
+import { cssAspect, type ClassAspect, type ClassAspectChoice, type ClassGenerationDTO, type ClassRoomDTO } from './types';
+
+const ASPECT_OPTIONS: { value: ClassAspectChoice; label: string; hint: string }[] = [
+  { value: 'auto', label: '자동', hint: '사진·프롬프트 따라' },
+  { value: '1:1', label: '1:1', hint: '정사각' },
+  { value: '3:4', label: '3:4', hint: '세로' },
+  { value: '9:16', label: '9:16', hint: '폰 화면 세로' },
+  { value: '4:3', label: '4:3', hint: '가로' },
+  { value: '16:9', label: '16:9', hint: '와이드' },
+];
+
+/** Tall results get a narrower bubble so a 9:16 image doesn't fill the whole phone screen. */
+function bubbleWidth(aspect: ClassAspect) {
+  return aspect === '9:16' || aspect === '3:4' ? 'w-[62%]' : 'w-[85%]';
+}
+
+function AspectGlyph({ aspect }: { aspect: ClassAspectChoice }) {
+  if (aspect === 'auto') return <span className="block size-3.5 rounded-[3px] border-[1.5px] border-dashed border-current" />;
+  const [w, h] = aspect.split(':').map(Number);
+  const scale = 14 / Math.max(w, h);
+  return <span className="block rounded-[3px] border-[1.5px] border-current" style={{ width: w * scale, height: h * scale }} />;
+}
 
 const SUGGESTIONS = [
   '우주복을 입은 고양이가 달에서 라면을 먹는 장면, 수채화',
@@ -180,6 +201,8 @@ function Chat({ code, room, remaining, onChange }: { code: string; room: ClassRo
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewing, setViewing] = useState<ClassGenerationDTO | null>(null);
+  const [aspect, setAspect] = useState<ClassAspectChoice>('auto');
+  const [aspectMenu, setAspectMenu] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -227,7 +250,7 @@ function Chat({ code, room, remaining, onChange }: { code: string; room: ClassRo
     setSending(true);
     setError(null);
     try {
-      await api.post<ClassGenerationDTO>(`/api/class/${code}/generate`, { prompt: prompt.trim(), referencePath: attachment?.path ?? null });
+      await api.post<ClassGenerationDTO>(`/api/class/${code}/generate`, { prompt: prompt.trim(), referencePath: attachment?.path ?? null, aspect });
       setPrompt('');
       setAttachment(null);
       await onChange();
@@ -288,6 +311,40 @@ function Chat({ code, room, remaining, onChange }: { code: string; room: ClassRo
               {attachment ? <ImagePlus className="size-5" /> : <Plus className="size-6" />}
             </button>
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void attach(e.target.files?.[0])} />
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                aria-label={`비율: ${aspect === 'auto' ? '자동' : aspect}`}
+                aria-expanded={aspectMenu}
+                disabled={!!blockedReason}
+                onClick={() => setAspectMenu((v) => !v)}
+                className="flex h-10 items-center gap-1.5 rounded-full px-2.5 text-sm text-muted-foreground active:bg-muted disabled:opacity-30"
+              >
+                <AspectGlyph aspect={aspect} />
+                {aspect === 'auto' ? '자동' : aspect}
+              </button>
+              {aspectMenu && (
+                <>
+                  <button type="button" aria-label="비율 선택 닫기" className="fixed inset-0 z-10 cursor-default" onClick={() => setAspectMenu(false)} />
+                  <div role="menu" className="absolute bottom-12 left-0 z-20 w-56 overflow-hidden rounded-2xl border bg-background py-1.5 shadow-lg">
+                    {ASPECT_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={aspect === option.value}
+                        onClick={() => { setAspect(option.value); setAspectMenu(false); }}
+                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-muted ${aspect === option.value ? 'font-semibold' : ''}`}
+                      >
+                        <span className="grid w-4 place-items-center"><AspectGlyph aspect={option.value} /></span>
+                        <span className="w-10 text-[15px]">{option.label}</span>
+                        <span className="text-xs text-muted-foreground">{option.hint}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
             <textarea
               ref={textRef}
               rows={1}
@@ -296,7 +353,7 @@ function Chat({ code, room, remaining, onChange }: { code: string; room: ClassRo
               disabled={!!blockedReason}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && window.matchMedia('(pointer: fine)').matches) { e.preventDefault(); void send(); } }}
-              placeholder={attachment ? '이 사진을 어떻게 바꿀까요?' : '만들고 싶은 그림을 적어보세요'}
+              placeholder={attachment ? '어떻게 바꿀까요?' : '무엇을 그릴까요?'}
               className="max-h-40 min-h-10 flex-1 resize-none bg-transparent py-2 text-base leading-6 outline-none placeholder:text-muted-foreground disabled:opacity-50"
             />
             <button type="button" aria-label="보내기" disabled={!canSend} onClick={() => void send()} className="grid size-10 shrink-0 place-items-center rounded-full bg-foreground text-background disabled:opacity-20">
@@ -336,8 +393,8 @@ function Result({ gen, onOpen, onRetry }: { gen: ClassGenerationDTO; onOpen: () 
 
   if (inFlight) {
     return (
-      <div className="w-[78%] max-w-sm">
-        <div className="aspect-square animate-pulse rounded-2xl bg-gradient-to-br from-muted to-muted/40" />
+      <div className={`${bubbleWidth(gen.aspect)} max-w-sm`}>
+        <div className="animate-pulse rounded-2xl bg-gradient-to-br from-muted to-muted/40" style={{ aspectRatio: cssAspect(gen.aspect) }} />
         <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground"><Loader2 className="size-3.5 animate-spin" />이미지 만드는 중… {elapsed}초</p>
       </div>
     );
@@ -351,9 +408,9 @@ function Result({ gen, onOpen, onRetry }: { gen: ClassGenerationDTO; onOpen: () 
     );
   }
   return (
-    <div className="w-[85%] max-w-sm">
+    <div className={`${bubbleWidth(gen.aspect)} max-w-sm`}>
       <button type="button" onClick={onOpen} className="block w-full overflow-hidden rounded-2xl">
-        <img src={gen.resultUrl!} alt={gen.promptText} className="aspect-square w-full object-cover" />
+        <img src={gen.resultUrl!} alt={gen.promptText} className="w-full object-cover" style={{ aspectRatio: cssAspect(gen.aspect) }} />
       </button>
       <button type="button" onClick={() => void saveImage(gen.resultUrl!, `coai-${gen.id.slice(0, 8)}`)} className="mt-1.5 flex items-center gap-1.5 rounded-full px-2 py-1 text-sm text-muted-foreground active:bg-muted">
         <Download className="size-4" />저장

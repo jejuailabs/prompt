@@ -3,7 +3,7 @@
 import { db } from '@/lib/db';
 import { HttpError } from '@/lib/auth';
 import { fail, ok } from '@/lib/server/handler';
-import { findSessionByCode, referenceUrl, roomState } from '@/modules/class-studio/server';
+import { findSessionByCode, isClassAspect, referenceUrl, roomState } from '@/modules/class-studio/server';
 import type { ClassBoardDTO } from '@/modules/class-studio/types';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ code: string }> }) {
@@ -23,6 +23,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ code: s
         id: row.id,
         nickname: row.participant.nickname,
         promptText: row.promptText,
+        aspect: isClassAspect(row.aspect) ? row.aspect : '1:1',
         resultUrl: row.resultUrl!,
         referenceUrl: referenceUrl(row.referencePath),
         createdAt: (row.completedAt ?? row.createdAt).toISOString(),

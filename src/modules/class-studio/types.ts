@@ -2,9 +2,20 @@
 
 export type ClassRoomState = 'scheduled' | 'open' | 'ended';
 
+/** Output ratios the image adapters accept; 'auto' = the attached photo's ratio, else one named in the prompt, else 1:1. */
+export const CLASS_ASPECTS = ['1:1', '3:4', '9:16', '4:3', '16:9'] as const;
+export type ClassAspect = (typeof CLASS_ASPECTS)[number];
+export type ClassAspectChoice = ClassAspect | 'auto';
+
+/** CSS aspect-ratio value for a stored ratio ('16:9' → '16 / 9'). */
+export function cssAspect(aspect: string): string {
+  return aspect.replace(':', ' / ');
+}
+
 export interface ClassGenerationDTO {
   id: string;
   promptText: string;
+  aspect: ClassAspect;
   referenceUrl: string | null;
   status: 'queued' | 'running' | 'done' | 'failed';
   resultUrl: string | null;
@@ -33,6 +44,7 @@ export interface ClassBoardCardDTO {
   id: string;
   nickname: string;
   promptText: string;
+  aspect: ClassAspect;
   resultUrl: string;
   referenceUrl: string | null;
   createdAt: string;

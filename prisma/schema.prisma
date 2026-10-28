@@ -336,6 +336,7 @@ model ClassGeneration {
   participant   ClassParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   promptText    String
   referencePath String?   // class-ref/<sessionId>/<participantId>/...
+  aspect        String    @default("1:1") // resolved at queue time: chosen, photo's own ratio, or read from the prompt
   status        String    @default("queued") // 'queued' | 'running' | 'done' | 'failed'
   resultUrl     String?
   hidden        Boolean   @default(false) // hidden from the board by the admin

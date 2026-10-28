@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { Loader2, X } from 'lucide-react';
 import { api, ApiError } from '@/lib/api-client';
-import type { ClassBoardCardDTO, ClassBoardDTO } from './types';
+import { cssAspect, type ClassBoardCardDTO, type ClassBoardDTO } from './types';
 
 const POLL_MS = 4000;
 
@@ -82,7 +82,7 @@ export function ClassBoard({ code }: { code: string }) {
               className={`mb-3 block w-full break-inside-avoid overflow-hidden rounded-2xl bg-background text-left shadow-sm ring-1 ring-border transition sm:mb-4 ${fresh.has(card.id) ? 'animate-in fade-in zoom-in-95 ring-2 ring-primary duration-700' : ''}`}
             >
               <p className="truncate px-3 pb-2 pt-2.5 text-[15px] font-semibold sm:text-base">{card.nickname}</p>
-              <img src={card.resultUrl} alt={card.promptText} loading="lazy" className="aspect-square w-full object-cover" />
+              <img src={card.resultUrl} alt={card.promptText} loading="lazy" className="w-full object-cover" style={{ aspectRatio: cssAspect(card.aspect) }} />
               <p className="line-clamp-2 px-3 py-2 text-xs text-muted-foreground sm:text-sm">{card.promptText}</p>
             </button>
           ))}
