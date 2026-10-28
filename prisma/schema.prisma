@@ -40,6 +40,7 @@ model Profile {
   youtubeAnalysisJobs YoutubeAnalysisJob[]
   savedYoutubeAnalyses SavedYoutubeAnalysis[]
   mcpToken          McpToken?
+  classSessions     ClassSession[]
 }
 
 model McpToken {
@@ -268,6 +269,7 @@ model ModelProvider {
   adapterType String   @default("default") // 'default' | 'openai' | 'replicate' | 'stability'
   adapterConfig String @default("{}") // JSON: { apiEndpoint?, modelId?, ... }
   jobs        GenerationJob[]
+  classSessions ClassSession[]
 }
 
 model GenerationJob {
@@ -289,6 +291,62 @@ model GenerationJob {
   error            String?
   createdAt        DateTime  @default(now())
   completedAt      DateTime?
+}
+
+// ────────────────────────────── Class studio (admin-opened, login-free class rooms) ──────────────────────────────
+
+model ClassSession {
+  id              String    @id @default(uuid())
+  code            String    @unique // short join code in /c/<code>
+  title           String
+  hostId          String
+  host            Profile   @relation(fields: [hostId], references: [id])
+  providerId      String
+  provider        ModelProvider @relation(fields: [providerId], references: [id])
+  startsAt        DateTime
+  endsAt          DateTime
+  closedAt        DateTime? // set when the admin ends the class early
+  maxParticipants Int       @default(15)
+  perUserLimit    Int       @default(10)
+  budgetKrw       Float     @default(15000) // cap on Σ provider cost, charged to the platform (no student credits)
+  boardPublic     Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  participants    ClassParticipant[]
+  generations     ClassGeneration[]
+}
+
+model ClassParticipant {
+  id          String   @id @default(uuid())
+  sessionId   String
+  session     ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  nickname    String
+  tokenHash   String   @unique // sha256 of the httpOnly cookie token
+  blocked     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  generations ClassGeneration[]
+
+  @@unique([sessionId, nickname])
+}
+
+model ClassGeneration {
+  id            String    @id @default(uuid())
+  sessionId     String
+  session       ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participantId String
+  participant   ClassParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  promptText    String
+  referencePath String?   // class-ref/<sessionId>/<participantId>/...
+  status        String    @default("queued") // 'queued' | 'running' | 'done' | 'failed'
+  resultUrl     String?
+  hidden        Boolean   @default(false) // hidden from the board by the admin
+  costActual    Float     @default(0) // configured provider unit cost
+  usage         String?   // JSON: provider-reported token usage, kept for real cost review
+  error         String?   // raw provider error, admin only
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  @@index([sessionId, createdAt])
+  @@index([participantId])
 }
 
 model Credits {

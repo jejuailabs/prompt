@@ -4,6 +4,8 @@
 export interface ImageResult {
   base64: string;
   buffer: Buffer;
+  /** Provider-reported token usage when the API returns it (OpenAI images). */
+  usage?: Record<string, unknown>;
 }
 
 export interface AdapterConfig {
@@ -75,15 +77,15 @@ class OpenAIAdapter implements IImageAdapter {
       throw new Error(`OpenAI API error ${res.status}: ${err.slice(0, 200)}`);
     }
 
-    const json = await res.json() as { data?: { b64_json?: string; url?: string }[] };
+    const json = await res.json() as { data?: { b64_json?: string; url?: string }[]; usage?: Record<string, unknown> };
     const item = json.data?.[0];
     if (item?.b64_json) {
-      return { base64: item.b64_json, buffer: Buffer.from(item.b64_json, 'base64') };
+      return { base64: item.b64_json, buffer: Buffer.from(item.b64_json, 'base64'), usage: json.usage };
     }
     if (item?.url) {
       const imgRes = await fetch(item.url);
       const buf = Buffer.from(await imgRes.arrayBuffer());
-      return { base64: buf.toString('base64'), buffer: buf };
+      return { base64: buf.toString('base64'), buffer: buf, usage: json.usage };
     }
     throw new Error('Empty image response from OpenAI');
   }

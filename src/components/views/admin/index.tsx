@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { AlertTriangle, ArrowDown, ArrowUp, BarChart3, CheckCircle, Circle, Clock, Coins, Film, Info, Loader2, Radar, ReceiptText, RotateCcw, ServerCog, Shield, ShieldCheck, ShieldOff, Trash2, Users, Wallet, Wrench, Zap } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, BarChart3, CheckCircle, Circle, Clock, Coins, Film, Info, Loader2, QrCode, Radar, ReceiptText, RotateCcw, ServerCog, Shield, ShieldCheck, ShieldOff, Trash2, Users, Wallet, Wrench, Zap } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { CreditRequests } from './credit-requests';
 import { AI_STUDIO_TOOLS } from '@/lib/ai-studio-tools';
@@ -14,6 +14,7 @@ import { H3Tests } from './h3-tests';
 import { VideoComparison } from './video-comparison';
 import { MotionUpload } from './motion-upload';
 import { RunpodWorkers } from './runpod-workers';
+import { ClassSessionsPanel } from '@/modules/class-studio/admin-panel';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -147,6 +148,7 @@ export default function AdminView() {
         <Tabs defaultValue="dashboard">
           <TabsList className="flex-wrap">
             <TabsTrigger value="dashboard"><BarChart3 className="mr-1 size-3.5" />운영 대시보드</TabsTrigger>
+            <TabsTrigger value="class-sessions"><QrCode className="mr-1 size-3.5" />수업 세션</TabsTrigger>
             <TabsTrigger value="modules">{t('tabModules')}</TabsTrigger>
             <TabsTrigger value="moderation">
               {t('tabModeration')}
@@ -178,6 +180,7 @@ export default function AdminView() {
             <TabsTrigger value="logs">{t('tabLogs')}</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="class-sessions" className="mt-4"><ClassSessionsPanel /></TabsContent>
           <TabsContent value="motion-upload" className="mt-4"><MotionUpload /></TabsContent>
           <TabsContent value="runpod-workers" className="mt-4"><RunpodWorkers /></TabsContent>
           <TabsContent value="dashboard" className="mt-4">

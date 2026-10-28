@@ -557,3 +557,13 @@ SocialKit 자막 요청은 공식 권장 130초 클라이언트 제한 적용. �
 - [x] 로컬 개발 서버에서 PC 목록·상세·검색 필터·모바일 375px 가로 넘침 없음, 상세 코드 로드와 실제 클릭 복사 확인.
 - [x] "No Remotion" 탭: 리모션 없이 브라우저에서 재생하고 MP4로 받는 첫 10개(01a·01b·16·41·44·45·51·52·56·57). `no-remotion/runtime.tsx`(Motion Lite)가 Remotion API 일부(useCurrentFrame·spring·interpolate·Sequence·Series·Loop·Freeze·Img 등)를 대신하고, 장면 코드는 import만 바꿔 원본 그대로 사용. MP4는 html-to-image로 프레임 캡처 → WebCodecs H.264 → mp4-muxer. 공개용 코드 사본은 `scripts/sync-motion-web-code.ts`(predev/prebuild)가 `public/motion-library/web/`에 생성.
 - [ ] 나머지 34개 이식(부가 패키지 대체 필요), MP4 생성 속도 개선(현재 6초 영상에 headless Chrome 기준 약 1.5분).
+
+### 2026-10-28 — 수업용 이미지 생성실 (class-studio)
+
+- [x] 어드민 "수업 세션" 탭: 수업 이름·시작·열어둘 시간·인원(기본 15)·1인 한도(기본 10장)·원가 예산 상한으로 세션을 열고, QR(전체화면)·입장 코드·실시간 참여/생성/원가 현황·30분 연장·즉시 종료·보드 공개 토글·학생 차단·이미지 숨김 제공.
+- [x] 학생 화면 `/c/<코드>`: 로그인 없이 닉네임만 입력(httpOnly 쿠키, sha256 저장). ChatGPT 모바일형 채팅 — `+`로 사진 첨부(폰에서 1536px로 줄여 업로드), 프롬프트 전송, 생성 중 경과 시간, 크게 보기·저장.
+- [x] 전시 보드 `/c/<코드>/board`: 패들렛식 벽돌형 그리드, 카드 상단 닉네임, 4초마다 자동 갱신, 늦게 온 학생용 QR을 헤더에 표시.
+- [x] 모델은 GPT Image 2.5 Flare 고정. 비용은 학생 크레딧이 아니라 세션 예산(원가 `costPerUnit`)에서 차감하고, OpenAI가 돌려준 토큰 사용량을 `ClassGeneration.usage`에 저장. 한도·동시 1장·예산은 serializable 트랜잭션으로 검사, 실패한 생성은 한도에 포함하지 않음.
+- [x] 테이블 `ClassSession`·`ClassParticipant`·`ClassGeneration` (RLS on, anon/authenticated 권한 없음). 학생용 메뉴에 노출하지 않는 어드민 전용 기능이라 모듈 레지스트리(네비게이션)에는 등록하지 않음.
+- [x] 로컬 검증: 모바일 375px 입장→실제 1장 생성(약 23초, 입력 28·출력 196 토큰)→보드 표시, 종료 후 생성 차단(403), 없는 코드 404.
+- [ ] 어드민 탭 화면은 로그인 세션이 없어 브라우저로 확인하지 못함. 첫 수업 후 실측 토큰으로 원가 단가 재검토.
