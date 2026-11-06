@@ -159,6 +159,85 @@
   .coai-carousel-arrow[data-dir="prev"] { left: -6px; } .coai-carousel-arrow[data-dir="next"] { right: -6px; }
 }
 
+/* AI 일정 calendar: month grid + side list, right under the posters */
+.coai-cal { margin-top: 32px; }
+.coai-cal + .coai-panels { margin-top: 24px; }
+.coai-cal [data-kind="course"] { --cal-c: #2F5BEA; }
+.coai-cal [data-kind="contest"] { --cal-c: #9A6A0E; }
+.coai-cal [data-kind="event"] { --cal-c: #D43D20; }
+.dark .coai-cal [data-kind="course"] { --cal-c: #8FB0FF; }
+.dark .coai-cal [data-kind="contest"] { --cal-c: #E5C06A; }
+.dark .coai-cal [data-kind="event"] { --cal-c: #FF8A6A; }
+.coai-cal-body { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 24px; }
+.coai-cal-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.coai-cal-bar strong { min-width: 108px; text-align: center; font-size: 18px; font-weight: 700; color: var(--coai-text-strong); font-variant-numeric: tabular-nums; }
+.coai-cal-nav { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--coai-border); background: var(--coai-bg-surface); color: var(--coai-text-body); display: inline-flex; align-items: center; justify-content: center; }
+.coai-cal-today { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--coai-border); background: var(--coai-bg-surface); font-size: 13px; font-weight: 600; color: var(--coai-text-body); }
+.coai-cal-nav:hover, .coai-cal-today:hover { border-color: var(--coai-border-strong); color: var(--coai-text-strong); }
+.coai-cal-legend { margin-left: auto; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--coai-text-muted); }
+.coai-cal-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.coai-cal-legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--cal-c); }
+.coai-cal-legend i[data-type="deadline"] { background: none; border: 1.5px solid var(--coai-text-muted); }
+.coai-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.coai-cal-week { padding: 0 6px 6px; font-size: 12px; font-weight: 600; color: var(--coai-text-muted); }
+.coai-cal-day { position: relative; min-width: 0; min-height: 76px; padding: 4px; border-top: 1px solid var(--coai-border); display: flex; flex-direction: column; gap: 3px; text-align: left; }
+button.coai-cal-day:hover { background: var(--coai-bg-subtle); }
+button.coai-cal-day[aria-pressed="true"] { background: var(--coai-blue-soft); box-shadow: inset 0 0 0 2px var(--coai-blue); }
+.coai-cal-num { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: var(--coai-text-body); font-variant-numeric: tabular-nums; }
+.coai-cal-week[data-col="0"], .coai-cal-day[data-col="0"] .coai-cal-num { color: #D43D20; }
+.coai-cal-week[data-col="6"], .coai-cal-day[data-col="6"] .coai-cal-num { color: var(--coai-blue-strong); }
+.dark .coai-cal-week[data-col="0"], .dark .coai-cal-day[data-col="0"] .coai-cal-num { color: #FF8A6A; }
+.coai-cal-day[data-past] .coai-cal-num, .coai-cal-day[data-past] .coai-cal-chips { opacity: .55; }
+.coai-cal-day[data-today] .coai-cal-num { background: var(--coai-blue); color: #fff; }
+.dark .coai-cal-day[data-today] .coai-cal-num { color: #0F1013; }
+.coai-cal-chips { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.coai-cal-chip { display: block; height: 18px; padding: 0 5px; border-radius: 4px; font-size: 11px; font-weight: 600; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--cal-c); background: color-mix(in srgb, var(--cal-c) 14%, transparent); }
+.coai-cal-chip[data-type="deadline"] { background: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cal-c) 55%, transparent); }
+.coai-cal-extra { position: absolute; top: 9px; right: 6px; font-size: 11px; font-weight: 600; line-height: 14px; color: var(--coai-text-muted); }
+.coai-cal-side { min-width: 0; min-height: 260px; padding-left: 24px; border-left: 1px solid var(--coai-border); display: flex; flex-direction: column; }
+.coai-cal-side-head { display: flex; align-items: center; justify-content: space-between; min-height: 32px; margin-bottom: 4px; }
+.coai-cal-side-head h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--coai-text-strong); }
+.coai-cal-side-head small { margin-left: 6px; font-size: 14px; font-weight: 700; color: var(--coai-blue-strong); }
+.coai-cal-reset, .coai-cal-more { font-size: 13px; font-weight: 600; color: var(--coai-blue-strong); }
+/* The list takes the month grid's height and scrolls inside it. */
+.coai-cal-scroll { position: relative; flex: 1; min-height: 0; }
+.coai-cal-list { position: absolute; inset: 0; overflow-y: auto; padding-right: 4px; }
+.coai-cal-more { display: none; }
+.coai-cal-item { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid var(--coai-border); text-decoration: none; }
+.coai-cal-item:first-child { border-top: 0; }
+.coai-cal-item[data-past] { opacity: .6; }
+.coai-cal-when { flex: 0 0 56px; align-self: flex-start; padding: 7px 0; border-radius: var(--coai-radius-md); background: var(--coai-bg-subtle); display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.coai-cal-when strong { font-size: 15px; font-weight: 700; line-height: 1.2; color: var(--coai-text-strong); font-variant-numeric: tabular-nums; }
+.coai-cal-when small { font-size: 12px; line-height: 1.2; color: var(--coai-text-muted); }
+.coai-cal-item-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.coai-cal-item-body > strong { font-size: 15px; font-weight: 700; line-height: 1.45; color: var(--coai-text-strong); }
+.coai-cal-item:hover .coai-cal-item-body > strong { color: var(--coai-blue-strong); }
+.coai-cal-item-body .coai-meta { font-size: 13px; }
+.coai-cal-item-tags { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--coai-text-muted); }
+.coai-cal-kind { display: inline-flex; align-items: center; gap: 5px; color: var(--cal-c); }
+.coai-cal-kind::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--cal-c); }
+.coai-cal-due { color: var(--coai-brand); }
+@media (max-width: 1023px) {
+  .coai-cal-body { grid-template-columns: 1fr; gap: 16px; }
+  .coai-cal-side { min-height: 0; padding: 16px 0 0; border-left: 0; border-top: 1px solid var(--coai-border); }
+  .coai-cal-list { position: static; overflow: visible; padding-right: 0; }
+  .coai-cal-list:not([data-expanded]) > .coai-cal-item:nth-child(n+6) { display: none; }
+  .coai-cal-more { display: block; align-self: center; padding: 10px 12px 0; }
+}
+@media (max-width: 767px) {
+  .coai-cal { margin: 16px -16px 0; }
+  .coai-cal + .coai-panels { margin-top: 8px; }
+  .coai-cal-bar strong { min-width: 96px; font-size: 17px; }
+  .coai-cal-legend { margin-left: 0; width: 100%; }
+  .coai-cal-week { padding: 0 0 6px; text-align: center; }
+  /* Cells are too narrow for titles: each entry becomes a dot (a ring for deadlines). */
+  .coai-cal-day { min-height: 52px; padding: 4px 0; align-items: center; }
+  .coai-cal-chips { flex-direction: row; align-items: center; gap: 3px; }
+  .coai-cal-chip { width: 6px; height: 6px; padding: 0; border-radius: 50%; font-size: 0; background: var(--cal-c); }
+  .coai-cal-chip[data-type="deadline"] { background: none; box-shadow: inset 0 0 0 1.5px var(--cal-c); }
+  .coai-cal-extra { position: static; font-size: 10px; line-height: 1; }
+}
+
 /* section panels */
 .coai-panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-top: 32px; }
 @media (max-width: 1279px) { .coai-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

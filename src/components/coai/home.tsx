@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
@@ -13,7 +13,8 @@ import type { ArtifactDTO, PromptDTO, ViewKey } from '@/lib/types';
 import type { AiEvent } from '@/modules/ai-events/catalogue';
 import { HOME_POSTERS } from './home-content';
 import { buildHeroSlides } from './home-posters';
-import { AI_EVENTS } from '@/modules/ai-events/catalogue';
+import { AI_EVENTS, koreaDate } from '@/modules/ai-events/catalogue';
+import { calendarEntries, daysBetween, entriesBetween, entriesOn, monthWeeks, weekdayOf, type CalendarEntry } from '@/modules/ai-events/calendar';
 import { GUIDE_SERVICES, HOME_GUIDE_IDS } from '@/modules/ai-guide/catalogue';
 import { boardDef, type BoardPostDTO } from '@/modules/community-board/boards';
 import type { NewsDTO } from '@/modules/coai-news/news';
@@ -144,17 +145,116 @@ function HeroCarousel() {
 
 // ── shared panel (§3 SectionPanel) ───────────────────────────────────────
 
-function Panel({ title, view, params, children, wide }: { title: string; view: ViewKey; params?: Record<string, string>; children: ReactNode; wide?: boolean }) {
+function Panel({ title, view, params, children, wide, className }: { title: string; view: ViewKey; params?: Record<string, string>; children: ReactNode; wide?: boolean; className?: string }) {
   const t = useTranslations('coai');
   const go = useGo();
   return (
-    <section className={`coai-panel${wide ? ' coai-panel-wide' : ''}`}>
+    <section className={`coai-panel${wide ? ' coai-panel-wide' : ''}${className ? ` ${className}` : ''}`}>
       <div className="coai-panel-head">
         <h2>{title}</h2>
         <a className="coai-more" href={hrefFor(view, params)} onClick={(event) => go(event, view, params)}>{t('more')}<ChevronRight size={16} /></a>
       </div>
       {children}
     </section>
+  );
+}
+
+// ── AI 일정 calendar (right under the posters) ───────────────────────────
+
+const WEEKDAYS = { ko: ['일', '월', '화', '수', '목', '금', '토'], en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] };
+const KIND_KEY = { course: 'calKindCourse', contest: 'calKindContest', event: 'calKindEvent' } as const;
+const CELL_CHIPS = 2;
+const shortDay = (day: string) => `${Number(day.slice(5, 7))}.${Number(day.slice(8, 10))}`;
+
+function EventCalendar() {
+  const t = useTranslations('coai');
+  const locale = useAppStore((s) => s.locale) === 'en' ? 'en' : 'ko';
+  const go = useGo();
+  // Same query as the carousel, so both share one request.
+  const events = useQuery({ queryKey: ['coai-home', 'events'], queryFn: () => api.get<AiEvent[]>('/api/ai-events'), staleTime: 60_000, placeholderData: AI_EVENTS });
+  const entries = useMemo(() => calendarEntries(events.data ?? []), [events.data]);
+  const [today] = useState(() => koreaDate(new Date()));
+  const [month, setMonth] = useState(() => today.slice(0, 7));
+  const [selected, setSelected] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  const [year, monthNo] = month.split('-').map(Number);
+  const weeks = monthWeeks(year, monthNo);
+  const monthDays = weeks.flat().filter((day): day is string => day !== null);
+  const isCurrent = month === today.slice(0, 7);
+  // ICU would print a numeric year as "2,026", so every value goes in as text.
+  const names = (day: string) => ({ year: day.slice(0, 4), month: String(Number(day.slice(5, 7))), day: String(Number(day.slice(8, 10))), weekday: WEEKDAYS[locale][weekdayOf(day)], monthName: new Date(day + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' }) });
+  const show = (next: string, day: string | null = null) => { setMonth(next); setSelected(day); setExpanded(false); };
+  const shift = (delta: number) => show(new Date(Date.UTC(year, monthNo - 1 + delta, 1)).toISOString().slice(0, 7));
+
+  // Side list: the picked day, or what is still ahead this month (the whole month when browsing another one).
+  const listed = selected ? entriesOn(entries, selected) : entriesBetween(entries, isCurrent ? today : monthDays[0], monthDays[monthDays.length - 1]);
+  const listTitle = selected ? t('calDayList', names(selected)) : isCurrent ? t('calUpcoming') : t('calMonthList', names(monthDays[0]));
+  const due = (entry: CalendarEntry) => { const left = daysBetween(today, entry.from); return left === 0 ? ` · ${t('calDueToday')}` : left > 0 ? ` · D-${left}` : ''; };
+
+  return (
+    <Panel title={t('homeCalendar')} view="ai-events" className="coai-cal">
+      <div className="coai-cal-body">
+        <div className="coai-cal-month">
+          <div className="coai-cal-bar">
+            <button type="button" className="coai-cal-nav" aria-label={t('calPrevMonth')} onClick={() => shift(-1)}><ChevronLeft size={18} /></button>
+            <strong aria-live="polite">{t('calMonthTitle', names(monthDays[0]))}</strong>
+            <button type="button" className="coai-cal-nav" aria-label={t('calNextMonth')} onClick={() => shift(1)}><ChevronRight size={18} /></button>
+            <button type="button" className="coai-cal-today" onClick={() => show(today.slice(0, 7))}>{t('calToday')}</button>
+            <div className="coai-cal-legend">
+              {(['course', 'contest', 'event'] as const).map((kind) => <span key={kind} data-kind={kind}><i />{t(KIND_KEY[kind])}</span>)}
+              <span><i data-type="deadline" />{t('calDeadline')}</span>
+            </div>
+          </div>
+          <div className="coai-cal-grid">
+            {WEEKDAYS[locale].map((label, col) => <span key={label} className="coai-cal-week" data-col={col} aria-hidden="true">{label}</span>)}
+            {weeks.flatMap((week, row) => week.map((day, col) => {
+              if (!day) return <span key={`${row}-${col}`} className="coai-cal-day" data-blank="" />;
+              const dayEntries = entriesOn(entries, day);
+              const cell = { className: 'coai-cal-day', 'data-col': col, 'data-today': day === today || undefined, 'data-past': day < today || undefined };
+              const body = <>
+                <span className="coai-cal-num">{Number(day.slice(8))}</span>
+                <span className="coai-cal-chips">
+                  {dayEntries.slice(0, CELL_CHIPS).map((entry) => <span key={entry.key} className="coai-cal-chip" data-kind={entry.event.kind} data-type={entry.type}>{entry.event.title}</span>)}
+                  {dayEntries.length > CELL_CHIPS && <span className="coai-cal-extra">+{dayEntries.length - CELL_CHIPS}</span>}
+                </span>
+              </>;
+              if (!dayEntries.length) return <div key={day} {...cell}>{body}</div>;
+              return <button key={day} type="button" {...cell} aria-pressed={selected === day} aria-label={t('calDayAria', { ...names(day), count: String(dayEntries.length) })} onClick={() => show(month, selected === day ? null : day)}>{body}</button>;
+            }))}
+          </div>
+        </div>
+        <div className="coai-cal-side">
+          <div className="coai-cal-side-head">
+            <h3>{listTitle}<small>{listed.length}</small></h3>
+            {selected && <button type="button" className="coai-cal-reset" onClick={() => show(month)}>{t('calShowAll')}</button>}
+          </div>
+          <div className="coai-cal-scroll">
+            <div className="coai-cal-list" data-expanded={expanded || undefined}>
+              {listed.length === 0 && <p className="coai-empty">{t(isCurrent && !selected ? 'calEmptyUpcoming' : 'calEmptyMonth')}</p>}
+              {listed.map((entry) => (
+                <a key={entry.key} className="coai-cal-item" data-kind={entry.event.kind} data-past={entry.to < today || undefined} href={hrefFor('ai-events', { id: entry.event.id })} onClick={(event) => go(event, 'ai-events', { id: entry.event.id })}>
+                  <span className="coai-cal-when">
+                    <strong>{shortDay(entry.from)}</strong>
+                    <small>{entry.to === entry.from ? WEEKDAYS[locale][weekdayOf(entry.from)] : `~${shortDay(entry.to)}`}</small>
+                  </span>
+                  <span className="coai-cal-item-body">
+                    <span className="coai-cal-item-tags">
+                      <span className="coai-cal-kind">{t(KIND_KEY[entry.event.kind])}</span>
+                      {entry.type === 'deadline' && <span className="coai-cal-due">{t('calDeadline')}{due(entry)}</span>}
+                      {entry.type === 'start' && <span>{t('calStart')}</span>}
+                    </span>
+                    <strong className="coai-clamp-1">{entry.event.title}</strong>
+                    <span className="coai-meta coai-clamp-1">{entry.type === 'deadline' ? entry.event.application : entry.event.schedule}</span>
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+          {listed.length > 5 && !expanded && <button type="button" className="coai-cal-more" onClick={() => setExpanded(true)}>{t('calMoreCount', { count: String(listed.length - 5) })}</button>}
+        </div>
+      </div>
+    </Panel>
   );
 }
 
@@ -317,11 +417,12 @@ function CommunityPopular() {
   );
 }
 
-/** COAI home (docs/coai/03 §2): poster carousel, three section panels, community popular. */
+/** COAI home (docs/coai/03 §2): poster carousel, AI 일정 calendar, three section panels, community popular. */
 export default function CoaiHome() {
   return (
     <div className="coai-home coai-container">
       <HeroCarousel />
+      <EventCalendar />
       <div className="coai-panels">
         <LatestNews />
         <RecommendedPrompts />
