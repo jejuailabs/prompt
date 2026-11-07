@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { repoLinks } from "../src/modules/github-pick/sources";
 import { serializePick } from "../src/modules/github-pick/server";
 import { formatStars } from "../src/modules/github-pick/pick";
+import { isInstallCommand } from "../src/modules/github-pick/write";
 
 test("repo links: owner/repo only, no GitHub pages or profiles, de-duplicated", () => {
   const text = [
@@ -22,6 +23,16 @@ test("serialize: only published-shape github-pick rows become cards", () => {
   assert.equal(card?.stars, 114403);
   assert.equal(serializePick({ ...base, sourceModule: "coai-news", metadata }), null);
   assert.equal(serializePick({ ...base, sourceModule: "github-pick", metadata: "{}" }), null);
+});
+
+test("install line: only real install/launch commands survive", () => {
+  for (const ok of ["npx rea-agents setup", "npx claude-mem install", "pip install timesfm", "uv tool install agent-reach", "brew install herdr",
+    "git clone https://github.com/a/b", "curl -fsSL https://releases.herdr.dev/app/install.sh | sh", "$ npm install -g foo", "docker run -p 3000:3000 x", "claude mcp add x -- npx y"]) {
+    assert.equal(isInstallCommand(ok), true, ok);
+  }
+  for (const bad of ["pnpm check", "npm test", "python examples/offline_inference.py", "make build", "cargo test", "pytest"]) {
+    assert.equal(isInstallCommand(bad), false, bad);
+  }
 });
 
 test("stars read naturally in Korean", () => {

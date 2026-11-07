@@ -47,14 +47,24 @@ type Candidate = { key: string; repo: string; videos: FeedVideo[]; channels: Set
 
 const KOREAN_CHANNELS = new Set(PICK_CHANNELS.filter((channel) => channel.lang === 'ko').map((channel) => channel.name));
 
-/** More channels covering the same repo beats raw stars; a Korean channel, a recent push and a recent video break ties. */
+// Readers are people learning to use AI, not server engineers (2026-11-08 사용자 지시: 대중적인 도구가 메인).
+// Tools they can try right away rank up; inference/training/infra projects rank down (the AI step also rejects them).
+const EVERYDAY = /claude[- ]?code|chatgpt|gemini|cursor|codex|\bmcp\b|plugin|skill|extension|desktop|app\b|no-?code|automation|workflow|agent|chrome|notion|obsidian|figma|video|image|voice|music|slide|ppt|productivity|vibe/i;
+const INFRA = /inference|serving|cuda|kernel|gpu|training|fine-?tun|quantiz|llm[- ]?engine|vllm|tensor|database|\bdb\b|kubernetes|k8s|cluster|compiler|runtime|sdk\b|benchmark|dataset/i;
+
+function audienceBonus(info: RepoInfo) {
+  const text = `${info.fullName} ${info.description} ${info.topics.join(' ')}`;
+  return (EVERYDAY.test(text) ? 6 : 0) - (INFRA.test(text) ? 8 : 0);
+}
+
+/** More channels covering the same repo beats raw stars; tools ordinary users can try, a Korean channel, a recent push and a recent video break ties. */
 function score(candidate: Candidate, now: number) {
   const info = candidate.info!;
   const newest = Math.max(...candidate.videos.map((video) => Date.parse(video.publishedAt) || 0));
   const videoAgeDays = (now - newest) / DAY;
   const pushAgeDays = (now - Date.parse(info.pushedAt)) / DAY;
   const korean = [...candidate.channels].some((name) => KOREAN_CHANNELS.has(name)) ? 5 : 0;
-  return candidate.channels.size * 10 + korean + Math.log10(info.stars + 1) * 2 + (pushAgeDays < 14 ? 2 : 0) + Math.max(0, 7 - videoAgeDays) / 2;
+  return candidate.channels.size * 10 + korean + audienceBonus(info) +Math.log10(info.stars + 1) * 2 + (pushAgeDays < 14 ? 2 : 0) + Math.max(0, 7 - videoAgeDays) / 2;
 }
 
 async function collect(options: PickRunOptions): Promise<PickReport> {
