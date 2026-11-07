@@ -575,3 +575,12 @@ SocialKit 자막 요청은 공식 권장 130초 클라이언트 제한 적용. �
 - [x] 캐러셀과 같은 `/api/ai-events` 조회를 공유하므로 관리자 등록·자동 수집 일정이 코드 수정 없이 반영. 모바일은 제목 대신 점(마감은 빈 원)으로 표시, 목록은 5개 후 "더 보기".
 - [x] `tests/ai-events-calendar.test.ts` 6개 통과, TypeScript 통과. 로컬 PC 1360px·모바일 375px(다크) 화면과 날짜 선택 확인, 가로 넘침 없음.
 - [ ] 일정 문구에 연도 없는 날짜("본선 11.21")와 날짜 정보가 전혀 없는 일정("원문 확인")은 캘린더에 나오지 않음. AI 일정 목록 화면 자체의 캘린더 보기는 미구현.
+
+### 2026-11-08 — 깃허브 픽 자동 수집 (`github-pick`)
+
+- [x] 화이트리스트 유튜브 10개 채널(빌더조쉬·Github Awesome·GithubTrends·AICodeKing 등, 최근 15개 영상 중 깃허브 링크 비율로 선정) RSS에서 최근 30일 영상의 깃허브 저장소 링크를 모아, 여러 채널이 함께 소개한 저장소 우선으로 하루 3개를 카드로 게시. 채널 목록은 `src/modules/github-pick/channels.ts`.
+- [x] 저장소 정보·README는 GitHub API(`GITHUB_TOKEN`), 영상 자막은 SocialKit(쇼츠 포함), 카드 작성은 Gemini(실패 시 OpenAI). 보관·포크·6개월 이상 방치·별 100개 미만(단일 채널) 저장소는 제외. 설치 명령은 README에 실제로 있는 문장만 표시. 처리한 저장소는 원장(`github-pick-ingest`)에 남겨 다시 AI를 부르지 않음.
+- [x] 매일 07:30 KST Vercel 크론 `GET /api/cron/github-pick`(`CRON_SECRET`), 관리자 즉시 실행 `POST`(기본 미리보기). 로컬 미리보기 `scripts/github-pick-dry-run.ts`.
+- [x] 화면: 뉴스·이벤트 메뉴 안 `#github-pick`(목록·상세·댓글) + 뉴스 화면에 "오늘의 깃허브 픽" 3개 띠. 모듈 레지스트리 등록(`group: learn`, NEW 30일).
+- [x] `tests/github-pick.test.ts` 3개 통과, TypeScript·ESLint 통과. 로컬 미리보기 실행에서 후보 590개 → 카드 3개 생성 확인. 로컬 PC 화면에서 목록·상세를 미리보기 데이터로 확인.
+- [ ] 운영 DB 실제 게시와 배포 후 크론 동작은 미확인(배포 전). 모바일 375px 화면 미확인.

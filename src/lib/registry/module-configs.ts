@@ -5,6 +5,7 @@ import { AI_EVENTS_MODULE } from '@/modules/ai-events/module.config';
 import { MOTION_LIBRARY_MODULE } from '@/modules/motion-library/module.config';
 import { COMMUNITY_BOARD_MODULE } from '@/modules/community-board/module.config';
 import { COAI_NEWS_MODULE } from '@/modules/coai-news/module.config';
+import { GITHUB_PICK_MODULE } from '@/modules/github-pick/module.config';
 import { AI_GUIDE_MODULE } from '@/modules/ai-guide/module.config';
 import type { ModuleDTO } from '@/lib/types';
 
@@ -19,6 +20,7 @@ export const MODULE_CONFIGS: ModuleConfigSeed[] = [
   MOTION_LIBRARY_MODULE,
   COMMUNITY_BOARD_MODULE,
   COAI_NEWS_MODULE,
+  GITHUB_PICK_MODULE,
   AI_GUIDE_MODULE,
   { id: 'game-room', phase: 3, titleKo: '게임룸', titleEn: 'Game Room', descKo: '만든 게임을 함께 플레이하세요', descEn: 'Play community games', icon: 'gamepad-2', navOrder: 7.5, enabled: true, status: 'active', mainScreenSlot: 'none', entryView: 'game-room', requiresAuth: false, adminOnly: false },
   { id: 'public-gallery', phase: 1, titleKo: '둘러보기', titleEn: 'Explore', descKo: '만든 작품을 보고, 실행하고, 이야기하세요', descEn: 'Explore and play community creations', icon: 'images', navOrder: 1.5, enabled: true, status: 'active', mainScreenSlot: 'none', entryView: 'gallery', requiresAuth: false, adminOnly: false },

@@ -35,6 +35,7 @@ export type ViewKey =
   | 'ai-guide'
   | 'ai-events'
   | 'news'
+  | 'github-pick'
   | 'motion-library'
   | 'landing-pages'
   | 'ai-tools'

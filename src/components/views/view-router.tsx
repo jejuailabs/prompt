@@ -25,6 +25,7 @@ const LandingPagesView = dynamic(() => import('@/modules/landing-pages'), { load
 const AiEventsView = dynamic(() => import('@/modules/ai-events'), { loading: () => <ViewLoading /> });
 const AiGuideView = dynamic(() => import('@/modules/ai-guide'), { loading: () => <ViewLoading /> });
 const CoaiNewsView = dynamic(() => import('@/modules/coai-news'), { loading: () => <ViewLoading /> });
+const GithubPickView = dynamic(() => import('@/modules/github-pick'), { loading: () => <ViewLoading /> });
 const CommunityBoardView = dynamic(() => import('@/modules/community-board'), { loading: () => <ViewLoading /> });
 const MotionLibraryView = dynamic(() => import('@/modules/motion-library'), { loading: () => <ViewLoading /> });
 const AiToolsView = dynamic(() => import('@/components/views/ai-tools'), { loading: () => <ViewLoading /> });
@@ -75,6 +76,8 @@ export default function ViewRouter() {
       return <AiGuideView />;
     case 'news':
       return <CoaiNewsView />;
+    case 'github-pick':
+      return <GithubPickView />;
     case 'community':
       return <CommunityBoardView />;
     case 'academy':

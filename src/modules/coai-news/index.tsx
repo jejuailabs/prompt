@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import type { CommentDTO } from '@/lib/types';
 import { eventStatus, filterEvents, type AiEvent } from '@/modules/ai-events/catalogue';
 import { EventPoster } from '@/modules/ai-events/event-poster';
+import { GithubPickStrip } from '@/modules/github-pick';
 import { NEWS_CATEGORIES, newsCategoryLabel, type NewsCategory, type NewsDTO, type NewsInput } from './news';
 import styles from './news.module.css';
 
@@ -183,7 +184,7 @@ export default function CoaiNews() {
       </header>
       {params.write && isAdmin ? <NewsEditor done={(id) => navigate('news', { id })} cancel={() => navigate('news')} />
         : params.id ? <NewsDetail key={params.id} id={params.id} back={() => navigate('news')} isAdmin={isAdmin} />
-        : <><EventStrip /><NewsList open={(id) => navigate('news', { id })} /></>}
+        : <><EventStrip /><GithubPickStrip /><NewsList open={(id) => navigate('news', { id })} /></>}
     </div>
   );
 }
