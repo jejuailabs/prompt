@@ -194,7 +194,7 @@ export default function GithubPick() {
     <div className={styles.page}>
       <header className={styles.headerRow}>
         <div>
-          <p className={styles.eyebrow}>뉴스·이벤트</p>
+          <p className={styles.eyebrow}>소식</p>
           <h1>깃허브 픽</h1>
           <p>유튜버들이 요즘 소개한 깃허브 도구를 매일 골라, 무엇인지와 어디에 쓰는지를 쉬운 말로 정리해요.</p>
         </div>

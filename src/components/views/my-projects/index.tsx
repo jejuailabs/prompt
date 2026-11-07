@@ -167,12 +167,12 @@ export default function MyProjectsView() {
             <p>{session.title || (locale === 'en' ? 'Creator' : '크리에이터')}</p>
             <div className={styles.profileActions}>
               <button type="button" onClick={() => navigate('community', { write: '1' })}>{locale === 'en' ? 'Write a post' : '글쓰기'}</button>
-              <button type="button" onClick={() => navigate('ai-tools')}>{locale === 'en' ? 'Open tools' : '바로쓰기'}</button>
+              <button type="button" onClick={() => navigate('ai-tools')}>{locale === 'en' ? 'Open tools' : 'AI 도구 써보기'}</button>
               {session.role === 'admin' && <button type="button" className={styles.adminButton} onClick={() => navigate('admin')}><ShieldCheck size={16} />{locale === 'en' ? 'Admin mode' : '관리자 모드'}</button>}
             </div>
           </div>
         </div>
-        <div className={styles.creditPanel}><h3>{locale === 'en' ? 'Credits' : '크레딧'}</h3><CreditsWidget className={styles.credits} /><p className={styles.creditNote}>{locale === 'en' ? 'Use credits in Tools and the creative studios.' : '바로쓰기와 만들어보기의 AI 생성에 사용해요.'}</p></div>
+        <div className={styles.creditPanel}><h3>{locale === 'en' ? 'Credits' : '크레딧'}</h3><CreditsWidget className={styles.credits} /><p className={styles.creditNote}>{locale === 'en' ? 'Use credits in Tools and the creative studios.' : '써보기와 만들기의 AI 생성에 사용해요.'}</p></div>
         <div className={styles.stats}>
           <h3>{locale === 'en' ? 'My activity' : '내 활동'}</h3>
           <dl>

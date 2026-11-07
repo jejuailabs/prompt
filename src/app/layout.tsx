@@ -9,7 +9,7 @@ import Providers from "@/components/providers";
 export const metadata: Metadata = {
   title: "COAI — 쉽게 보고, 바로 써보는 AI 커뮤니티",
   description:
-    "AI를 같이 배우고, 같이 쓰고, 같이 만드는 커뮤니티. AI 뉴스와 행사, 프롬프트, 바로 쓰는 AI 도구, 배우기와 만들어보기까지 한곳에서.",
+    "AI를 같이 배우고, 같이 쓰고, 같이 만드는 커뮤니티. AI 소식과 행사, 배우기·써보기·만들기를 한곳에서.",
   keywords: ["COAI", "AI 커뮤니티", "AI 스터디", "프롬프트", "AI 뉴스", "바이브코딩"],
   icons: { icon: "/coai/brand/icon.png", apple: "/coai/brand/apple-icon.png" },
   metadataBase: new URL(SITE_URL),

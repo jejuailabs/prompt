@@ -27,7 +27,7 @@ const TTS_TABS: { id: TtsTab; label: string; hint: string }[] = [
 
 function TtsTool() {
   const [tab, setTab] = useState<TtsTab>('tts'); const [description, setDescription] = useState(TTS_DESIGN_PRESETS[0].description);
-  const [text, setText] = useState('안녕하세요. COAI 바로쓰기에서 자연스러운 AI 음성을 만들어 보세요.'); const [voice, setVoice] = useState(TTS_VOICES[0].id); const [language, setLanguage] = useState('Korean'); const [style, setStyle] = useState('default');
+  const [text, setText] = useState('안녕하세요. COAI 써보기에서 자연스러운 AI 음성을 만들어 보세요.'); const [voice, setVoice] = useState(TTS_VOICES[0].id); const [language, setLanguage] = useState('Korean'); const [style, setStyle] = useState('default');
   const [job, setJob] = useState<TtsJob | null>(null); const [submitting, setSubmitting] = useState(false); const [error, setError] = useState('');
   const busy = submitting || (!!job && TTS_ACTIVE.has(job.status));
   async function call(init?: RequestInit, id?: string) {

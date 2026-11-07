@@ -1,12 +1,12 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { BookOpen, Compass, Home, Newspaper, PlaySquare, Sparkles, Users, Wrench } from 'lucide-react';
+import { BookOpen, Home, Newspaper, PlaySquare, Sparkles, Users } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { COAI_BOTTOM_TABS, COAI_MENUS, activeCoaiMenu, coaiMenuHref, type CoaiMenu } from '@/lib/coai-navigation';
 import { useMenuNavigate } from './header';
 
-const ICONS: Record<CoaiMenu['icon'], typeof Home> = { home: Home, newspaper: Newspaper, sparkles: Sparkles, 'play-square': PlaySquare, wrench: Wrench, compass: Compass, 'book-open': BookOpen, users: Users };
+const ICONS: Record<CoaiMenu['icon'], typeof Home> = { home: Home, newspaper: Newspaper, sparkles: Sparkles, 'play-square': PlaySquare, 'book-open': BookOpen, users: Users };
 
 /** Mobile bottom tab bar, five fixed slots (docs/coai/02 §2, 03 §2.6). */
 export default function CoaiBottomTab() {

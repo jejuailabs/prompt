@@ -272,7 +272,7 @@ function GamePlayPost() {
           onCloseAutoFocus={event=>{event.preventDefault();playButtonRef.current?.focus();}}
           onInteractOutside={event=>event.preventDefault()}>
           <header className={styles.header}>
-            <div className={styles.heading}><small>만들어보기 · 게임</small><DialogTitle>{game?.title??'게임'}</DialogTitle></div>
+            <div className={styles.heading}><small>만들기 · 게임</small><DialogTitle>{game?.title??'게임'}</DialogTitle></div>
             <div className={styles.toolbar}>
               {game && <ArtifactShare id={game.id} title={game.title} game onOpen={() => { if (!infoOpen) showInfo(); if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined); }} />}
               <Button variant="ghost" size="icon" data-game-info aria-label={infoOpen?'게임 화면으로':'게임 정보와 랭킹'} aria-pressed={infoOpen} onClick={showInfo}><Trophy className="h-4 w-4"/></Button>

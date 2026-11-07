@@ -28,7 +28,7 @@ export function GamePost({ game, onPlay, onBack, playButtonRef, actions }: GameP
         <div className={styles.caption}><Gamepad2 className="size-4" /><span>{game.title}</span><small>클릭해서 시작</small></div>
       </section>
       <section className={styles.description} aria-label="게임 설명">
-        <p className={styles.eyebrow}>만들어보기 · 게임</p>
+        <p className={styles.eyebrow}>만들기 · 게임</p>
         <h1>{game.title}</h1>
         <p className={styles.body}>{game.description || '플레이 버튼을 눌러 게임을 즐겨보세요.'}</p>
         {controls && <div className={styles.controls}><h2>조작 방법</h2><p>{controls}</p></div>}

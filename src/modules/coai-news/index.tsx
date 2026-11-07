@@ -167,7 +167,7 @@ function NewsEditor({ done, cancel }: { done: (id: string) => void; cancel: () =
   );
 }
 
-/** 뉴스·이벤트: upcoming event posters + news list on one screen, news detail (summary · commentary · meaning · source), staff editor. */
+/** 소식: upcoming event posters + news list on one screen, news detail (summary · commentary · meaning · source), staff editor. */
 export default function CoaiNews() {
   const params = useAppStore((s) => s.params);
   const navigate = useAppStore((s) => s.navigate);
@@ -176,7 +176,7 @@ export default function CoaiNews() {
   return (
     <div className={styles.page}>
       <header className={styles.headerRow}>
-        <div><p className={styles.eyebrow}>뉴스·이벤트</p><h1>AI 뉴스·행사</h1><p>오늘 알아두면 좋은 AI 소식과 참여할 만한 행사·강의를 한 화면에서 확인하세요.</p></div>
+        <div><p className={styles.eyebrow}>소식</p><h1>AI 뉴스·행사</h1><p>오늘 알아두면 좋은 AI 소식과 참여할 만한 행사·강의를 한 화면에서 확인하세요.</p></div>
         {isAdmin && !params.write && !params.id && <div className={styles.headerActions}>
           <button type="button" className={styles.primary} onClick={() => navigate('ai-events', { new: '1' })}><Plus size={16} />행사 등록</button>
           <button type="button" className={styles.primary} onClick={write}><Plus size={16} />뉴스 등록</button>

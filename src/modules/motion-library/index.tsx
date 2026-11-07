@@ -107,7 +107,7 @@ export default function MotionLibraryView() {
   return <div className={styles.page}>
     <header className={styles.hero}>
       <div>
-        <span className={styles.eyebrow}>{mode === 'web' ? '만들어보기 · 모션' : '만들어보기 · 모션'}</span>
+        <span className={styles.eyebrow}>{mode === 'web' ? '만들기 · 모션' : '만들기 · 모션'}</span>
         {mode === 'web'
           ? <><h1>설치 없이,<br /><em>바로 영상.</em></h1><p>리모션 없이 브라우저에서 바로 재생하고 MP4로 받는 모션그래픽이에요.<br />같은 장면 코드를 작은 runtime 파일 하나로 돌려요. 지금 {WEB_ITEMS.length}개, 계속 늘어나요.</p></>
           : <><h1>코드로 만드는<br /><em>모션그래픽.</em></h1><p>제품 광고, 캐릭터, 자막, 전환 효과까지 44가지 리모션 예제를 모았어요.<br />마음에 드는 장면을 고르고 코드를 복사해 이미지 주소와 글자만 바꿔 보세요.</p></>}

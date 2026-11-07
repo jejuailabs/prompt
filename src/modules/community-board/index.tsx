@@ -134,7 +134,7 @@ function Gallery() {
   });
   return (
     <section>
-      <p className={styles.hint}>AI로 만든 이미지·영상을 자랑해 보세요. 게임과 웹 작품은 만들어보기에 모여 있어요.</p>
+      <p className={styles.hint}>AI로 만든 이미지·영상을 자랑해 보세요. 게임과 웹 작품은 만들기에 모여 있어요.</p>
       <div className={styles.gallery}>
         {works.data?.map((work) => {
           const image = work.metadata?.previewUrl || work.metadata?.frames?.[0] || (work.type === 'image' ? work.fileUrl : null);
