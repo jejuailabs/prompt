@@ -5,7 +5,7 @@ import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, ChevronLeft, ChevronRight, Code2, Copy, FileText, Heart, Image as ImageIcon, MapPin, MessageCircle, Eye, Newspaper } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Code2, Copy, FileText, GitBranch, Heart, Image as ImageIcon, MapPin, MessageCircle, Eye, Newspaper, Star } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
 import { toast } from '@/hooks/use-toast';
@@ -18,6 +18,7 @@ import { calendarEntries, daysBetween, entriesBetween, entriesOn, monthWeeks, we
 import { GUIDE_SERVICES, HOME_GUIDE_IDS } from '@/modules/ai-guide/catalogue';
 import { boardDef, type BoardPostDTO } from '@/modules/community-board/boards';
 import type { NewsDTO } from '@/modules/coai-news/news';
+import { formatStars, type PickDTO } from '@/modules/github-pick/pick';
 
 const AUTO_ADVANCE_MS = 5000;
 
@@ -73,17 +74,16 @@ function HeroCarousel() {
   const slideCount = posterStyle === 'clay' ? HOME_POSTERS.length : slides.length;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [perView, setPerView] = useState(4);
+  // Two full posters per page at every width (PC shows 2.5, the half card hints at more).
+  const perView = 2;
   const pageCount = Math.max(1, slideCount - perView + 1);
   const viewport = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState(0);
 
   // Card width drives the slide step; ResizeObserver also fires once on mount.
   const measure = useCallback(() => {
-    const width = window.innerWidth;
-    setPerView(width < 1024 ? 2 : 4);
     const card = viewport.current?.querySelector<HTMLElement>('.coai-poster');
-    if (card) setStep(card.offsetWidth + (width < 768 ? 12 : 16));
+    if (card) setStep(card.offsetWidth + (window.innerWidth < 768 ? 12 : 16));
   }, []);
   useEffect(() => {
     const node = viewport.current;
@@ -134,6 +134,7 @@ function HeroCarousel() {
           ))}
         </div>
       </div>
+      <a className="coai-cal-open" href={hrefFor('ai-events')} onClick={(event) => go(event, 'ai-events')}><CalendarDays size={14} />{t('calOpen')}</a>
       {pageCount > 1 && <>
         <button type="button" className="coai-carousel-arrow" data-dir="prev" aria-label={t('prev')} onClick={() => move(-1)}><ChevronLeft size={22} /></button>
         <button type="button" className="coai-carousel-arrow" data-dir="next" aria-label={t('next')} onClick={() => move(1)}><ChevronRight size={22} /></button>
@@ -253,6 +254,41 @@ function EventCalendar() {
           </div>
           {listed.length > 5 && !expanded && <button type="button" className="coai-cal-more" onClick={() => setExpanded(true)}>{t('calMoreCount', { count: String(listed.length - 5) })}</button>}
         </div>
+      </div>
+    </Panel>
+  );
+}
+
+// ── 깃허브 픽 (webzine list beside the posters on PC, 2×2 cards under them on mobile) ──
+
+const HOME_PICKS = 4;
+
+function PickThumb({ pick }: { pick: PickDTO }) {
+  const [failed, setFailed] = useState(false);
+  if (!pick.imageUrl || failed) return <span className="coai-pick-thumb" data-empty="" aria-hidden="true"><GitBranch size={22} /></span>;
+  return <img className="coai-pick-thumb" src={pick.imageUrl} alt="" loading="lazy" onError={() => setFailed(true)} />;
+}
+
+function GithubPicks() {
+  const t = useTranslations('coai');
+  const go = useGo();
+  const picks = useQuery({ queryKey: ['coai-home', 'github-pick'], queryFn: () => api.get<PickDTO[]>(`/api/github-pick?limit=${HOME_PICKS}`), staleTime: 60_000 });
+  const items = picks.data?.slice(0, HOME_PICKS) ?? [];
+  return (
+    <Panel title={t('homeGithubPick')} view="github-pick" className="coai-picks-panel">
+      {picks.isSuccess && items.length === 0 && <p className="coai-empty">{t('homeEmpty')}</p>}
+      <div className="coai-picks">
+        {picks.isLoading && Array.from({ length: HOME_PICKS }, (_, i) => <div key={i} className="coai-pick" data-skeleton="" aria-hidden="true"><span className="coai-pick-thumb" /><span className="coai-pick-body"><span /><span /></span></div>)}
+        {items.map((pick) => (
+          <a key={pick.id} className="coai-pick" href={hrefFor('github-pick', { id: pick.id })} onClick={(event) => go(event, 'github-pick', { id: pick.id })}>
+            <PickThumb pick={pick} />
+            <span className="coai-pick-body">
+              <span className="coai-pick-repo coai-clamp-1">{pick.repo}</span>
+              <strong className="coai-clamp-2">{pick.title}</strong>
+              <span className="coai-pick-meta"><span><Star size={13} />{formatStars(pick.stars)}</span><span>{t('pickChannels', { count: String(new Set(pick.videos.map((video) => video.channel)).size) })}</span></span>
+            </span>
+          </a>
+        ))}
       </div>
     </Panel>
   );
@@ -417,11 +453,17 @@ function CommunityPopular() {
   );
 }
 
-/** COAI home (docs/coai/03 §2): poster carousel, AI 일정 calendar, three section panels, community popular. */
+/**
+ * COAI home (docs/coai/03 §2, 2026-11-08 layout): poster carousel with 깃허브 픽 beside it on PC
+ * (under it on mobile), AI 일정 calendar (PC/tablet only), three section panels, community popular.
+ */
 export default function CoaiHome() {
   return (
     <div className="coai-home coai-container">
-      <HeroCarousel />
+      <div className="coai-hero-row">
+        <HeroCarousel />
+        <GithubPicks />
+      </div>
       <EventCalendar />
       <div className="coai-panels">
         <LatestNews />

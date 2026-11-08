@@ -97,11 +97,17 @@
 
 /* ── home ───────────────────────────────────────── */
 .coai-home { padding-top: 24px; padding-bottom: 8px; }
-.coai-carousel { position: relative; }
+/* Top row: posters left (2.5 visible), 깃허브 픽 webzine list right; stacks below 1024px. */
+.coai-hero-row { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 24px; align-items: stretch; }
+@media (max-width: 1023px) { .coai-hero-row { grid-template-columns: 1fr; gap: 24px; } }
+.coai-carousel { position: relative; min-width: 0; }
+/* "캘린더 보기" shortcut on the posters: mobile only, where the calendar panel is hidden. */
+.coai-cal-open { display: none; position: absolute; top: 10px; right: 10px; z-index: 3; align-items: center; gap: 4px; height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(17,17,20,.72); color: #fff; font-size: 12px; font-weight: 600; text-decoration: none; backdrop-filter: blur(6px); }
+@media (max-width: 767px) { .coai-cal-open { display: inline-flex; } }
 .coai-carousel-viewport { overflow: hidden; border-radius: var(--coai-radius-xl); }
 .coai-carousel-track { display: flex; gap: 16px; transition: transform .45s ease; }
 @media (prefers-reduced-motion: reduce) { .coai-carousel-track { transition: none; } }
-.coai-poster { position: relative; flex: 0 0 calc((100% - 48px) / 4); aspect-ratio: 11 / 16; border-radius: var(--coai-radius-xl); padding: 24px; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; text-decoration: none; }
+.coai-poster { position: relative; flex: 0 0 calc((100% - 32px) / 2.5); aspect-ratio: 11 / 16; border-radius: var(--coai-radius-xl); padding: 24px; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; text-decoration: none; }
 .coai-poster[data-theme="event"] { background: var(--coai-poster-event-bg); --accent: var(--coai-poster-event-accent); }
 .coai-poster[data-theme="feature"] { background: var(--coai-poster-feature-bg); --accent: var(--coai-poster-feature-accent); }
 .coai-poster[data-theme="challenge"] { background: var(--coai-poster-challenge-bg); --accent: var(--coai-poster-challenge-accent); }
@@ -225,7 +231,7 @@ button.coai-cal-day[aria-pressed="true"] { background: var(--coai-blue-soft); bo
   .coai-cal-more { display: block; align-self: center; padding: 10px 12px 0; }
 }
 @media (max-width: 767px) {
-  .coai-cal { margin: 16px -16px 0; }
+  .coai-cal { display: none; }
   .coai-cal + .coai-panels { margin-top: 8px; }
   .coai-cal-bar strong { min-width: 96px; font-size: 17px; }
   .coai-cal-legend { margin-left: 0; width: 100%; }
@@ -260,6 +266,32 @@ button.coai-cal-day[aria-pressed="true"] { background: var(--coai-blue-soft); bo
 .coai-news-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .coai-news-body h3 { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.45; color: var(--coai-text-strong); }
 .coai-news-foot { display: flex; justify-content: space-between; margin-top: auto; }
+
+/* 깃허브 픽 panel: PC = four thumbnail+title rows filling the poster height; mobile = 2×2 cards */
+.coai-picks-panel { display: flex; flex-direction: column; min-width: 0; }
+.coai-picks { flex: 1; display: flex; flex-direction: column; }
+.coai-pick { flex: 1; display: flex; align-items: center; gap: 14px; min-height: 0; padding: 10px 0; border-top: 1px solid var(--coai-border); text-decoration: none; }
+.coai-pick:first-child { border-top: 0; padding-top: 0; }
+.coai-pick:last-child { padding-bottom: 0; }
+.coai-pick-thumb { flex: 0 0 104px; height: 66px; border-radius: var(--coai-radius-md); background: var(--coai-bg-subtle); object-fit: cover; display: flex; align-items: center; justify-content: center; color: var(--coai-text-muted); }
+.coai-pick-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.coai-pick-repo { font: 700 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--coai-blue-strong); }
+.coai-pick-body strong { font-size: 15px; font-weight: 700; line-height: 1.4; color: var(--coai-text-strong); letter-spacing: -.01em; }
+.coai-pick:hover strong { color: var(--coai-blue-strong); }
+.coai-pick-meta { display: flex; gap: 10px; font-size: 12px; color: var(--coai-text-muted); }
+.coai-pick-meta span { display: inline-flex; align-items: center; gap: 3px; }
+.coai-pick[data-skeleton] .coai-pick-body span { display: block; height: 12px; border-radius: 6px; background: var(--coai-bg-subtle); }
+.coai-pick[data-skeleton] .coai-pick-body span:first-child { width: 40%; }
+@media (max-width: 1023px) {
+  .coai-picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
+  .coai-pick { flex-direction: column; align-items: stretch; gap: 8px; padding: 0; border-top: 0; }
+  .coai-pick-thumb { flex: 0 0 auto; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+  .coai-pick-body strong { font-size: 14px; }
+}
+@media (max-width: 767px) {
+  .coai-hero-row { gap: 0; }
+  .coai-picks-panel { margin: 16px -16px 0; }
+}
 
 /* prompt card */
 .coai-prompt { display: flex; gap: 16px; padding: 16px; border: 1px solid var(--coai-border); border-radius: var(--coai-radius-lg); text-decoration: none; }
