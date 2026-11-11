@@ -14,13 +14,13 @@ export function isTranscriptQualityAcceptable(text: string): boolean {
   return text.trim().split(/\s+/).filter(Boolean).length >= 30;
 }
 
-function formatTimestamp(seconds: number): string {
+export function formatTimestamp(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-function detectTranscriptLang(text: string): 'ko' | 'en' | 'other' {
+export function detectTranscriptLang(text: string): 'ko' | 'en' | 'other' {
   const stripped = text.replace(/\[[^\]]*\]|\d+[:.\s]/g, '').replace(/\s+/g, '');
   if (!stripped) return 'other';
   const korean = (stripped.match(/[\uAC00-\uD7AF\u1100-\u11FF]/g) || []).length;
@@ -30,17 +30,27 @@ function detectTranscriptLang(text: string): 'ko' | 'en' | 'other' {
   return 'other';
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export async function fetchSocialKitTranscript(videoId: string): Promise<TranscriptResult> {
   const key = process.env.SOCIALKIT_API_KEY?.trim();
   if (!key) throw new Error('SocialKit API 키가 설정되지 않아 자막을 추출하지 못했습니다.');
-  let response: Response;
-  try {
-    response = await fetch(`https://api.socialkit.dev/youtube/transcript?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`, {
-      headers: { 'x-access-key': key }, cache: 'no-store', signal: AbortSignal.timeout(8_000),
-    });
-  } catch {
-    throw new Error('SocialKit 자막 추출 요청이 연결 실패 또는 시간 초과로 중단됐습니다. 다시 시도해주세요.');
+  let response: Response | null = null;
+  // SocialKit answers transient outages with 429/5xx ("retryable": true).
+  // Retry those briefly instead of failing the lesson on the first blip.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(1_500 * attempt);
+    try {
+      response = await fetch(`https://api.socialkit.dev/youtube/transcript?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`, {
+        headers: { 'x-access-key': key }, cache: 'no-store', signal: AbortSignal.timeout(8_000),
+      });
+    } catch {
+      response = null;
+      continue;
+    }
+    if (response.ok || (response.status !== 429 && response.status < 500)) break;
   }
+  if (!response) throw new Error('SocialKit 자막 추출 요청이 연결 실패 또는 시간 초과로 중단됐습니다. 다시 시도해주세요.');
   // Do not expose provider bodies: they may echo credentials or request URLs.
   if (!response.ok) throw new Error(`SocialKit 자막 추출 실패 (HTTP ${response.status}). API 키·사용량과 영상 공개 여부를 확인해주세요.`);
   const body = await response.json().catch(() => null) as TranscriptResponse | null;

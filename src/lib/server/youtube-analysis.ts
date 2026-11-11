@@ -2,6 +2,7 @@
 import { db } from '@/lib/db';
 import { chatJson } from '@/lib/server/ai';
 import { fetchSocialKitTranscript } from '@/lib/server/socialkit';
+import { fetchSupadataTranscript } from '@/lib/server/supadata';
 export { isTranscriptQualityAcceptable } from '@/lib/server/socialkit';
 import type { YoutubeAnalysisDTO, YoutubeChapter } from '@/lib/types';
 
@@ -83,16 +84,11 @@ export async function processYoutubeAnalysis(jobId: string) {
   await db.youtubeAnalysisJob.update({ where: { id: job.id }, data: { status: 'running' } });
   await db.youtubeAnalysis.update({ where: { id: job.analysisId }, data: { status: 'running', error: null } });
   try {
-    // Persist extraction before optional AI generation. A billing/AI error must
-    // never discard a successful SocialKit transcript or hide the video title.
-    const transcript = await fetchSocialKitTranscript(job.analysis.videoId);
-    await db.youtubeAnalysis.update({ where: { id: job.analysisId }, data: {
-      transcript: transcript.text, transcriptSource: transcript.source,
-      transcriptLanguage: transcript.language, qualityWarning: null,
-    } });
+    // Save title/thumbnail first so a transcript failure never leaves the lesson
+    // titled "YouTube 영상 <id>".
     const [oembed, youtube] = await Promise.all([
       fetchOembed(job.analysis.sourceUrl).catch(() => ({})),
-      fetchYoutubeData(job.analysis.videoId),
+      fetchYoutubeData(job.analysis.videoId).catch(() => ({ title: '', channelTitle: '', description: '', thumbnailUrl: null as string | null, comments: '' })),
     ]);
     const metadata = {
       title: youtube.title || ('title' in oembed && oembed.title) || job.analysis.title || job.analysis.videoId,
@@ -102,6 +98,25 @@ export async function processYoutubeAnalysis(jobId: string) {
     };
     await db.youtubeAnalysis.update({ where: { id: job.analysisId }, data: {
       ...metadata,
+    } });
+    // Persist extraction before optional AI generation. A billing/AI error must
+    // never discard a successful transcript. Same order as the reference
+    // pipeline: 1) SocialKit  2) Supadata.
+    let transcript: { text: string; timed: string; language: string; source: string };
+    try {
+      transcript = await fetchSocialKitTranscript(job.analysis.videoId);
+    } catch (socialKitError) {
+      const socialKitMessage = socialKitError instanceof Error ? socialKitError.message : 'SocialKit 자막 추출 실패';
+      try {
+        transcript = await fetchSupadataTranscript(job.analysis.videoId);
+      } catch (supadataError) {
+        const supadataMessage = supadataError instanceof Error ? supadataError.message : 'Supadata 자막 추출 실패';
+        throw new Error(`${socialKitMessage} / 2단계 ${supadataMessage}`);
+      }
+    }
+    await db.youtubeAnalysis.update({ where: { id: job.analysisId }, data: {
+      transcript: transcript.text, transcriptSource: transcript.source,
+      transcriptLanguage: transcript.language, qualityWarning: null,
     } });
     let summary: Awaited<ReturnType<typeof makeSummary>>;
     try {
@@ -114,7 +129,7 @@ export async function processYoutubeAnalysis(jobId: string) {
         : /GEMINI_API_KEY/.test(message)
           ? 'Gemini API 키가 설정되지 않아 학습노트를 만들지 못했습니다.'
           : 'AI 학습노트 생성에 실패했습니다. 잠시 후 다시 생성해주세요.';
-      throw new Error(`SocialKit 자막은 추출·저장했습니다. ${reason}`);
+      throw new Error(`${transcript.source === 'socialkit' ? 'SocialKit' : 'Supadata'} 자막은 추출·저장했습니다. ${reason}`);
     }
     await db.youtubeAnalysis.update({ where: { id: job.analysisId }, data: {
       category: summary.category, summary: summary.summary, reportSummary: summary.reportSummary,
