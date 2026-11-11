@@ -1,7 +1,7 @@
 // YouTube analysis pipeline. Provider credentials never leave the server.
 import { db } from '@/lib/db';
-import { chatJson } from '@/lib/server/ai';
-import { fetchSocialKitTranscript } from '@/lib/server/socialkit';
+import { chatJson, chatText } from '@/lib/server/ai';
+import { detectTranscriptLang, fetchSocialKitTranscript } from '@/lib/server/socialkit';
 import { fetchSupadataTranscript } from '@/lib/server/supadata';
 export { isTranscriptQualityAcceptable } from '@/lib/server/socialkit';
 import type { YoutubeAnalysisDTO, YoutubeChapter } from '@/lib/types';
@@ -53,6 +53,12 @@ async function fetchYoutubeData(videoId: string) {
   return { title: snippet?.title ?? '', channelTitle: snippet?.channelTitle ?? '', description: snippet?.description ?? '', thumbnailUrl: snippet?.thumbnails?.high?.url ?? null, comments: (commentData.items ?? []).map((c) => c.snippet?.topLevelComment?.snippet?.textDisplay ?? '').filter(Boolean).join('\n') };
 }
 
+// The academy shows this note as a lecture: an outline, then one section per
+// part of the video with its [MM:SS] start so learners can jump to the scene.
+// The whole transcript is sent (up to the model's comfortable context) so the
+// note covers the full video instead of the first part.
+const NOTE_TRANSCRIPT_LIMIT = 150_000;
+
 async function makeSummary(input: { title: string; channel: string; description: string; transcript: string; comments: string }) {
   const source = input.transcript;
   if (!process.env.GEMINI_API_KEY?.trim()) throw new Error('GEMINI_API_KEY 미설정');
@@ -60,22 +66,98 @@ async function makeSummary(input: { title: string; channel: string; description:
     category: string; summary: string; reportSummary: string; chapters: YoutubeChapter[];
     keywords: string[]; studyContent: string; commentsSummary: string; contextSummary: string;
   }>(
-    `You are an expert educational content designer. Analyze YouTube learning content and create comprehensive study materials in Korean.
+    `You are an expert instructor who turns YouTube videos into a Korean lecture that a learner can follow from start to finish.
+The transcript may be in English or another language — always write every output field in natural Korean (keep product names, commands and code as-is).
 Return JSON only. Do not invent facts — only use information present in the transcript/description.`,
-    `제목: ${input.title}\n채널: ${input.channel}\n설명: ${input.description}\n자막: ${source.slice(0, 50000)}\n\n` +
-      `상위 댓글: ${input.comments.slice(0, 10000)}\n\n` +
+    `제목: ${input.title}
+채널: ${input.channel}
+설명: ${input.description}
+전체 자막([MM:SS] 시간 포함):
+${source.slice(0, NOTE_TRANSCRIPT_LIMIT)}
+
+` +
+      `상위 댓글: ${input.comments.slice(0, 10000)}
+
+` +
       `JSON 형식으로 반환:
 {
   "category": "콘텐츠 카테고리 (예: IT/AI 교육, 프로그래밍, 디자인 등)",
   "summary": "핵심 요약 (3-5문장)",
   "reportSummary": "상세 학습 노트 (자막 내용을 체계적으로 정리)",
-  "chapters": [{"title": "섹션 제목", "summary": "해당 섹션 요약", "timestamp": "00:00 (있으면)"}],
+  "chapters": [{"title": "섹션 제목", "summary": "해당 섹션 요약", "timestamp": "MM:SS (자막의 실제 시작 시간)"}],
   "keywords": ["핵심 키워드 5-10개"],
-  "studyContent": "## 학습 가이드\\n\\n### 1. 핵심 개념 정리\\n- 영상에서 다루는 핵심 개념을 불릿 포인트로 정리\\n- 각 개념에 대한 간결한 설명 포함\\n\\n### 2. 단계별 학습 내용\\n영상의 흐름을 따라 단계별로 정리. 각 단계마다:\\n- 무엇을 배우는지\\n- 핵심 포인트\\n- 예시나 실습 내용\\n\\n### 3. 실습/적용 포인트\\n- 직접 따라해볼 수 있는 실습 항목\\n- 적용 가능한 팁\\n\\n### 4. 핵심 요약 & 복습 체크리스트\\n- [ ] 체크리스트 형태로 복습 포인트 정리\\n\\n(자막 내용을 기반으로 위 구조에 맞게 상세하게 작성. 마크다운 형식. 최소 1000자 이상.)",
+  "studyContent": "강의 노트 (아래 규칙)",
   "commentsSummary": "시청자 반응 요약",
   "contextSummary": "영상 맥락 한 줄 요약"
-}`,
+}
+
+studyContent 작성 규칙 — 전체 자막을 처음부터 끝까지 빠짐없이 다루는 '강의 노트'를 마크다운으로 작성:
+## 강의 소개
+- **이 강의에서 배우는 것**: 학습 목표 3-5개 불릿
+- **이런 분께 추천**: 1-2줄
+- **준비물**: 영상에 나온 도구·서비스 (없으면 생략)
+
+## 강의 목차
+1. 각 강의 파트 제목 [MM:SS] 형식으로 번호 목록
+
+그 다음 영상 흐름을 따라 파트마다:
+## 1강. 파트 제목 [MM:SS]
+강사가 설명하듯 자연스러운 한국어 문단 2-4개로 이 구간 내용을 풀어서 설명 (자막의 예시·숫자·고유명사 유지)
+> 💡 **핵심 포인트**: 이 구간에서 꼭 기억할 한 줄
+- 따라하기 단계나 세부 항목이 있으면 번호 목록으로
+(파트는 영상 길이에 맞춰 4-10개, 각 파트 제목 끝의 [MM:SS]는 자막에 있는 실제 시작 시간)
+
+## 정리
+- 강의 전체 핵심을 5개 이내 불릿으로
+
+## 실습 과제
+- 직접 해볼 과제 2-3개
+
+## 복습 퀴즈
+1. 질문 (3-5문항) — 각 문항 아래 줄에 "**정답**: ..." 형태로 답
+
+최소 2000자 이상, 마크다운 형식. 원문이 영어여도 한국어로 작성.`,
   );
+}
+
+// ── Korean transcript ──
+// Extraction keeps the original-language transcript (reference pipeline: no
+// translation at extraction). For non-Korean videos a Korean version is made
+// afterwards and cached in Setting so the transcript tab can show both.
+const KO_TRANSCRIPT_KEY = (videoId: string) => `youtube-transcript-ko:${videoId}`;
+const TRANSLATE_CHUNK = 6_000;
+
+export async function getKoreanTranscript(videoId: string): Promise<string | null> {
+  const row = await db.setting.findUnique({ where: { key: KO_TRANSCRIPT_KEY(videoId) } });
+  return row?.value || null;
+}
+
+export async function translateTranscriptToKorean(videoId: string, transcript: string): Promise<string> {
+  const lines = transcript.split('\n').filter((l) => l.trim());
+  const chunks: string[] = [];
+  let current = '';
+  for (const line of lines) {
+    if (current && current.length + line.length > TRANSLATE_CHUNK) { chunks.push(current); current = ''; }
+    current += (current ? '\n' : '') + line;
+  }
+  if (current) chunks.push(current);
+  const translated: string[] = new Array(chunks.length);
+  // Small concurrency keeps long lectures fast without tripping rate limits.
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(4, chunks.length) }, async () => {
+    while (next < chunks.length) {
+      const i = next++;
+      const out = await chatText(
+        'You translate video transcripts into natural, easy Korean. Keep every [MM:SS] timestamp exactly as given at the start of its line, one output line per input line, same order. Keep product names, commands and code unchanged. Output only the translated lines.',
+        chunks[i],
+      );
+      translated[i] = out.replace(/^```\w*\s*|```\s*$/g, '').trim();
+    }
+  }));
+  const text = translated.join('\n').trim();
+  if (!text) throw new Error('자막 번역 결과가 비어 있습니다.');
+  await db.setting.upsert({ where: { key: KO_TRANSCRIPT_KEY(videoId) }, create: { key: KO_TRANSCRIPT_KEY(videoId), value: text }, update: { value: text } });
+  return text;
 }
 
 export async function processYoutubeAnalysis(jobId: string) {
@@ -114,10 +196,22 @@ export async function processYoutubeAnalysis(jobId: string) {
         throw new Error(`${socialKitMessage} / 2단계 ${supadataMessage}`);
       }
     }
+    // SocialKit has no language option and can return a YouTube auto-dubbed /
+    // translated track (e.g. English for a Korean lecture). When the video's own
+    // title/description is Korean but the transcript is not, ask Supadata for the
+    // Korean track and keep SocialKit's result if that fails.
+    if (transcript.language !== 'ko' && detectTranscriptLang(`${metadata.title} ${metadata.description}`) === 'ko') {
+      const korean = await fetchSupadataTranscript(job.analysis.videoId, 'ko').catch(() => null);
+      if (korean?.language === 'ko') transcript = korean;
+    }
     await db.youtubeAnalysis.update({ where: { id: job.analysisId }, data: {
       transcript: transcript.text, transcriptSource: transcript.source,
       transcriptLanguage: transcript.language, qualityWarning: null,
     } });
+    // Korean transcript runs beside the note; its failure never fails the lesson.
+    const translation = transcript.language === 'ko'
+      ? Promise.resolve()
+      : translateTranscriptToKorean(job.analysis.videoId, transcript.text).then(() => undefined, () => undefined);
     let summary: Awaited<ReturnType<typeof makeSummary>>;
     try {
       summary = await makeSummary({ ...metadata, channel: metadata.channelTitle, transcript: transcript.timed, comments: youtube.comments });
@@ -129,8 +223,10 @@ export async function processYoutubeAnalysis(jobId: string) {
         : /GEMINI_API_KEY/.test(message)
           ? 'Gemini API 키가 설정되지 않아 학습노트를 만들지 못했습니다.'
           : 'AI 학습노트 생성에 실패했습니다. 잠시 후 다시 생성해주세요.';
+      await translation;
       throw new Error(`${transcript.source === 'socialkit' ? 'SocialKit' : 'Supadata'} 자막은 추출·저장했습니다. ${reason}`);
     }
+    await translation;
     await db.youtubeAnalysis.update({ where: { id: job.analysisId }, data: {
       category: summary.category, summary: summary.summary, reportSummary: summary.reportSummary,
       chapterJson: JSON.stringify(summary.chapters ?? []), keywordsJson: JSON.stringify(summary.keywords ?? []),

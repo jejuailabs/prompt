@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, ListVideo, Play, Search } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileDown, Languages, Link2, ListVideo, Play, Search, Share2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { api } from '@/lib/api-client';
 import { useAppStore } from '@/lib/store';
@@ -11,6 +11,7 @@ import { useRuntime } from '@/components/runtime-context';
 import { Button } from '@/components/ui/button';
 import { CourseManager } from '@/modules/academy/course-manager';
 import { readCourseProgress, timestampSeconds, type CourseProgress } from '@/modules/academy/curriculum';
+import { copyRich, linkTimestamps, printLecturePdf, shareHtml, shareMarkdown, timestampFromHref, type LectureExport } from '@/modules/academy/lesson-export';
 import styles from '@/modules/academy/academy.module.css';
 
 const progressKey = (course: AcademyPlaylistDTO, user: string) => `playlab-academy-${course.isExample ? 'preview' : 'course'}:${user}:${course.id}`;
@@ -84,13 +85,24 @@ function Classroom({ course: groupedCourse, standalone, user, lessonId }: { cour
   const [startAt, setStartAt] = useState(0);
   const [seekVersion, setSeekVersion] = useState(0);
   const [feedback, setFeedback] = useState('');
+  const [shareOpen, setShareOpen] = useState(false);
+  const [transcriptView, setTranscriptView] = useState<'ko' | 'original'>('ko');
+  const notesRef = useRef<HTMLDivElement>(null);
+  const shareRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!shareOpen) return;
+    const close = (e: MouseEvent | KeyboardEvent) => { if (e instanceof KeyboardEvent ? e.key === 'Escape' : !shareRef.current?.contains(e.target as Node)) setShareOpen(false); };
+    document.addEventListener('mousedown', close); document.addEventListener('keydown', close);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', close); };
+  }, [shareOpen]);
   useEffect(() => {
     try {
       const state = readCourseProgress(localStorage.getItem(storageKey), course.videos.map(v => v.id));
       const next = { ...state, lastLesson: lesson?.id };
       setProgress(next); localStorage.setItem(storageKey, JSON.stringify(next));
     } catch { setStorageError(true); }
-    setStartAt(0); setTab('study'); setFeedback('');
+    setStartAt(0); setTab('study'); setFeedback(''); setShareOpen(false);
   }, [storageKey, lesson?.id, course.videos]);
   function save(next: CourseProgress) {
     setProgress(next);
@@ -102,12 +114,42 @@ function Classroom({ course: groupedCourse, standalone, user, lessonId }: { cour
   const percent = videos.length ? Math.round(progress.completed.length / videos.length * 100) : 0;
   const analysis = lesson?.analysis;
   const notes = course.isExample ? lesson?.sampleNote ?? '' : analysis?.status === 'done' ? analysis.studyContent || analysis.reportSummary : '';
-  const text = tab === 'transcript' ? analysis?.transcript ?? '' : notes;
+  const videoOk = !!lesson && /^[\w-]{11}$/.test(lesson.videoId) && !course.isExample;
+  // Transcripts keep the video's original language; non-Korean videos also get
+  // an AI Korean version (made after extraction, cached on the server).
+  const original = analysis?.transcript ?? '';
+  const needsKo = videoOk && !!original && analysis?.transcriptLanguage !== 'ko';
+  const langName = analysis?.transcriptLanguage === 'en' ? '영어' : '외국어';
+  const koKey = ['academy', 'transcript-ko', lesson?.videoId];
+  const koQuery = useQuery({ queryKey: koKey, enabled: needsKo && tab === 'transcript', staleTime: Infinity, queryFn: () => api.get<{ language: string | null; ko: string | null }>(`/api/academy/transcripts/${lesson!.videoId}`) });
+  const translate = useMutation({ mutationFn: () => api.post<{ language: string | null; ko: string | null }>(`/api/academy/transcripts/${lesson!.videoId}`), onSuccess: data => { queryClient.setQueryData(koKey, data); setTranscriptView('ko'); } });
+  const koTranscript = needsKo ? koQuery.data?.ko ?? null : null;
+  const showingKo = needsKo && transcriptView === 'ko' && !!koTranscript;
+  const transcriptText = showingKo ? koTranscript! : original;
+  const text = tab === 'transcript' ? transcriptText : notes;
+  function seek(seconds: number) { setStartAt(seconds); setSeekVersion(n => n + 1); document.getElementById('academy-player-anchor')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
   async function copyNotes() { try { await navigator.clipboard.writeText(text); setFeedback('복사했어요.'); } catch { setFeedback('복사하지 못했어요. 텍스트 저장을 이용해주세요.'); } }
   function downloadNotes() {
     if (!lesson) return;
     const url = URL.createObjectURL(new Blob([`${lesson.title}\n\n${text}`], { type: 'text/plain;charset=utf-8' }));
-    const link = document.createElement('a'); link.href = url; link.download = `${lesson.title.replace(/[<>:"/\\|?*]/g, '_')}-학습노트.txt`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const link = document.createElement('a'); link.href = url; link.download = `${lesson.title.replace(/[<>:"/\\|?*]/g, '_')}-${tab === 'transcript' ? '자막' : '학습노트'}.txt`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function exportData(): LectureExport | null {
+    if (!lesson || !notes) return null;
+    return { title: lesson.title, channel: analysis?.channelTitle, videoId: lesson.videoId, summary: analysis?.status === 'done' ? analysis.summary : undefined, keywords: analysis?.keywords, notes, pageUrl: window.location.href };
+  }
+  async function share(kind: 'html' | 'markdown' | 'link') {
+    const x = exportData(); setShareOpen(false);
+    if (!x) return;
+    let copied = false;
+    if (kind === 'html') copied = await copyRich(shareHtml(x, notesRef.current?.innerHTML ?? ''), shareMarkdown(x));
+    else { try { await navigator.clipboard.writeText(kind === 'link' ? x.pageUrl : shareMarkdown(x)); copied = true; } catch { copied = false; } }
+    setFeedback(!copied ? '복사하지 못했어요. 브라우저의 클립보드 권한을 확인해주세요.' : kind === 'html' ? '서식 그대로 복사했어요. 블로그·노션에 붙여넣으세요.' : kind === 'markdown' ? '마크다운으로 복사했어요.' : '강의 링크를 복사했어요.');
+  }
+  function savePdf() {
+    const x = exportData();
+    if (!x) return;
+    setFeedback(printLecturePdf(x, notesRef.current?.innerHTML ?? '') ? '인쇄 창에서 대상을 "PDF로 저장"으로 선택하세요.' : 'PDF 창을 열지 못했어요.');
   }
   return <>
     <button className={styles.back} onClick={() => navigate('academy')}><ArrowLeft size={16} />영상·강의 목록</button>
@@ -126,9 +168,33 @@ function Classroom({ course: groupedCourse, standalone, user, lessonId }: { cour
               {course.isExample && <p className={styles.small}>구성 예시 · 실제 영상의 분석 결과가 아닙니다.</p>}
               {analysis?.status === 'failed' && <p role="status" className={styles.notice}>{analysis.transcript ? '영상 자막은 저장되어 자막 탭에서 볼 수 있어요. 학습노트 생성은 아직 완료되지 않았어요.' : '자막·학습노트를 가져오지 못했어요. 관리자에게 다시 생성을 요청해주세요.'}</p>}
               {analysis?.qualityWarning && <p className={styles.notice}>{analysis.qualityWarning}</p>}
-              {tab === 'study' && <>{analysis?.status === 'done' && analysis.summary && <div className={styles.summary}><span className={styles.eyebrow}>한눈에 보기</span><h3>이번 영상, 한눈에.</h3><p>{analysis.summary}</p>{analysis.keywords?.length > 0 && <div className={styles.keywords}>{analysis.keywords.map((word, i) => <span key={`${word}-${i}`}>{word}</span>)}</div>}</div>}{notes ? <div className={styles.markdown}><ReactMarkdown>{notes}</ReactMarkdown></div> : <div className={styles.noteEmpty}><BookOpen /><h3>{analysis?.status === 'failed' ? '학습노트를 준비하지 못했어요.' : analysis?.status === 'running' ? '학습노트를 만들고 있어요.' : '학습노트를 준비하고 있어요.'}</h3><p>영상은 먼저 시청할 수 있어요. 자막과 학습노트가 등록되면 여기에 표시됩니다.</p></div>}</>}
-              {tab === 'transcript' && (analysis?.transcript ? <p className={styles.transcript}>{analysis.transcript}</p> : <div className={styles.noteEmpty}><h3>{course.isExample ? '영상의 자막이 이곳에 표시돼요.' : '아직 가져온 자막이 없어요.'}</h3><p>자막이 없는 영상은 영상 시청과 내 메모를 이용해주세요.</p></div>)}
-              {tab === 'chapters' && (analysis?.status === 'done' && analysis.chapters.length ? <div className={styles.chapters}>{analysis.chapters.map((chapter, i) => <div key={i}><button disabled={timestampSeconds(chapter.timestamp) === null} onClick={() => { setStartAt(timestampSeconds(chapter.timestamp) ?? 0); setSeekVersion(n => n + 1); document.getElementById('academy-player-anchor')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); }}><Play size={13} />{chapter.timestamp || '시간 없음'}</button><div><h3>{chapter.title}</h3><p>{chapter.summary}</p></div></div>)}</div> : <div className={styles.noteEmpty}><ListVideo /><h3>{course.isExample ? '주요 구간을 눌러 바로 복습하기.' : '아직 정리된 주요 구간이 없어요.'}</h3><p>자막에서 정리한 시간과 주제가 표시되고, 시간을 누르면 해당 장면으로 이동해요.</p></div>)}
+              {tab === 'study' && <>{analysis?.status === 'done' && analysis.summary && <div className={styles.summary}><span className={styles.eyebrow}>한눈에 보기</span><h3>이번 영상, 한눈에.</h3><p>{analysis.summary}</p>{analysis.keywords?.length > 0 && <div className={styles.keywords}>{analysis.keywords.map((word, i) => <span key={`${word}-${i}`}>{word}</span>)}</div>}</div>}{notes ? <>
+                <div className={styles.lectureBar}>
+                  <div><span className={styles.eyebrow}>강의 노트</span><p>{videoOk ? '▶ 시간을 누르면 영상이 그 장면부터 재생돼요.' : '영상 흐름을 따라 정리한 강의 노트예요.'}</p></div>
+                  <div className={styles.lectureActions}>
+                    <div className={styles.shareWrap} ref={shareRef}>
+                      <Button size="sm" aria-haspopup="menu" aria-expanded={shareOpen} onClick={() => setShareOpen(o => !o)}><Share2 size={14} />강의 내용 퍼가기</Button>
+                      {shareOpen && <div role="menu" className={styles.shareMenu}>
+                        <button role="menuitem" onClick={() => void share('html')}><Copy size={15} /><span><strong>블로그·노션용 복사</strong><small>제목·서식·시간 링크·출처까지 그대로</small></span></button>
+                        <button role="menuitem" onClick={() => void share('markdown')}><BookOpen size={15} /><span><strong>마크다운으로 복사</strong><small>깃허브·옵시디언 등에 붙여넣기</small></span></button>
+                        <button role="menuitem" onClick={() => void share('link')}><Link2 size={15} /><span><strong>강의 링크 복사</strong><small>이 강의 페이지 주소</small></span></button>
+                      </div>}
+                    </div>
+                    <Button size="sm" variant="outline" onClick={savePdf}><FileDown size={14} />PDF 다운로드</Button>
+                  </div>
+                </div>
+                <div ref={notesRef} className={`${styles.markdown} ${styles.lecture}`}><ReactMarkdown components={{ a: ({ href, children }) => { const at = videoOk ? timestampFromHref(href, lesson.videoId) : null; return at === null ? <a href={href} target="_blank" rel="noopener noreferrer">{children}</a> : <a href={href} className={styles.timeLink} onClick={e => { e.preventDefault(); seek(at); }}>{children}</a>; } }}>{videoOk ? linkTimestamps(notes, lesson.videoId) : notes}</ReactMarkdown></div>
+              </> : <div className={styles.noteEmpty}><BookOpen /><h3>{analysis?.status === 'failed' ? '학습노트를 준비하지 못했어요.' : analysis?.status === 'running' ? '학습노트를 만들고 있어요.' : '학습노트를 준비하고 있어요.'}</h3><p>영상은 먼저 시청할 수 있어요. 자막과 학습노트가 등록되면 여기에 표시됩니다.</p></div>}</>}
+              {tab === 'transcript' && (original ? <>
+                {needsKo && <div className={styles.transcriptBar}>
+                  <div role="group" aria-label="자막 언어" className={styles.langToggle}><button aria-pressed={showingKo} disabled={!koTranscript} onClick={() => setTranscriptView('ko')}>한국어</button><button aria-pressed={!showingKo} onClick={() => setTranscriptView('original')}>원문({langName})</button></div>
+                  <span role="status">{koQuery.isLoading ? '한국어 자막을 확인하고 있어요…' : translate.isPending ? '한국어로 번역하고 있어요… 영상 길이에 따라 1~2분 걸려요.' : !koTranscript ? `가져온 자막이 ${langName}예요. 한국어 자막은 아직 없어요.` : showingKo ? 'AI 번역 자막이에요. 정확한 표현은 원문을 확인하세요.' : `가져온 ${langName} 자막이에요.`}</span>
+                  {!koTranscript && !koQuery.isLoading && user !== 'guest' && <Button size="sm" variant="outline" disabled={translate.isPending} onClick={() => translate.mutate()}><Languages size={14} />한국어로 번역</Button>}
+                </div>}
+                {translate.isError && <p role="alert" className={styles.notice}>{translate.error.message}</p>}
+                <div className={styles.transcript}>{transcriptText.split('\n').filter(l => l.trim()).map((line, i) => { const m = line.match(/^\[(\d{1,3}:\d{2}(?::\d{2})?)\]\s*(.*)$/); const at = m ? timestampSeconds(m[1]) : null; return <p key={i}>{m && at !== null && videoOk ? <><button onClick={() => seek(at)} aria-label={`${m[1]}부터 재생`}>{m[1]}</button>{m[2]}</> : line}</p>; })}</div>
+              </> : <div className={styles.noteEmpty}><h3>{course.isExample ? '영상의 자막이 이곳에 표시돼요.' : '아직 가져온 자막이 없어요.'}</h3><p>자막이 없는 영상은 영상 시청과 내 메모를 이용해주세요.</p></div>)}
+              {tab === 'chapters' && (analysis?.status === 'done' && analysis.chapters.length ? <div className={styles.chapters}>{analysis.chapters.map((chapter, i) => <div key={i}><button disabled={timestampSeconds(chapter.timestamp) === null} onClick={() => seek(timestampSeconds(chapter.timestamp) ?? 0)}><Play size={13} />{chapter.timestamp || '시간 없음'}</button><div><h3>{chapter.title}</h3><p>{chapter.summary}</p></div></div>)}</div> : <div className={styles.noteEmpty}><ListVideo /><h3>{course.isExample ? '주요 구간을 눌러 바로 복습하기.' : '아직 정리된 주요 구간이 없어요.'}</h3><p>자막에서 정리한 시간과 주제가 표시되고, 시간을 누르면 해당 장면으로 이동해요.</p></div>)}
               {!!text && (tab === 'study' || tab === 'transcript') && <div className={styles.noteActions}><Button size="sm" variant="outline" onClick={() => void copyNotes()}><Copy size={14} />내용 복사</Button><Button size="sm" variant="ghost" onClick={downloadNotes}><Download size={14} />텍스트 저장</Button><span role="status">{feedback}</span></div>}
             </>}
           </div>

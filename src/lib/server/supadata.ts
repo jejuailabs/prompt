@@ -11,12 +11,13 @@ type SupadataResponse = {
   lang?: string;
 };
 
-export async function fetchSupadataTranscript(videoId: string): Promise<SupadataTranscript> {
+/** `lang` asks for a specific track (e.g. 'ko' when SocialKit returned a translated/dubbed track). */
+export async function fetchSupadataTranscript(videoId: string, lang?: string): Promise<SupadataTranscript> {
   const key = process.env.SUPADATA_API_KEY?.trim();
   if (!key) throw new Error('Supadata API 키가 설정되지 않았습니다.');
   let response: Response;
   try {
-    response = await fetch(`https://api.supadata.ai/v1/youtube/transcript?videoId=${encodeURIComponent(videoId)}`, {
+    response = await fetch(`https://api.supadata.ai/v1/youtube/transcript?videoId=${encodeURIComponent(videoId)}${lang ? `&lang=${encodeURIComponent(lang)}` : ''}`, {
       headers: { 'x-api-key': key }, cache: 'no-store', signal: AbortSignal.timeout(25_000),
     });
   } catch {
