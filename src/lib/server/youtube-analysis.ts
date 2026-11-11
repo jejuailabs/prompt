@@ -182,24 +182,24 @@ export async function processYoutubeAnalysis(jobId: string) {
       ...metadata,
     } });
     // Persist extraction before optional AI generation. A billing/AI error must
-    // never discard a successful transcript. Same order as the reference
-    // pipeline: 1) SocialKit  2) Supadata.
+    // never discard a successful transcript. Order (2026-11-12 user decision):
+    // 1) Supadata  2) SocialKit (skipped instantly when its key is removed).
     let transcript: { text: string; timed: string; language: string; source: string };
     try {
-      transcript = await fetchSocialKitTranscript(job.analysis.videoId);
-    } catch (socialKitError) {
-      const socialKitMessage = socialKitError instanceof Error ? socialKitError.message : 'SocialKit 자막 추출 실패';
+      transcript = await fetchSupadataTranscript(job.analysis.videoId);
+    } catch (supadataError) {
+      const supadataMessage = supadataError instanceof Error ? supadataError.message : 'Supadata 자막 추출 실패';
       try {
-        transcript = await fetchSupadataTranscript(job.analysis.videoId);
-      } catch (supadataError) {
-        const supadataMessage = supadataError instanceof Error ? supadataError.message : 'Supadata 자막 추출 실패';
-        throw new Error(`${socialKitMessage} / 2단계 ${supadataMessage}`);
+        transcript = await fetchSocialKitTranscript(job.analysis.videoId);
+      } catch (socialKitError) {
+        const socialKitMessage = socialKitError instanceof Error ? socialKitError.message : 'SocialKit 자막 추출 실패';
+        throw new Error(`${supadataMessage} / 2단계 ${socialKitMessage}`);
       }
     }
-    // SocialKit has no language option and can return a YouTube auto-dubbed /
-    // translated track (e.g. English for a Korean lecture). When the video's own
-    // title/description is Korean but the transcript is not, ask Supadata for the
-    // Korean track and keep SocialKit's result if that fails.
+    // The default track can be a YouTube auto-dubbed / translated one (e.g.
+    // English for a Korean lecture). When the video's own title/description is
+    // Korean but the transcript is not, ask Supadata for the Korean track and
+    // keep the first result if that fails.
     if (transcript.language !== 'ko' && detectTranscriptLang(`${metadata.title} ${metadata.description}`) === 'ko') {
       const korean = await fetchSupadataTranscript(job.analysis.videoId, 'ko').catch(() => null);
       if (korean?.language === 'ko') transcript = korean;
