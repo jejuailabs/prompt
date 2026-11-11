@@ -79,3 +79,10 @@
 .tabs button{font-size:15px}
 .tabs button[aria-selected=true]{color:var(--coai-blue-strong)}
 @media (max-width:767px){.academy{padding:18px 16px 40px}.intro h1{font-size:22px}}
+
+/* 2026-11-11: admin "YouTube 영상 등록 · 강의 관리" moved to the top of the page as a visible bar. */
+.academy>.manager{margin:0 0 20px;border:1px solid var(--primary);border-radius:8px;padding:0 18px;background:var(--card)}
+.academy>.manager>summary{cursor:pointer;padding:14px 0;gap:12px;flex-wrap:wrap;font-size:14px;font-weight:600;color:var(--primary)}
+.academy>.manager>summary>span{display:inline-flex;align-items:center;gap:8px}
+.academy>.manager>summary>small{font-size:11px;font-weight:400;color:var(--muted-foreground)}
+.academy>.manager[open]>summary{border-bottom:1px solid var(--border)}

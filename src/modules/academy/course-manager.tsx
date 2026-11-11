@@ -29,6 +29,7 @@ export function CourseManager({ lessons, courses, selected, selectedLesson, prev
   const [editDescription, setEditDescription] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [busy, setBusy] = useState('');
+  const [open, setOpen] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   useEffect(() => { setEditTitle(editing?.title ?? ''); setEditDescription(editing?.description ?? ''); setEditNotes(editing?.analysis?.studyContent ?? editing?.sampleNote ?? ''); }, [editing]);
@@ -48,8 +49,8 @@ export function CourseManager({ lessons, courses, selected, selectedLesson, prev
     setIds(items => { const next = [...items]; [next[index], next[index + direction]] = [next[index + direction], next[index]]; return next; });
   }
   const selectedVideos = ids.map(id => lessons.find(l => l.id === id));
-  return <details className={styles.manager}>
-    <summary>{preview ? '영상 등록·강의 묶기 살펴보기' : '영상 등록·강의 관리'} <Plus size={16} /></summary>
+  return <details className={styles.manager} open={open} onToggle={e => setOpen(e.currentTarget.open)}>
+    <summary><span><Plus size={17} />{preview ? 'YouTube 영상 등록 · 강의 만들기 살펴보기' : 'YouTube 영상 등록 · 강의 관리'}</span><small>영상 추가 · 수정 · 삭제 · 강의 묶기</small></summary>
     <div className={styles.managerBody}>
       {preview && <p className={styles.notice}>등록 화면 미리보기입니다. 예시 영상 선택과 순서 변경을 체험할 수 있어요. 실제 등록·분석·저장은 운영 서비스의 관리자만 사용할 수 있습니다.</p>}
       <section className={styles.managerSection}>
@@ -59,11 +60,13 @@ export function CourseManager({ lessons, courses, selected, selectedLesson, prev
         <div className={styles.formGrid}><label>영상 제목 (선택)<Input value={videoTitle} maxLength={160} onChange={e => setVideoTitle(e.target.value)} placeholder="자동 분석 시 영상 제목을 가져옵니다" /></label><label>영상 소개 (선택)<Input value={videoDescription} maxLength={500} onChange={e => setVideoDescription(e.target.value)} /></label></div>
         <label>직접 작성한 학습내용 (선택)<textarea value={studyContent} maxLength={50000} onChange={e => setStudyContent(e.target.value)} placeholder="비워두면 영상 자막을 바탕으로 학습내용을 만들 수 있어요. 마크다운을 지원합니다." /></label>
         <label className={styles.checkLabel}><input type="checkbox" checked={analyze} onChange={e => setAnalyze(e.target.checked)} disabled={!!studyContent.trim()} />등록과 함께 자막·학습내용 자동 생성</label>
-        <p className={styles.small}>{studyContent.trim() ? '직접 작성한 학습내용을 저장합니다. 자동 분석은 실행하지 않아요.' : 'SocialKit으로 시간별 자막을 먼저 저장한 뒤 AI 학습노트를 만듭니다. 학습노트 생성에 실패해도 추출된 자막은 남아요. 이미 분석된 영상은 기존 결과를 재사용합니다.'}</p>
+        <p className={styles.small}>{studyContent.trim() ? '직접 작성한 학습내용을 저장합니다. 자동 분석은 실행하지 않아요.' : 'SocialKit(실패 시 Supadata)으로 시간별 자막을 먼저 저장한 뒤 AI 학습노트를 만듭니다. 학습노트 생성에 실패해도 추출된 자막은 남아요. 이미 등록된 영상을 다시 등록하면 기존 강의를 열고, 학습노트가 없으면 다시 추출합니다.'}</p>
         <div><Button disabled={preview || !!busy || !url.trim().startsWith('https://') || !youtubeVideoId(url)} onClick={() => void run('register', async () => {
-          const lesson = await api.post<AcademyLessonDTO>('/api/academy/lessons', { url, title: videoTitle, description: videoDescription, studyContent, analyze });
+          const lesson = await api.post<AcademyLessonDTO & { existing?: boolean }>('/api/academy/lessons', { url, title: videoTitle, description: videoDescription, studyContent, analyze });
           onLessonCreated(lesson.id);
+          setEditingId(lesson.id);
           if (lesson.analysis?.status === 'failed') setError(lesson.analysis.error || '영상은 등록됐지만 학습내용 생성에 실패했어요.');
+          else if (lesson.existing) setNotice(lesson.analysis?.status === 'done' ? '이미 등록된 영상이라 기존 강의를 열었어요. 새로 분석하려면 아래 “자막·학습내용 생성”을 눌러주세요.' : '이미 등록된 영상이라 자막·학습내용을 다시 추출했어요.');
         })}>{busy === 'register' ? '영상 등록·학습내용 준비 중…' : '영상 강의 등록'}</Button></div>
       </section>
       {!!lessons.length && <section className={styles.managerSection}>
@@ -77,7 +80,10 @@ export function CourseManager({ lessons, courses, selected, selectedLesson, prev
           <div className={styles.actions}><Button disabled={preview || !!busy || !editTitle.trim()} onClick={() => void run('save-lesson', async () => { await api.patch(`/api/academy/lessons/${editing.id}`, { title: editTitle, description: editDescription, studyContent: editNotes }); setNotice('영상과 학습내용을 저장했어요.'); })}>영상 내용 저장</Button><Button variant="outline" disabled={preview || !!busy} onClick={() => {
             if (editing.analysis?.studyContent && !window.confirm('기존 학습내용을 새 분석 결과로 교체할까요?')) return;
             void run('analyze', async () => { const result = await api.post<{ status: string; error?: string }>(`/api/academy/lessons/${editing.id}/analyze`); if (result.status === 'failed') setError(result.error || '분석에 실패했어요. 다시 시도해주세요.'); else setNotice('자막과 학습내용을 갱신했어요.'); });
-          }}>{busy === 'analyze' ? '자막·학습내용 분석 중…' : '자막·학습내용 생성'}</Button></div>
+          }}>{busy === 'analyze' ? '자막·학습내용 분석 중…' : '자막·학습내용 생성'}</Button><Button variant="destructive" disabled={preview || !!busy} onClick={() => {
+            if (!window.confirm(`“${editing.title}” 영상을 삭제할까요?\n이 영상의 강의와, 이 영상이 들어 있는 묶음 강의의 차시에서 모두 빠집니다.`)) return;
+            void run('delete-lesson', async () => { await api.del(`/api/academy/lessons/${editing.id}`); setEditingId(''); setIds(items => items.filter(id => id !== editing.id)); setNotice('영상을 삭제했어요.'); onRemoved(); });
+          }}><Trash2 size={15} />{busy === 'delete-lesson' ? '삭제 중…' : '영상 삭제'}</Button></div>
         </>}
       </section>}
       <section className={styles.managerSection}>

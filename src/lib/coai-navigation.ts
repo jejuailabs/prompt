@@ -21,8 +21,8 @@ export type CoaiMenu = {
 export const COAI_MENUS: CoaiMenu[] = [
   { id: 'home', labelKey: 'navHome', icon: 'home', target: { view: 'home' }, views: ['home'] },
   { id: 'news', labelKey: 'navNews', icon: 'newspaper', target: { view: 'news' }, views: ['news', 'ai-events', 'github-pick'] },
-  // 배우기 = AI 서비스 사용설명서(가이드) + 영상 강의. Beginners land on the guide shelf first.
-  { id: 'learn', labelKey: 'navLearn', icon: 'book-open', target: { view: 'ai-guide' }, views: ['ai-guide', 'vibe-setup', 'academy'] },
+  // 배우기 = 영상 강의 + AI 서비스 사용설명서(가이드). 2026-11-11 사용자 지시: 첫 화면은 YouTube 영상 강의.
+  { id: 'learn', labelKey: 'navLearn', icon: 'book-open', target: { view: 'academy' }, views: ['academy', 'ai-guide', 'vibe-setup'] },
   // 써보기 = 프롬프트 갤러리(+ 진화 트리) + 바로 쓰는 AI 도구.
   { id: 'use', labelKey: 'navUse', icon: 'sparkles', target: { view: 'gallery', params: { tab: 'prompts' } }, views: ['prompt-wiki', 'prompt', 'ai-tools', 'tool'] },
   { id: 'make', labelKey: 'navMake', icon: 'play-square', target: { view: 'game-room' }, views: ['game-room', 'game-play', 'landing-pages', 'motion-library', 'project', 'lab', 'video-studio', '3d-studio'] },
@@ -58,9 +58,9 @@ const onViews = (...views: ViewKey[]) => (view: ViewKey) => views.includes(view)
 /** Sub-section tabs shown under a grouped menu, so merged screens stay one click away. */
 export const COAI_SECTIONS: Partial<Record<CoaiMenuId, CoaiSection[]>> = {
   learn: [
+    { id: 'courses', label: '강의', labelEn: 'Courses', target: { view: 'academy' }, current: onViews('academy') },
     { id: 'guide', label: 'AI 가이드', labelEn: 'AI Guides', target: { view: 'ai-guide' }, current: onViews('ai-guide') },
     { id: 'start', label: '바이브코딩 시작', labelEn: 'Start vibe-coding', target: { view: 'vibe-setup' }, current: onViews('vibe-setup') },
-    { id: 'courses', label: '강의', labelEn: 'Courses', target: { view: 'academy' }, current: onViews('academy') },
   ],
   use: [
     { id: 'prompts', label: '프롬프트', labelEn: 'Prompts', target: { view: 'gallery', params: { tab: 'prompts' } }, current: (view, params) => view === 'prompt' || view === 'prompt-wiki' || (view === 'gallery' && params.tab === 'prompts') },

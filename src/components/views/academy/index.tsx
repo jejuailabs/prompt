@@ -39,6 +39,8 @@ export default function AcademyView() {
   const filteredLessons = lessons.filter(matches);
   const filteredCourses = courses.filter(matches);
   return <div className={styles.academy}>
+    {/* Admin tools sit at the top so registering a YouTube lesson is one click away. */}
+    {(session?.role === 'admin' || previewMode) && <CourseManager key={selected?.id ?? standalone?.id ?? 'library'} lessons={lessons} courses={courses} selected={selected} selectedLesson={selectedLesson} preview={previewMode} onCreated={id => navigate('academy', { course: id })} onLessonCreated={id => navigate('academy', { lesson: id })} onRemoved={() => navigate('academy')} />}
     {selected || standalone ? <Classroom key={`${selected?.id ?? standalone?.id}:${session?.id ?? 'guest'}`} course={selected} standalone={standalone} user={session?.id ?? 'guest'} lessonId={selected ? params.lesson : standalone?.id} /> : <>
       <header className={styles.intro}>
         <img className={styles.heroBackground} src="/uploads/seed/thumb-fantasy.png" alt="" fetchPriority="high" />
@@ -65,7 +67,6 @@ export default function AcademyView() {
       </button>)}</div>
       {library.isSuccess && !filteredCourses.length && <div className={styles.state}><h3>{search ? '검색에 맞는 묶음 강의가 없어요.' : '아직 묶인 강의가 없어요.'}</h3><p>영상 강의는 각각 볼 수 있고, 두 개 이상을 묶으면 차시와 커리큘럼이 생겨요.</p></div>}
     </>}
-    {(session?.role === 'admin' || previewMode) && <CourseManager key={selected?.id ?? standalone?.id ?? 'library'} lessons={lessons} courses={courses} selected={selected} selectedLesson={selectedLesson} preview={previewMode} onCreated={id => navigate('academy', { course: id })} onLessonCreated={id => navigate('academy', { lesson: id })} onRemoved={() => navigate('academy')} />}
   </div>;
 }
 
